@@ -2,7 +2,7 @@
 
 Three.js 角色查看器：**可配置**（模型 / 嘴部贴图 / 基准 JSON）、**可嵌入**（自包含单文件版）、**可部署**（纯静态）。
 
-【[部署本工具](DEPLOY.md)】  【[模型JSON配置](CONFIG.md)】
+【[部署本工具](DEPLOY.md)】  【[模型JSON配置](CONFIG.md)】  【[第三方库许可证声明](THIRD-PARTY-NOTICES.md)】
 
 ## 快速开始
 
