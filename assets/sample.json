@@ -1,0 +1,44 @@
+{
+  "_comment": "3D 角色查看器配置 ——（模型 + 嘴部修复贴图 + 缩放/取景 + 渲染/打光/背景）。配置里的相对路径按本文件所在目录解析。animation.name 可用完整名，也可用简写（如 \"Cafe_Idle\"，按名字包含匹配）。renderer.framing=\"tight\" 表示用「真实蒙皮内容」居中（整盒的居中/落地是错的，会让角色偏心+悬空）；这时 pivot 保持 0 即可。framingReferenceHeight = 参考面板高度：相机参数按它一次算成固定世界量，之后面板按百分比缩放，画面就整体等比缩放（角色尺寸和相对位置一起变）。framingOffsetY 是取景垂直偏移（CSS 像素，正值=取景下移），本模型内容已自动居中，保持 0 即可。renderer.mouthIdle 是兜底口型：有些模型的 GLB 里没有任何嘴部动画数据（如 CH0273），嘴型会一直固定，把它设为 true 就让口型按 mouthIdleMs 的节奏自行循环（默认 false 关闭）。renderer.mouthCell 是默认口型（图集格 0~63，null=第一个口型）：当动作没有驱动嘴部骨骼时用哪一格 —— 有些模型的 GLB 完全没有嘴部动画数据（如 CH0273），就靠它指定。",
+  "model": {
+    "url": "./sample.glb",
+    "mouthAtlas": "./mouth/Character_Mouth_High.png"
+  },
+  "pivot": {
+    "x": -0.1,
+    "z": 0
+  },
+  "renderer": {
+    "framing": "tight",
+    "framingReferenceHeight": 430,
+    "framingOffsetY": 0,
+    "shading": "cel",
+    "outline": true,
+    "outlineThickness": 0.002,
+    "outlineColor": [
+      0.1,
+      0.07,
+      0.11
+    ],
+    "outlineAlpha": 1,
+    "targetHeight": 2,
+    "fov": 30,
+    "shadows": true,
+    "modelHeightPx": 360,
+    "pressHoldMs": 200,
+    "mouthIdle": false,
+    "mouthIdleMs": 180,
+    "mouthCell": null
+  },
+  "lighting": {
+    "preset": "day",
+    "exposure": 1
+  },
+  "background": {
+    "transparent": true,
+    "color": null
+  },
+  "animation": {
+    "name": "CH0155_Cafe_Idle"
+  }
+}

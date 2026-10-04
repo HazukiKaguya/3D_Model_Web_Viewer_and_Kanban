@@ -1,0 +1,20 @@
+﻿# 让 .glb 以正确 MIME 返回（Netlify / Cloudflare Pages 会自动读取本文件）
+/assets/*.glb
+  Content-Type: model/gltf-binary
+
+# 配置 json 不缓存：改完上传即生效
+/assets/*.json
+  Content-Type: application/json; charset=utf-8
+  Cache-Control: no-cache
+
+/assets/mouth/*.png
+  Content-Type: image/png
+  Cache-Control: public, max-age=31536000, immutable
+
+/dist/*.js
+  Content-Type: text/javascript; charset=utf-8
+  Cache-Control: public, max-age=31536000, immutable
+
+/vendor/three/*
+  Content-Type: text/javascript; charset=utf-8
+  Cache-Control: public, max-age=31536000, immutable

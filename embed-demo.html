@@ -1,0 +1,477 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>3D 模型网页内嵌看板娘演示 —— 可拖动面板 / 右键旋转 / 动作钩子</title>
+<style>
+  /* ---------- 米白主题 ---------- */
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    font: 15px/1.7 system-ui, -apple-system, "PingFang SC", sans-serif;
+    color: #2c2822; min-height: 100vh;
+    /* 米白底 + 两团很淡的暖 / 冷光晕，给页面一点层次 */
+    background:
+      radial-gradient(90% 60% at 80% 0%, rgba(214,172,110,.26), transparent 62%),
+      radial-gradient(70% 60% at 5% 100%, rgba(150,182,206,.22), transparent 62%),
+      #f7f4ec;
+  }
+  .wrap { max-width: 1180px; margin: 0 auto; padding: 40px 24px 90px; }
+  h1 { font-size: 24px; font-weight: 600; margin-bottom: 8px; color: #241f19; }
+  .sub { color: #6b6357; margin-bottom: 28px; }
+  h2 { font-size: 16px; font-weight: 600; margin: 34px 0 12px; color: #443d33; }
+  p { color: #5d564a; margin-bottom: 12px; }
+  pre {
+    background: #efeade; border: 1px solid rgba(44,40,34,.10);
+    border-radius: 10px; padding: 16px 18px; overflow-x: auto;
+    font: 12.5px/1.65 ui-monospace, SFMono-Regular, Consolas, monospace; color: #4a4438;
+  }
+  code { font-family: ui-monospace, Consolas, monospace; color: #9a5b18; }
+  table { width: 100%; border-collapse: collapse; margin: 12px 0 4px; font-size: 14px; }
+  th, td { text-align: left; padding: 9px 12px; border-bottom: 1px solid rgba(44,40,34,.10); }
+  th { color: #8a8172; font-weight: 600; font-size: 13px; }
+  td code { color: #a8620f; }
+
+  /* 页面右下角的操作日志 */
+  #log {
+    position: fixed; right: 16px; bottom: 16px; z-index: 80;
+    width: 360px; max-height: 220px; overflow: auto;
+    background: rgba(255,253,247,.94); border: 1px solid rgba(44,40,34,.14);
+    border-radius: 10px; padding: 10px 12px;
+    font: 12px/1.6 ui-monospace, Consolas, monospace; color: #8a5a1f;
+    box-shadow: 0 8px 26px rgba(60,50,35,.10);
+    backdrop-filter: blur(8px);
+  }
+  #log b { color: #2f7d4f; font-weight: 400; }
+  #log .d { color: #9a9184; }
+
+  /* 页面左下角：面板尺寸百分比缩放控件 */
+  #scaler {
+    position: fixed; left: 16px; bottom: 16px; z-index: 80;
+    background: rgba(255,253,247,.94); border: 1px solid rgba(44,40,34,.14);
+    border-radius: 10px; padding: 10px 12px;
+    font: 12px/1.7 ui-monospace, Consolas, monospace; color: #8a5a1f;
+    box-shadow: 0 8px 26px rgba(60,50,35,.10);
+    backdrop-filter: blur(8px);
+    display: flex; flex-direction: column; gap: 6px; width: 300px;
+  }
+  #scaler .row { display: flex; align-items: center; gap: 8px; }
+  #scaler label { color: #8a8172; flex: none; }
+  #scaler input[type="range"] { flex: 1; accent-color: #c07a2a; min-width: 0; }
+  #scaler input[type="number"] {
+    width: 62px; height: 24px; padding: 0 6px; text-align: right;
+    border-radius: 6px; border: 1px solid rgba(44,40,34,.20);
+    background: #fffdf7; color: #3a342b;
+    font: 12px/1 ui-monospace, Consolas, monospace; outline: none;
+  }
+  #scaler input[type="number"]:focus { border-color: rgba(192,122,42,.65); }
+  #scaler .unit { color: #8a8172; flex: none; }
+  #scaler .info { color: #2f7d4f; }
+  #scaler .hint { color: #9a9184; }
+  #scaler button {
+    height: 24px; padding: 0 10px; border-radius: 6px; cursor: pointer;
+    border: 1px solid rgba(44,40,34,.20); background: #fffdf7;
+    color: #3a342b; font: 12px/1 system-ui, sans-serif;
+  }
+  #scaler button:hover { border-color: rgba(192,122,42,.65); color: #8a5a1f; }
+
+
+  /* ---------- 可拖动的浮动面板 ----------
+     平时完全不可见（无边框、无阴影、无背景），角色看起来就像直接站在网页上；
+     鼠标移入范围时才显出边框和投影，提示"这里是一块可拖动的浮层"。 */
+  .floater {
+    position: fixed; left: 56px; top: 120px;
+    width: 420px; height: 430px;   /* 刚好装下角色：除 _Cam 机位动画外全部 23 段（含 Vital_Death）实测需 ≥384×386px */
+    border-radius: 16px; overflow: hidden;
+    /* 用「透明边框」而不是 border:none —— 尺寸不变，悬停时不会导致布局跳动 */
+    border: 1px solid transparent;
+    /* ⚠️ 这里不要给不透明背景：查看器画布本身是透明的
+       （配置 background.transparent = true），容器一有实色背景，
+       透明就看不出来了 —— 背后的网页内容会被整块盖住，看着像"背景没生效"。 */
+    background: transparent;
+    box-shadow: none;
+    transition: border-color .18s ease, box-shadow .18s ease;
+    z-index: 60;
+    /* 触摸设备上避免页面跟着滚动 */
+    touch-action: none;
+  }
+  .floater:hover {
+    /* 米白底上要用深色描边才看得见（原来在深色底上用的是白色） */
+    border-color: rgba(44,40,34,.22);
+    box-shadow: 0 18px 44px rgba(60,50,35,.18);
+  }
+
+  /* 动画选单：放在左下角控件区，只通过全局 play3dmodelaction([...]) 驱动 */
+  #animSel {
+    flex: 1; min-width: 0; height: 24px;
+    padding: 0 22px 0 8px;
+    border-radius: 7px; border: 1px solid rgba(44,40,34,.20);
+    background: #fffdf7 url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='10' height='6'><path d='M0 0l5 6 5-6z' fill='%238a8172'/></svg>") no-repeat right 8px center;
+    color: #3a342b; font: 12px/1 system-ui, sans-serif;
+    appearance: none; -webkit-appearance: none; cursor: pointer;
+    outline: none;
+  }
+  #animSel:hover { border-color: rgba(192,122,42,.65); }
+  #animSel option { background: #fffdf7; color: #3a342b; }
+
+  @media (max-width: 900px) {
+    /* 注意：这里刻意不用 transform 居中 —— 拖动会把内联 transform 覆盖掉，
+       用 margin 居中才能避免「首次拖动跳位」 */
+    .floater {
+      /* 注意 max() 不是 min()：margin 要等于「盒宽的一半」。
+         92vw 更窄时盒宽 = 92vw → -46vw；否则盒宽 = 420px → -210px */
+      left: 50%; margin-left: max(-46vw, -210px); top: 76px;
+      width: min(92vw, 420px); height: 430px;
+    }
+    #log, #scaler { display: none; }
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <h1>3D 模型网页内嵌看板娘演示</h1>
+  <p class="sub">
+    左边那个角色就是内嵌的查看器 —— 浮层本身**平时完全隐形**（鼠标移进它的范围才显出边框和投影），
+    所以看起来就像角色直接站在网页上。<b>按住角色本体拖动可以移动整个面板</b>，
+    <b>按住右键拖动可以旋转角色</b>。按住左键时页面会通过 <code>play3dmodelaction</code> 触发
+    <code>Formation_Pickup</code>，松开恢复。
+  </p>
+
+  <h2>1. 放一个容器 + 两行 script 就能用</h2>
+  <pre>&lt;!-- data-ba3d-drag 开启「左键按角色拖容器」 --&gt;
+&lt;div data-ba3d data-ba3d-drag data-ba3d-config="./assets/sample.json"
+     style="width:420px;height:430px"&gt;&lt;/div&gt;
+
+&lt;script type="module"&gt;
+  import { autoMount } from './dist/ba3d-viewer.min.js';  // 自包含单文件版，无需 importmap
+  autoMount();
+&lt;/script&gt;</pre>
+
+  <h2>2. 容器的 data-* 属性</h2>
+  <table>
+    <tr><th>属性</th><th>说明</th></tr>
+    <tr><td><code>data-ba3d</code></td><td>标记这个容器要挂查看器</td></tr>
+    <tr><td><code>data-ba3d-config</code></td><td>配置 JSON（模型 / 嘴部贴图 / 基准 / 渲染 / 打光 / 背景）</td></tr>
+    <tr><td><code>data-ba3d-model</code></td><td>模型文件 URL（<code>.glb</code>）</td></tr>
+    <tr><td><code>data-ba3d-mouth</code></td><td>嘴部修复贴图 URL（<code>.png</code>）</td></tr>
+    <tr><td><code>data-ba3d-drag</code></td><td>开启「左键按在模型上拖动整个容器」</td></tr>
+    <tr><td><code>data-ba3d-auto-rotate</code></td><td><code>true</code> 自动旋转</td></tr>
+  </table>
+
+  <h2>3. 面板尺寸：按百分比改就是整体等比缩放</h2>
+  <p>配置里的取景相关字段：</p>
+  <table>
+    <tr><th>字段</th><th>说明</th></tr>
+    <tr><td><code>renderer.framing</code></td>
+        <td><code>"tight"</code> = 用<b>真实蒙皮内容</b>居中（整盒的居中/落地是错的，会让角色偏心 + 悬空）</td></tr>
+    <tr><td><code>renderer.framingReferenceHeight</code></td>
+        <td><b>参考面板高度</b>。相机参数按它一次算成<b>固定世界量</b> —— 于是面板按百分比缩放时，画面整体等比缩放（角色尺寸和相对位置一起变）。本例选 430（面板高度）</td></tr>
+    <tr><td><code>renderer.framingOffsetY</code></td>
+        <td>取景垂直偏移，单位 CSS 像素（以参考高度为准），正值 = 取景下移 / 画面内容上移。倒地类动作会把内容压在画面下方，下移 57px 把上下余量拉平</td></tr>
+  </table>
+  <p>所以把容器尺寸按比例改一下就行，不需要动任何其它参数：</p>
+  <pre>&lt;!-- 原始（参考）尺寸 --&gt;
+&lt;div data-ba3d data-ba3d-drag data-ba3d-config="./assets/sample.json"
+     style="width:420px;height:430px"&gt;&lt;/div&gt;
+
+&lt;!-- 放大 1.5 倍 --&gt;
+&lt;div ... style="width:630px;height:645px"&gt;&lt;/div&gt;
+
+&lt;!-- 缩小到 60% --&gt;
+&lt;div ... style="width:252px;height:258px"&gt;&lt;/div&gt;
+
+&lt;!-- 或者用百分比 / 响应式单位也行 --&gt;
+&lt;div ... style="width:50vh;height:51vh"&gt;&lt;/div&gt;</pre>
+  <p>载入模型时若觉得太小/太大，<strong>不用改配置，直接滚动滚轮缩放模型</strong>即可。</p>
+
+  <h2>4. 交互约定</h2>
+  <table>
+    <tr><th>操作</th><th>行为</th></tr>
+    <tr><td>左键按在<b>模型身上</b>拖动</td><td>移动整个容器（需 <code>data-ba3d-drag</code>）</td></tr>
+    <tr><td>右键按在<b>模型身上</b>拖动</td><td>旋转角色（左键不再旋转）</td></tr>
+    <tr><td>滚轮</td><td>缩放</td></tr>
+  </table>
+  <h3>按住才算「按下」：0.2s 阈值</h3>
+  <p>左键在模型上按下后**不会立刻**触发——先进入待定，按住超过 <code>pressHoldMs</code>（默认 <b>200ms</b>）
+     才真正算一次「按下」，这时才会派发 <code>ba3d:press</code> 并开始拖动容器；
+     没按够就松手算「点击」，派发 <code>ba3d:click</code>，不触发拖动。</p>
+  <p>这样**点一下想触发动作、结果把面板拖走了**的情况就不会发生了。</p>
+  <pre>panel.addEventListener('ba3d:press', (e) =&gt; {
+  // e.detail = { button, heldMs, thresholdMs, hit }   按住够久了 → 触发动作
+});
+panel.addEventListener('ba3d:click', (e) =&gt; {
+  // e.detail = { button, heldMs, thresholdMs, hit }   短按 → 算点击
+});</pre>
+  <p>所有按下/抬起都会在容器上派发<strong>冒泡的 CustomEvent</strong>，页面直接监听即可：</p>
+  <pre>panel.addEventListener('ba3d:pointerdown', (e) =&gt; {
+  // e.detail = { button, hit }                        hit=是否按在模型身上（立即派发，不过阈值）
+});
+panel.addEventListener('ba3d:pointerup', (e) =&gt; {
+  // e.detail = { button, hit, pressedOnModel, pressed }
+  //   pressed = 本次是否越过了按住阈值（true=按下过 / false=只是点击）
+});</pre>
+
+  <h2>5. 动作钩子：<code>play3dmodelaction([动作数组])</code></h2>
+  <pre>play3dmodelaction(['Formation_Pickup']);   // 播第一个能匹配到的动作
+play3dmodelaction(['A', 'B']);             // 按顺序找，播第一个存在的
+play3dmodelaction([3]);                    // 也可以用索引
+play3dmodelaction('Cafe_Idle');            // 单个字符串也行
+play3dmodelaction();                       // 不传 → 回到默认动作（随机 idle）</pre>
+  <p>匹配规则：精确名字 → 忽略大小写精确 → 「名字包含」（忽略大小写）。
+     所以 <code>'Formation_Pickup'</code> 能匹配到 <code>xxx_Formation_Pickup</code>。</p>
+
+  <h3>左下角控件区的动作选单</h3>
+  <p>左下角控件区最上面那行的下拉选单就是纯页面代码：动作列表问一次查看器，**切动作只走全局钩子**，
+     完全不碰模型内部：</p>
+  <pre>const sel = document.getElementById('animSel');
+let current = null;
+
+// 1) 用动作列表填充选单
+for (const a of viewer.getAnimations()) {
+  const o = document.createElement('option');
+  o.value = a.name;
+  o.textContent = a.name.replace(/^[^_]*_/, '');
+  sel.appendChild(o);
+}
+// 2) 监听查看器的 ba3d:action 事件来同步选中项（不读查看器内部状态）
+panel.addEventListener('ba3d:action', (e) =&gt; { sel.value = current = e.detail.name; });
+
+// 3) 切换 = 调全局钩子（返回值是实际播上的动作名）
+sel.addEventListener('change', () =&gt; {
+  const played = play3dmodelaction([sel.value]);
+  if (played) current = played;
+});</pre>
+  <p>左键按下/抬起也用同一个 <code>current</code>，所以「按下触发 Pickup → 抬起恢复」恢复的
+     正是你在选单里选的那一段。</p>
+
+  <p>本页测试代码（就是左下角日志里跑的那段）：</p>
+  <pre>const panel = document.getElementById('floatPanel');
+let prevAction = null;
+
+// 按住 ≥200ms 才算「按下」
+panel.addEventListener('ba3d:press', (e) =&gt; {
+  if (e.detail.button !== 0) return;
+  prevAction = current;                                 // 记住选单里选的
+  play3dmodelaction(['Formation_Pickup']);              // 按下：触发动作
+});
+
+// 短按算点击，不触发按下
+panel.addEventListener('ba3d:click', (e) =&gt; {
+  console.log('点击，按住', e.detail.heldMs, 'ms / 阈值', e.detail.thresholdMs, 'ms');
+});
+
+panel.addEventListener('ba3d:pointerup', (e) =&gt; {
+  if (e.detail.button !== 0 || !e.detail.pressed) return;   // 只有真的按下过才恢复
+  play3dmodelaction(prevAction ? [prevAction] : undefined); // 不带参 = 回默认动作
+});</pre>
+
+  <h2>6. 默认动作</h2>
+  <p>配置里没写 <code>animation.name</code> 时，会**在名字含 <code>idle</code> 的动作里随机**挑一个作为初始动作
+     （本模型有 <code>Normal_Idle</code> / <code>Cafe_Idle</code> / <code>Formation_Idle</code> 三个）。
+     多刷新几次能看到初始动作在变。</p>
+
+  <h2>7. 也可以用 JS 创建（等价）</h2>
+  <pre>import { createViewer } from './dist/ba3d-viewer.min.js';
+
+const viewer = createViewer(document.getElementById('floatPanel'), {
+  modelUrl:       './assets/sample.glb',
+  mouthAtlasUrl:  './assets/mouth/Character_Mouth_High.png',
+  configUrl:      './assets/sample.json',   // 也可直接传对象：config: {...}
+  dragContainer:  true,              // 左键按模型拖容器
+  backgroundTransparent: true,
+});
+await viewer.load();
+viewer.playAction(['Formation_Pickup']);</pre>
+
+</div>
+
+<!-- ======== 浮层背后的彩色装饰：验证查看器背景真的是透明的 ======== -->
+<div id="showcase"></div>
+
+<!-- ======== 可拖动的浮动面板（就是内嵌的查看器容器） ======== -->
+<div id="floatPanel" class="floater"
+     data-ba3d data-ba3d-drag data-ba3d-config="./assets/sample.json"></div>
+
+<div id="log"><div class="d">— 操作日志 —</div></div>
+
+<!-- 面板尺寸百分比缩放：验证「按百分比改面板 = 整体等比缩放」 -->
+<div id="scaler">
+  <div class="row">
+    <!-- 动作选单：页面自己维护，切换时只调 play3dmodelaction([...]) -->
+    <label for="animSel">动作</label>
+    <select id="animSel" title="选择播放的动画（走 play3dmodelaction）">
+      <option>加载中…</option>
+    </select>
+  </div>
+  <div class="row">
+    <label for="scaleNum">面板尺寸</label>
+    <input id="scaleNum" type="number" min="20" max="400" step="5" value="100" />
+    <span class="unit">%</span>
+    <button id="scaleReset" type="button">重置</button>
+  </div>
+  <div class="row">
+    <input id="scaleRange" type="range" min="40" max="200" step="5" value="100" />
+  </div>
+  <div class="row">
+    <span class="info" id="scaleInfo">420 × 430 px</span>
+    <span class="hint" id="scaleHint"></span>
+  </div>
+</div>
+
+<script type="module">
+  import { autoMount } from './dist/ba3d-viewer.min.js';
+
+  const logEl = document.getElementById('log');
+  const log = (msg, hi) => {
+    const d = document.createElement('div');
+    d.innerHTML = hi ? '<b>' + msg + '</b>' : msg;
+    logEl.appendChild(d);
+    logEl.scrollTop = logEl.scrollHeight;
+  };
+
+  const panel = document.getElementById('floatPanel');
+  let viewer = null;
+
+  try {
+    const viewers = autoMount(); // 扫描 [data-ba3d] → 建查看器并自动开始加载
+    viewer = viewers[0] || null;
+    log('已挂载查看器：' + viewers.length + ' 个');
+  } catch (e) {
+    panel.innerHTML = '<div style="padding:24px;color:#ff9b9b;font:13px monospace">初始化失败：'
+      + (e && e.message ? e.message : e) + '</div>';
+  }
+
+  // 加载失败时把原因贴出来，避免"只看到一片空白"
+  const t = setInterval(() => {
+    if (panel.dataset.ba3dError) {
+      clearInterval(t);
+      panel.innerHTML = '<div style="padding:24px;color:#ff9b9b;font:13px monospace">模型加载失败：'
+        + panel.dataset.ba3dError + '</div>';
+    }
+  }, 400);
+  setTimeout(() => clearInterval(t), 20000);
+
+  /* ---------- 动作：全部只通过全局 play3dmodelaction([...]) 驱动 ---------- */
+  const animSel = document.getElementById('animSel');
+  let currentAction = null;   // 页面自己记录当前动作（不依赖模型 js 的内部状态）
+
+  /** 唯一入口：调用全局钩子，成功后记下实际播放的名字 */
+  function playVia(actions) {
+    const played = typeof window.play3dmodelaction === 'function'
+      ? window.play3dmodelaction(actions)
+      : null;
+    if (played) currentAction = played;
+    return played;
+  }
+
+  /** 用模型里的动作列表填充选单（列表本身要问一次查看器） */
+  function fillAnimMenu() {
+    if (!viewer || !viewer.getAnimations) return;
+    const list = viewer.getAnimations();
+    animSel.innerHTML = '';
+    for (const a of list) {
+      const o = document.createElement('option');
+      o.value = a.name;
+	  
+      o.textContent = a.name.replace(/^[^_]*_/, '');   // 显示时去掉前缀
+      animSel.appendChild(o);
+    }
+    // 选中当前生效的动作（来自 ba3d:action 事件；还没收到就用配置里的默认动作）
+    const cur = currentAction || viewer.getDefaultAction();
+    if (cur) { currentAction = cur; animSel.value = cur; }
+  }
+
+  // 查看器切换动作时会派发 ba3d:action —— 选单据此保持同步（不读查看器内部状态）
+  panel.addEventListener('ba3d:action', (e) => {
+    currentAction = e.detail.name;
+    if (animSel.value !== currentAction) animSel.value = currentAction;
+  });
+
+  // 切选单 → play3dmodelaction([名字])
+  animSel.addEventListener('change', () => {
+    const name = animSel.value;
+    const played = playVia([name]);
+    log('选单 → play3dmodelaction([\'' + name + '\']) → ' + played, true);
+    if (!played) animSel.value = currentAction || '';
+  });
+
+  /* ---------- 左键：按住 ≥0.2s 才算「按下」，短按算「点击」 ---------- */
+  let prevAction = null;
+
+  // 右键：按下即开始旋转
+  panel.addEventListener('ba3d:pointerdown', (e) => {
+    const { button, hit } = e.detail;
+    if (button === 2 && hit) log('右键按下 · 开始旋转角色');
+  });
+
+  // 左键按住够久 → 触发动作（拖动容器也在这时才开始）
+  panel.addEventListener('ba3d:press', (e) => {
+    if (e.detail.button !== 0) return;
+    prevAction = currentAction;                       // 记住当前动作，抬起时恢复
+    const played = playVia(['Formation_Pickup']);
+    log('按住 ' + e.detail.heldMs + 'ms → play3dmodelaction([\'Formation_Pickup\']) → ' + played + '<br>'
+      + '<span class="d">（已跨越 ' + e.detail.thresholdMs + 'ms 阈值，记作「按下」；原动作：'
+      + (prevAction || '默认') + '）</span>', true);
+  });
+
+  // 左键没按够就松手 → 算点击，不触发按下
+  panel.addEventListener('ba3d:click', (e) => {
+    if (e.detail.button !== 0) return;
+    log('点击 · 按住 ' + e.detail.heldMs + 'ms（未达 ' + e.detail.thresholdMs + 'ms 阈值）→ 不触发按下动作');
+  });
+
+  // 抬起：只有真的「按下」过才恢复动作
+  panel.addEventListener('ba3d:pointerup', (e) => {
+    const { button, pressed } = e.detail;
+    if (button !== 0 || !pressed) return;
+    // 没记录到具体动作就交回默认（play3dmodelaction() 不带参数 = 回默认动作）
+    const back = prevAction ? playVia([prevAction]) : playVia();
+    log('抬起 → 恢复动作 → ' + back);
+    if (back) animSel.value = back;
+  });
+
+  /* ---------- 面板尺寸百分比缩放 ----------
+     tight 模式下取景参数是按「参考高度」算好的固定世界量，
+     所以改容器尺寸就是整体等比缩放：角色尺寸 + 相对位置一起变。   */
+  const REF_W = 420, REF_H = 430, REF_PCT = 100;
+  const scaleNum = document.getElementById('scaleNum');
+  const scaleRange = document.getElementById('scaleRange');
+  const scaleInfo = document.getElementById('scaleInfo');
+  const scaleHint = document.getElementById('scaleHint');
+
+  function applyScale(pct, quiet) {
+    let p = Number(pct);
+    if (!isFinite(p)) p = REF_PCT;
+    p = Math.max(20, Math.min(400, p));
+    const w = Math.round(REF_W * p / 100);
+    const h = Math.round(REF_H * p / 100);
+    panel.style.width = w + 'px';
+    panel.style.height = h + 'px';
+    scaleNum.value = p;
+    scaleRange.value = Math.max(40, Math.min(200, p));
+    scaleInfo.textContent = w + ' × ' + h + ' px';
+    scaleHint.textContent = p < 100 ? '（小于 100% 会裁掉动作边缘）' : '';
+    if (!quiet) log('面板 → ' + p + '% = ' + w + '×' + h + 'px · 整体等比缩放');
+  }
+
+  scaleNum.addEventListener('change', () => applyScale(scaleNum.value));
+  scaleNum.addEventListener('keydown', (e) => { if (e.key === 'Enter') applyScale(scaleNum.value); });
+  scaleRange.addEventListener('input', () => applyScale(scaleRange.value, true));
+  scaleRange.addEventListener('change', () => applyScale(scaleRange.value));
+  document.getElementById('scaleReset').addEventListener('click', () => applyScale(REF_PCT));
+  applyScale(REF_PCT, true); // 初始化
+
+  if (viewer && panel.__ba3dLoad) {
+    // autoMount 已经开始加载了，这里只等它完成（不要再调一次 load）
+    panel.__ba3dLoad
+      .then(() => {
+        fillAnimMenu();
+        log('<span class="d">模型就绪 · 默认动作 ' + (currentAction || '?')
+          + ' · 选单已载入 ' + animSel.options.length + ' 段动作</span>');
+      })
+      .catch((err) => log('<span style="color:#ff9b9b">加载失败：' + err + '</span>'));
+  }
+</script>
+</body>
+</html>

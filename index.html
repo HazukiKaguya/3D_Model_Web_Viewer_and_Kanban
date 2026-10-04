@@ -1,0 +1,544 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+<title>3D 模型查看器 · BA 模型特化</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  html, body {
+    width: 100%; height: 100%; overflow: hidden;
+    /* 查看器背景默认透明，所以这里就是「下方网页内容」 */
+    background: radial-gradient(120% 90% at 50% 0%, #1c2434 0%, #0b0e15 72%);
+  }
+  #app { position: fixed; inset: 0; touch-action: none; }
+  #vignette {
+    position: fixed; inset: 0; pointer-events: none; z-index: 5;
+    background: radial-gradient(circle at 50% 40%, transparent 40%, rgba(0,0,0,.55) 100%);
+  }
+  #hud {
+    position: fixed; left: 16px; bottom: 16px; z-index: 10;
+    display: flex; gap: 8px; flex-wrap: wrap;
+    font: 13px/1.4 system-ui, -apple-system, "PingFang SC", sans-serif;
+    color: #cfd3dc;
+  }
+  #hud button {
+    padding: 7px 13px; border: 1px solid rgba(255,255,255,.18);
+    border-radius: 8px; background: rgba(22,26,34,.72);
+    color: inherit; cursor: pointer; backdrop-filter: blur(8px);
+    transition: background .15s, border-color .15s, color .15s;
+  }
+  #hud button:hover { background: rgba(50,58,74,.85); border-color: rgba(255,255,255,.32); }
+  #hud button.on { background: #3d6fe0; border-color: #5b8cf5; color: #fff; }
+  #hud .sep { width: 1px; background: rgba(255,255,255,.15); margin: 0 4px; }
+  #hud label {
+    display: inline-flex; align-items: center; gap: 6px;
+    font-size: 13px; color: #cfd3dc;
+  }
+  #hud select, #hud input[type=color] {
+    padding: 6px 8px; border: 1px solid rgba(255,255,255,.18);
+    border-radius: 8px; background: rgba(22,26,34,.72); color: #cfd3dc;
+    cursor: pointer; font: 13px system-ui, sans-serif; backdrop-filter: blur(8px);
+  }
+  #hud select { max-width: 180px; }
+  #hud input[type=color] { width: 34px; height: 30px; padding: 2px; }
+  #hud input[type=range] { width: 90px; vertical-align: middle; }
+  #hud input[type=number] { width: 64px; vertical-align: middle; }
+  #hud option { background: #151a26; color: #cfd3dc; }
+  #loading {
+    position: fixed; inset: 0; z-index: 20;
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    gap: 14px; background: #10131a; color: #8b93a7;
+    font: 14px system-ui, sans-serif; transition: opacity .4s;
+  }
+  #loading.hide { opacity: 0; pointer-events: none; }
+  #bar { width: 220px; height: 3px; border-radius: 2px; background: rgba(255,255,255,.1); overflow: hidden; }
+  #bar i { display: block; height: 100%; width: 0%; background: #5b8cf5; transition: width .2s; }
+  #info {
+    position: fixed; right: 16px; bottom: 16px; z-index: 10;
+    font: 12px/1.6 ui-monospace, monospace; color: #6b7385; text-align: right;
+  }
+
+  /* ---------- 自定义模型：本地文件上传 ---------- */
+  #upload {
+    position: fixed; left: 16px; top: 16px; z-index: 12;
+    width: 288px; padding: 14px;
+    border: 1px solid rgba(255,255,255,.14); border-radius: 12px;
+    background: rgba(18,22,30,.82); backdrop-filter: blur(10px);
+    font: 12.5px/1.5 system-ui, -apple-system, "PingFang SC", sans-serif;
+    color: #cfd3dc;
+    box-shadow: 0 12px 40px rgba(0,0,0,.4);
+  }
+  #upload.hidden { display: none; }
+  #upload .u-title {
+    font-size: 12px; color: #8b93a7; margin-bottom: 10px;
+    padding-bottom: 9px; border-bottom: 1px solid rgba(255,255,255,.09);
+  }
+  #upload .u-row { margin-bottom: 9px; }
+  #upload .u-pick {
+    display: block; padding: 7px 10px; cursor: pointer;
+    border: 1px dashed rgba(255,255,255,.22); border-radius: 8px;
+    background: rgba(255,255,255,.03); color: #cfd3dc;
+    transition: border-color .15s, background .15s;
+  }
+  #upload .u-pick:hover { border-color: rgba(91,140,245,.7); background: rgba(91,140,245,.10); }
+  #upload .u-pick input[type=file] { display: none; }
+  #upload .u-pick em { color: #6b7385; font-style: normal; font-size: 11px; }
+  #upload .u-name {
+    margin: 4px 2px 0; font-size: 11px; color: #6b7385;
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  }
+  #upload .u-name.has { color: #7de0a8; }
+  #upload .u-actions { display: flex; gap: 8px; margin-top: 12px; }
+  #upload .u-actions button {
+    flex: 1; padding: 8px 10px; cursor: pointer;
+    border: 1px solid rgba(255,255,255,.18); border-radius: 8px;
+    background: rgba(34,40,52,.9); color: #cfd3dc;
+    font: 12.5px system-ui, sans-serif;
+    transition: background .15s, border-color .15s;
+  }
+  #upload .u-actions button:hover:not(:disabled) { background: rgba(50,58,74,.95); border-color: rgba(255,255,255,.34); }
+  #upload .u-actions button.primary { background: #3d6fe0; border-color: #5b8cf5; color: #fff; }
+  #upload .u-actions button.primary:hover:not(:disabled) { background: #4a7cf0; }
+  #upload .u-actions button:disabled { opacity: .45; cursor: not-allowed; }
+  #upload .u-msg { margin-top: 9px; font-size: 11px; color: #7de0a8; min-height: 14px; word-break: break-all; }
+</style>
+</head>
+<body>
+
+<div id="app"></div>
+<div id="vignette"></div>
+
+<div id="hud">
+  <button id="btnUpload" title="上传本地模型文件后直接加载">自定义模型</button>
+  <span class="sep"></span>
+  <label>动作
+    <select id="animMenu" disabled><option>载入中…</option></select>
+  </label>
+  <span class="sep"></span>
+  <label>打光
+    <select id="lightMenu"></select>
+  </label>
+  <span class="sep"></span>
+  <label>渲染
+    <select id="shadingMenu"></select>
+  </label>
+  <span class="sep"></span>
+  <label>背景
+    <select id="bgMenu"></select>
+  </label>
+  <input type="color" id="bgColor" value="#10131a" title="自定义背景色" />
+  <span class="sep"></span>
+  <label>基准X
+    <input id="pivotX" type="range" min="-2" max="2" step="0.01" value="0" title="旋转中心左右偏移">
+    <input id="pivotXNum" type="number" min="-2" max="2" step="0.01" value="0" title="精确输入左右偏移">
+  </label>
+  <label>基准Z
+    <input id="pivotZ" type="range" min="-2" max="2" step="0.01" value="0" title="旋转中心前后偏移">
+    <input id="pivotZNum" type="number" min="-2" max="2" step="0.01" value="0" title="精确输入前后偏移">
+  </label>
+  <button id="btnPivotReset" title="基准归零">基准归零</button>
+  <span class="sep"></span>
+  <button id="btnAuto">自动旋转</button>
+  <button id="btnReset">重置视角</button>
+  <button id="btnAnim" class="on">播放动画</button>
+  <button id="btnWire">线框</button>
+  <button id="btnSkel">骨骼</button>
+  <button id="btnOutline" class="on">描边</button>
+  <label>粗细
+    <input id="outlineWidth" type="range" min="0" max="0.02" step="0.0005" value="0.004" title="描边粗细">
+    <input id="outlineWidthNum" type="number" min="0" max="0.02" step="0.0005" value="0.004" title="精确输入描边粗细">
+  </label>
+</div>
+
+<div id="info"></div>
+
+<!-- 自定义模型：依次选好文件 → 点「加载」 -->
+<div id="upload" class="hidden">
+  <div class="u-title">自定义模型（本地文件，不会上传到任何服务器）</div>
+
+  <div class="u-row">
+    <label class="u-pick">
+      <input type="file" id="fileModel" accept=".glb,.gltf,model/gltf-binary,model/gltf+json" />
+      选择模型文件 <em>.glb / .gltf</em>
+    </label>
+    <div class="u-name" id="nameModel">未选择</div>
+  </div>
+
+  <div class="u-row">
+    <label class="u-pick">
+      <input type="file" id="fileMouth" accept="image/png,image/*" />
+      选择嘴部修复贴图 <em>.png（可选）</em>
+    </label>
+    <div class="u-name" id="nameMouth">未选择（用默认图集）</div>
+  </div>
+
+  <div class="u-row">
+    <label class="u-pick">
+      <input type="file" id="fileConfig" accept=".json,application/json" />
+      选择基准调整 JSON <em>（可选）</em>
+    </label>
+    <div class="u-name" id="nameConfig">未选择（用默认设置）</div>
+  </div>
+
+  <div class="u-actions">
+    <button id="btnDoLoad" class="primary" disabled>请先选模型</button>
+    <button id="btnClearFiles">清空</button>
+  </div>
+  <div class="u-msg" id="uploadMsg"></div>
+</div>
+
+<div id="loading">
+  <div>模型加载中…</div>
+  <div id="bar"><i></i></div>
+</div>
+
+<script type="importmap">
+{
+  "imports": {
+    "three": "./vendor/three/three.module.js",
+    "three/addons/": "./vendor/three/"
+  }
+}
+</script>
+
+<script type="module">
+import { createViewer } from './viewer.js';
+
+const container = document.getElementById('app');
+const loadingEl = document.getElementById('loading');
+let barEl = document.querySelector('#bar i');
+const infoEl = document.getElementById('info');
+
+/* 可以通过 URL 参数传入：模型 / 嘴部修复贴图 / 配置 JSON
+   例：index.html?config=./assets/sample.json
+      index.html?model=./assets/sample.glb&mouth=./assets/mouth/Character_Mouth_2.png&config=./assets/sample.json */
+const qs = new URLSearchParams(location.search);
+const bootOpts = { modelUrl: './assets/sample.glb' };
+if (qs.get('model')) bootOpts.modelUrl = qs.get('model');
+if (qs.get('mouth')) bootOpts.mouthAtlasUrl = qs.get('mouth');
+if (qs.get('config')) bootOpts.configUrl = qs.get('config');
+
+/* ---------- 挂载（可重复调用：先销毁旧的再建新的） ---------- */
+let viewer = null;
+
+function progressHandler(p) {
+  if (barEl) barEl.style.width = (p * 100).toFixed(1) + '%';
+}
+
+async function mount(opts) {
+  if (viewer) { viewer.dispose(); viewer = null; }
+  container.innerHTML = '';
+  viewer = createViewer(container, Object.assign({ autoRotate: false, onProgress: progressHandler }, opts));
+  const info = await viewer.load();
+  afterLoad(info);
+  return info;
+}
+
+/* ---------- 首次加载 ----------
+   必须在下面的 UI 初始化之前调用：createViewer 是同步执行的，
+   所以这一行返回后 viewer 已经存在，后面所有 viewer.xxx 都安全。 */
+showLoading();
+const bootPromise = mount(bootOpts);
+bootPromise.catch((err) => {
+  console.error('模型加载失败：', err);
+  showLoadingError(err);
+});
+
+/* ---------- UI ---------- */
+const btnAuto  = document.getElementById('btnAuto');
+const btnReset = document.getElementById('btnReset');
+const btnAnim  = document.getElementById('btnAnim');
+const btnWire  = document.getElementById('btnWire');
+const btnSkel  = document.getElementById('btnSkel');
+const animMenu = document.getElementById('animMenu');
+const lightMenu = document.getElementById('lightMenu');
+const bgMenu   = document.getElementById('bgMenu');
+const bgColor  = document.getElementById('bgColor');
+const pivotX   = document.getElementById('pivotX');
+const pivotZ   = document.getElementById('pivotZ');
+const pivotXNum = document.getElementById('pivotXNum');
+const pivotZNum = document.getElementById('pivotZNum');
+
+/* 打光预设菜单 */
+viewer.getLightingPresets().forEach((p) => {
+  const opt = document.createElement('option');
+  opt.value = p.key;
+  opt.textContent = p.label;
+  lightMenu.appendChild(opt);
+});
+lightMenu.value = viewer.state.currentLighting;
+lightMenu.addEventListener('change', () => viewer.applyLighting(lightMenu.value));
+
+/* 渲染模式菜单（原始 PBR / 卡通 Cel） */
+const shadingMenu = document.getElementById('shadingMenu');
+viewer.getShadingModes().forEach((m) => {
+  const opt = document.createElement('option');
+  opt.value = m.key;
+  opt.textContent = m.label;
+  shadingMenu.appendChild(opt);
+});
+shadingMenu.value = viewer.getShading();
+shadingMenu.addEventListener('change', () => viewer.setShading(shadingMenu.value));
+
+/* 旋转基准位置（水平偏移，角色站地面）。滑杆 + 数字输入双向同步 */
+function applyPivot(x, z) {
+  const px = Number(x) || 0;
+  const pz = Number(z) || 0;
+  viewer.setPivot(px, pz);
+  pivotX.value = String(px);
+  pivotZ.value = String(pz);
+  pivotXNum.value = String(px);
+  pivotZNum.value = String(pz);
+}
+pivotX.addEventListener('input', () => applyPivot(pivotX.value, pivotZ.value));
+pivotZ.addEventListener('input', () => applyPivot(pivotX.value, pivotZ.value));
+pivotXNum.addEventListener('input', () => applyPivot(pivotXNum.value, pivotZNum.value));
+pivotZNum.addEventListener('input', () => applyPivot(pivotXNum.value, pivotZNum.value));
+document.getElementById('btnPivotReset').addEventListener('click', () => applyPivot(0, 0));
+
+/* 背景菜单：0 = 透明（默认），1..n = 预设色；另有取色器自定义 */
+const BG_NAMES = viewer.getBackgroundNames();
+function fillBgMenu() {
+  const bgs = viewer.getBackgrounds();
+  bgMenu.innerHTML = '';
+  BG_NAMES.slice(0, bgs.length + 1).forEach((label, i) => {
+    const opt = document.createElement('option');
+    opt.value = String(i);
+    opt.textContent = label;
+    bgMenu.appendChild(opt);
+  });
+}
+fillBgMenu();
+bgMenu.value = viewer.getBackground().transparent ? '0' : '';
+
+bgMenu.addEventListener('change', () => {
+  const hex = viewer.setBackground(Number(bgMenu.value));
+  if (hex !== null && hex !== undefined) {
+    bgColor.value = '#' + hex.toString(16).padStart(6, '0');
+  }
+});
+
+bgColor.addEventListener('input', () => {
+  viewer.setBackground(bgColor.value);
+  bgMenu.value = '';
+});
+
+animMenu.addEventListener('change', () => {
+  viewer.setAnimation(Number(animMenu.value));
+});
+
+btnAuto.addEventListener('click', () => {
+  const on = viewer.setAutoRotate(!viewer.state.autoRotate);
+  btnAuto.classList.toggle('on', on);
+});
+
+btnReset.addEventListener('click', () => viewer.resetView());
+
+btnAnim.addEventListener('click', () => {
+  const on = viewer.playPause();
+  btnAnim.classList.toggle('on', on);
+});
+
+btnWire.addEventListener('click', () => {
+  const on = viewer.setWireframe(!viewer.state.wireframe);
+  btnWire.classList.toggle('on', on);
+});
+
+btnSkel.addEventListener('click', () => {
+  const on = viewer.setSkeleton(!viewer.state.skeleton);
+  btnSkel.classList.toggle('on', on);
+});
+
+/* 描边开关 + 粗细（滑杆与数字框双向同步，照基准 X/Z 的写法） */
+const btnOutline = document.getElementById('btnOutline');
+const outlineWidth = document.getElementById('outlineWidth');
+const outlineWidthNum = document.getElementById('outlineWidthNum');
+
+btnOutline.classList.toggle('on', viewer.getOutline().on);
+btnOutline.addEventListener('click', () => {
+  const on = viewer.setOutline(!viewer.getOutline().on);
+  btnOutline.classList.toggle('on', on);
+});
+
+const OUTLINE_MIN = Number(outlineWidth.min) || 0;
+const OUTLINE_MAX = Number(outlineWidth.max) || 0.02;
+
+function applyOutlineWidth(v) {
+  let n = Number(v);
+  if (!isFinite(n)) n = Number(outlineWidth.value) || 0;
+  n = Math.min(OUTLINE_MAX, Math.max(OUTLINE_MIN, n));
+  viewer.setOutlineParams({ thickness: n });
+  outlineWidth.value = String(n);
+  outlineWidthNum.value = String(n);
+  return n;
+}
+
+outlineWidth.addEventListener('input', () => applyOutlineWidth(outlineWidth.value));
+outlineWidthNum.addEventListener('input', () => applyOutlineWidth(outlineWidthNum.value));
+// 数字框里手动输入时要能"从箭头慢慢加"：按上下箭头也能即时反映
+outlineWidthNum.addEventListener('change', () => applyOutlineWidth(outlineWidthNum.value));
+
+const initOutline = viewer.getOutline().thickness;
+outlineWidth.value = String(initOutline);
+outlineWidthNum.value = String(initOutline);
+
+/* ---------- 加载完成后的界面同步 ---------- */
+function afterLoad(info) {
+  infoEl.textContent =
+    `${info.meshes} meshes · ${Math.round(info.triangles / 1000)}k tris · ${info.animations} anims`;
+
+  // 配置可能改了基准/渲染/打光/描边/背景 → 把界面同步过来
+  const pv = viewer.getPivot();
+  pivotX.value = String(pv.x); pivotXNum.value = String(pv.x);
+  pivotZ.value = String(pv.z); pivotZNum.value = String(pv.z);
+  shadingMenu.value = viewer.getShading();
+  lightMenu.value = viewer.state.currentLighting;
+  btnOutline.classList.toggle('on', viewer.getOutline().on);
+  outlineWidth.value = String(viewer.getOutline().thickness);
+  outlineWidthNum.value = String(viewer.getOutline().thickness);
+  bgMenu.value = viewer.getBackground().transparent ? '0' : bgMenu.value;
+
+  // 填充动作菜单
+  const anims = viewer.getAnimations();
+  animMenu.innerHTML = '';
+  anims.forEach((a) => {
+    const opt = document.createElement('option');
+    opt.value = String(a.index);
+    opt.textContent = `${a.name}（${a.duration.toFixed(1)}s）`;
+    animMenu.appendChild(opt);
+  });
+  animMenu.disabled = false;
+  // 选中当前（默认 idle）项
+  const cur = anims.findIndex((a) => a.name === viewer.state.currentAnimation);
+  if (cur >= 0) animMenu.value = String(cur);
+
+  hideLoading();
+}
+
+function showLoading(text) {
+  loadingEl.innerHTML =
+    '<div>' + (text || '模型加载中…') + '</div><div id="bar"><i></i></div>';
+  loadingEl.classList.remove('hide');
+  barEl = document.querySelector('#bar i');
+  if (barEl) barEl.style.width = '0%';
+}
+function hideLoading() { loadingEl.classList.add('hide'); }
+function showLoadingError(err) {
+  loadingEl.innerHTML =
+    '<div style="color:#e06c6c;text-align:center;padding:0 24px">' +
+    '模型加载失败<br><span style="font-size:12px;opacity:.7">' +
+    '检查文件格式 / 是否缺少贴图</span>' +
+    '<br><span style="font-size:11px;opacity:.5">' + String(err && err.message || err) + '</span></div>';
+  loadingEl.classList.remove('hide');
+}
+
+/* ---------- 自定义模型：依次上传文件 → 点「加载」 ---------- */
+const uploadEl = document.getElementById('upload');
+const btnUpload = document.getElementById('btnUpload');
+const uploadMsgEl = document.getElementById('uploadMsg');
+const picked = { model: null, mouth: null, config: null };
+let objectUrls = [];   // 自己创建的 blob URL，换模型时要释放
+
+const FILE_UI = {
+  model:  { input: 'fileModel',  name: 'nameModel',  empty: '未选择' },
+  mouth:  { input: 'fileMouth',  name: 'nameMouth',  empty: '未选择（用默认图集）' },
+  config: { input: 'fileConfig', name: 'nameConfig', empty: '未选择（用默认设置）' },
+};
+
+function setMsg(text, isErr) {
+  uploadMsgEl.textContent = text || '';
+  uploadMsgEl.style.color = isErr ? '#e06c6c' : '#7de0a8';
+}
+
+function setPicked(key, file) {
+  picked[key] = file || null;
+  const ui = FILE_UI[key];
+  const nameEl = document.getElementById(ui.name);
+  if (file) {
+    nameEl.textContent = file.name + ' · ' + (file.size >= 1048576
+      ? (file.size / 1048576).toFixed(1) + ' MB'
+      : Math.max(1, Math.round(file.size / 1024)) + ' KB');
+    nameEl.classList.add('has');
+  } else {
+    nameEl.textContent = ui.empty;
+    nameEl.classList.remove('has');
+  }
+  const btn = document.getElementById('btnDoLoad');
+  btn.disabled = !picked.model;
+  btn.textContent = picked.model ? '加载' : '请先选模型';
+}
+
+function clearPicked() {
+  Object.keys(FILE_UI).forEach((key) => {
+    document.getElementById(FILE_UI[key].input).value = '';
+    setPicked(key, null);
+  });
+  setMsg('');
+}
+
+Object.keys(FILE_UI).forEach((key) => {
+  document.getElementById(FILE_UI[key].input).addEventListener('change', (e) => {
+    setPicked(key, e.target.files && e.target.files[0]);
+    setMsg('');
+  });
+});
+document.getElementById('btnClearFiles').addEventListener('click', clearPicked);
+document.getElementById('btnDoLoad').addEventListener('click', doLoadPicked);
+
+btnUpload.addEventListener('click', () => {
+  const on = uploadEl.classList.toggle('hidden') === false;
+  btnUpload.classList.toggle('on', on);
+});
+
+async function doLoadPicked() {
+  if (!picked.model) return;
+  const btn = document.getElementById('btnDoLoad');
+  btn.disabled = true;
+  setMsg('准备中…');
+
+  // 释放上一轮的 blob URL
+  while (objectUrls.length) URL.revokeObjectURL(objectUrls.pop());
+
+  const opts = { modelUrl: URL.createObjectURL(picked.model) };
+  objectUrls.push(opts.modelUrl);
+
+  if (picked.mouth) {
+    opts.mouthAtlasUrl = URL.createObjectURL(picked.mouth);
+    objectUrls.push(opts.mouthAtlasUrl);
+  }
+
+  if (picked.config) {
+    let conf;
+    try {
+      conf = JSON.parse(await picked.config.text());
+    } catch (e) {
+      setMsg('配置 JSON 解析失败：' + e.message, true);
+      btn.disabled = false;
+      return;
+    }
+    // 上传的配置里模型/贴图路径失去了解析基准（原本是相对配置文件所在目录），
+    // 一律改用上传的文件，所以把这两个字段删掉
+    if (conf.model) { delete conf.model.url; delete conf.model.mouthAtlas; }
+    opts.config = conf;
+  }
+
+  setMsg('加载中…');
+  showLoading('模型加载中…');
+  try {
+    await mount(opts);
+    setMsg('已加载：' + picked.model.name);
+  } catch (err) {
+    console.error('自定义模型加载失败：', err);
+    setMsg('加载失败：' + (err && err.message ? err.message : err), true);
+    showLoadingError(err);
+  } finally {
+    btn.disabled = false;
+  }
+}
+
+/* ---------- 首次加载的收尾 ---------- */
+setPicked('model', null);
+</script>
+</body>
+</html>
