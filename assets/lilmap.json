@@ -1,0 +1,1901 @@
+{
+ "_comment": "我们的 lilCfg 键 ↔ lilToon 着色器属性。由 scripts/gen-lilmap.mjs 生成：all-segs/group+leaf/leaf 最可靠，words 需抽看，comment 需复核",
+ "generatedFrom": [
+  "assets/lilprops.json",
+  "viewer.js 的 lilCfg（任意深度 ✓）"
+ ],
+ "propsCount": 517,
+ "counts": {
+  "leaves": 241,
+  "containers": 15,
+  "mapped": 228,
+  "unmapped": 13,
+  "confHigh": 145,
+  "confMedium": 39,
+  "confLow": 0,
+  "shapeJudged": 80,
+  "shapeGood": 80,
+  "shapeBad": 0,
+  "byHow": {
+   "leaf": 30,
+   "override": 44,
+   "words": 39,
+   "all-segs": 115
+  }
+ },
+ "mapped": [
+  {
+   "path": "mainTexHSVG",
+   "lil": "_MainTexHSVG",
+   "type": "vector",
+   "how": "leaf",
+   "conf": "high",
+   "shapeOK": true
+  },
+  {
+   "path": "mainTexScrollRotate",
+   "lil": "_MainTex_ScrollRotate",
+   "type": "vector",
+   "how": "leaf",
+   "conf": "high",
+   "shapeOK": true
+  },
+  {
+   "path": "transparentMode",
+   "lil": "_TransparentMode",
+   "type": "int",
+   "how": "leaf",
+   "conf": "high",
+   "shapeOK": true
+  },
+  {
+   "path": "cutoff",
+   "lil": "_Cutoff",
+   "type": "range",
+   "how": "leaf",
+   "conf": "high",
+   "shapeOK": true
+  },
+  {
+   "path": "cull",
+   "lil": "_Cull",
+   "type": "int",
+   "how": "leaf",
+   "conf": "high",
+   "shapeOK": true
+  },
+  {
+   "path": "useShadow",
+   "lil": "_UseShadow",
+   "type": "int",
+   "how": "override",
+   "conf": "manual",
+   "shapeOK": true
+  },
+  {
+   "path": "shadowStrength",
+   "lil": "_ShadowStrength",
+   "type": "range",
+   "how": "leaf",
+   "conf": "high",
+   "shapeOK": null
+  },
+  {
+   "path": "shadowColor",
+   "lil": "_ShadowColor",
+   "type": "color",
+   "how": "leaf",
+   "conf": "high",
+   "shapeOK": true
+  },
+  {
+   "path": "shadowBorder",
+   "lil": "_ShadowBorder",
+   "type": "range",
+   "how": "leaf",
+   "conf": "high",
+   "shapeOK": true
+  },
+  {
+   "path": "shadowBorderRange",
+   "lil": "_ShadowBorderRange",
+   "type": "range",
+   "how": "leaf",
+   "conf": "high",
+   "shapeOK": true
+  },
+  {
+   "path": "shadowMainStrength",
+   "lil": "_ShadowMainStrength",
+   "type": "range",
+   "how": "leaf",
+   "conf": "high",
+   "shapeOK": true
+  },
+  {
+   "path": "shadowReceive",
+   "lil": "_ShadowReceive",
+   "type": "range",
+   "how": "leaf",
+   "conf": "high",
+   "shapeOK": true
+  },
+  {
+   "path": "shadow2ndReceive",
+   "lil": "_Shadow2ndReceive",
+   "type": "range",
+   "how": "leaf",
+   "conf": "high",
+   "shapeOK": true
+  },
+  {
+   "path": "shadow3rdReceive",
+   "lil": "_Shadow3rdReceive",
+   "type": "range",
+   "how": "leaf",
+   "conf": "high",
+   "shapeOK": true
+  },
+  {
+   "path": "shadowBlur",
+   "lil": "_ShadowBlur",
+   "type": "range",
+   "how": "leaf",
+   "conf": "high",
+   "shapeOK": true
+  },
+  {
+   "path": "shadow2ndColor",
+   "lil": "_Shadow2ndColor",
+   "type": "color",
+   "how": "leaf",
+   "conf": "high",
+   "shapeOK": true
+  },
+  {
+   "path": "shadow2ndBorder",
+   "lil": "_Shadow2ndBorder",
+   "type": "range",
+   "how": "leaf",
+   "conf": "high",
+   "shapeOK": true
+  },
+  {
+   "path": "shadow2ndBlur",
+   "lil": "_Shadow2ndBlur",
+   "type": "range",
+   "how": "leaf",
+   "conf": "high",
+   "shapeOK": true
+  },
+  {
+   "path": "shadow3rdColor",
+   "lil": "_Shadow3rdColor",
+   "type": "color",
+   "how": "override",
+   "conf": "manual",
+   "shapeOK": null
+  },
+  {
+   "path": "shadow3rdBorder",
+   "lil": "_Shadow3rdBorder",
+   "type": "range",
+   "how": "leaf",
+   "conf": "high",
+   "shapeOK": true
+  },
+  {
+   "path": "shadow3rdBlur",
+   "lil": "_Shadow3rdBlur",
+   "type": "range",
+   "how": "leaf",
+   "conf": "high",
+   "shapeOK": true
+  },
+  {
+   "path": "shadowNormalStrength",
+   "lil": "_ShadowNormalStrength",
+   "type": "range",
+   "how": "leaf",
+   "conf": "high",
+   "shapeOK": true
+  },
+  {
+   "path": "shadow2ndNormalStrength",
+   "lil": "_Shadow2ndNormalStrength",
+   "type": "range",
+   "how": "leaf",
+   "conf": "high",
+   "shapeOK": true
+  },
+  {
+   "path": "shadow3rdNormalStrength",
+   "lil": "_Shadow3rdNormalStrength",
+   "type": "range",
+   "how": "leaf",
+   "conf": "high",
+   "shapeOK": true
+  },
+  {
+   "path": "bump.use",
+   "lil": "_UseBumpMap",
+   "type": "int",
+   "how": "words",
+   "conf": "medium",
+   "shapeOK": null
+  },
+  {
+   "path": "bump.tex",
+   "lil": "_BumpMap",
+   "type": "texture",
+   "how": "words",
+   "conf": "medium",
+   "shapeOK": null
+  },
+  {
+   "path": "bump.scale",
+   "lil": "_BumpScale",
+   "type": "range",
+   "how": "all-segs",
+   "conf": "high",
+   "shapeOK": null
+  },
+  {
+   "path": "bump2nd.use",
+   "lil": "_UseBump2ndMap",
+   "type": "int",
+   "how": "words",
+   "conf": "medium",
+   "shapeOK": null
+  },
+  {
+   "path": "bump2nd.tex",
+   "lil": "_Bump2ndMap",
+   "type": "texture",
+   "how": "words",
+   "conf": "medium",
+   "shapeOK": null
+  },
+  {
+   "path": "bump2nd.scale",
+   "lil": "_Bump2ndScale",
+   "type": "range",
+   "how": "all-segs",
+   "conf": "high",
+   "shapeOK": null
+  },
+  {
+   "path": "bump2nd.scaleMask",
+   "lil": "_Bump2ndScaleMask",
+   "type": "texture",
+   "how": "all-segs",
+   "conf": "high",
+   "shapeOK": null
+  },
+  {
+   "path": "bump2nd.uvMode",
+   "lil": "_Bump2ndMap_UVMode",
+   "type": "int",
+   "how": "words",
+   "conf": "medium",
+   "shapeOK": null
+  },
+  {
+   "path": "outline.enable",
+   "lil": "_UseOutline",
+   "type": "int",
+   "how": "override",
+   "conf": "manual",
+   "shapeOK": null
+  },
+  {
+   "path": "outline.color",
+   "lil": "_OutlineColor",
+   "type": "color",
+   "how": "all-segs",
+   "conf": "high",
+   "shapeOK": true
+  },
+  {
+   "path": "outline.tex",
+   "lil": "_OutlineTex",
+   "type": "texture",
+   "how": "all-segs",
+   "conf": "high",
+   "shapeOK": null
+  },
+  {
+   "path": "outline.width",
+   "lil": "_OutlineWidth",
+   "type": "range",
+   "how": "all-segs",
+   "conf": "high",
+   "shapeOK": null
+  },
+  {
+   "path": "outline.widthMask",
+   "lil": "_OutlineWidthMask",
+   "type": "texture",
+   "how": "all-segs",
+   "conf": "high",
+   "shapeOK": null
+  },
+  {
+   "path": "outline.texST",
+   "lil": "_OutlineTex_ScrollRotate",
+   "type": "vector",
+   "how": "override",
+   "conf": "manual",
+   "shapeOK": true
+  },
+  {
+   "path": "outline.texScrollRotate",
+   "lil": "_OutlineTex_ScrollRotate",
+   "type": "vector",
+   "how": "all-segs",
+   "conf": "high",
+   "shapeOK": true
+  },
+  {
+   "path": "outline.texHSVG",
+   "lil": "_OutlineTexHSVG",
+   "type": "vector",
+   "how": "all-segs",
+   "conf": "high",
+   "shapeOK": true
+  },
+  {
+   "path": "outline.stencilEnable",
+   "lil": "_OutlineStencilRef",
+   "type": "range",
+   "how": "override",
+   "conf": "manual",
+   "shapeOK": null
+  },
+  {
+   "path": "outline.stencilRef",
+   "lil": "_OutlineStencilRef",
+   "type": "range",
+   "how": "all-segs",
+   "conf": "high",
+   "shapeOK": null
+  },
+  {
+   "path": "outline.stencilReadMask",
+   "lil": "_OutlineStencilReadMask",
+   "type": "range",
+   "how": "all-segs",
+   "conf": "high",
+   "shapeOK": null
+  },
+  {
+   "path": "outline.stencilWriteMask",
+   "lil": "_OutlineStencilWriteMask",
+   "type": "range",
+   "how": "all-segs",
+   "conf": "high",
+   "shapeOK": null
+  },
+  {
+   "path": "outline.stencilComp",
+   "lil": "_OutlineStencilComp",
+   "type": "float",
+   "how": "all-segs",
+   "conf": "high",
+   "shapeOK": null
+  },
+  {
+   "path": "outline.stencilPass",
+   "lil": "_OutlineStencilPass",
+   "type": "float",
+   "how": "all-segs",
+   "conf": "high",
+   "shapeOK": null
+  },
+  {
+   "path": "outline.stencilFail",
+   "lil": "_OutlineStencilFail",
+   "type": "float",
+   "how": "all-segs",
+   "conf": "high",
+   "shapeOK": null
+  },
+  {
+   "path": "outline.stencilZFail",
+   "lil": "_OutlineStencilZFail",
+   "type": "float",
+   "how": "all-segs",
+   "conf": "high",
+   "shapeOK": null
+  },
+  {
+   "path": "outline.fixWidth",
+   "lil": "_OutlineFixWidth",
+   "type": "range",
+   "how": "all-segs",
+   "conf": "high",
+   "shapeOK": null
+  },
+  {
+   "path": "outline.fixWidthMode",
+   "lil": "_OutlineFixWidth",
+   "type": "range",
+   "how": "words",
+   "conf": "medium",
+   "shapeOK": null
+  },
+  {
+   "path": "outline.vertexR2Width",
+   "lil": "_OutlineVertexR2Width",
+   "type": "int",
+   "how": "all-segs",
+   "conf": "high",
+   "shapeOK": null
+  },
+  {
+   "path": "outline.zBias",
+   "lil": "_OutlineZBias",
+   "type": "float",
+   "how": "all-segs",
+   "conf": "high",
+   "shapeOK": null
+  },
+  {
+   "path": "outline.litEnable",
+   "lil": "_OutlineEnableLighting",
+   "type": "range",
+   "how": "override",
+   "conf": "manual",
+   "shapeOK": null
+  },
+  {
+   "path": "outline.litColor",
+   "lil": "_OutlineLitColor",
+   "type": "color",
+   "how": "all-segs",
+   "conf": "high",
+   "shapeOK": true
+  },
+  {
+   "path": "outline.litApplyTex",
+   "lil": "_OutlineLitApplyTex",
+   "type": "int",
+   "how": "all-segs",
+   "conf": "high",
+   "shapeOK": null
+  },
+  {
+   "path": "outline.litShadowReceive",
+   "lil": "_OutlineLitShadowReceive",
+   "type": "int",
+   "how": "override",
+   "conf": "manual",
+   "shapeOK": null
+  },
+  {
+   "path": "outline.shaderColorMult",
+   "lil": "_OutlineLitColor",
+   "type": "color",
+   "how": "override",
+   "conf": "manual",
+   "shapeOK": null
+  },
+  {
+   "path": "outline.vectorTex",
+   "lil": "_OutlineVectorTex",
+   "type": "texture",
+   "how": "all-segs",
+   "conf": "high",
+   "shapeOK": null
+  },
+  {
+   "path": "outline.vectorScale",
+   "lil": "_OutlineVectorScale",
+   "type": "range",
+   "how": "all-segs",
+   "conf": "high",
+   "shapeOK": null
+  },
+  {
+   "path": "outline.vectorUVMode",
+   "lil": "_OutlineVectorUVMode",
+   "type": "int",
+   "how": "all-segs",
+   "conf": "high",
+   "shapeOK": null
+  },
+  {
+   "path": "outline.litScale",
+   "lil": "_OutlineLitScale",
+   "type": "float",
+   "how": "all-segs",
+   "conf": "high",
+   "shapeOK": null
+  },
+  {
+   "path": "outline.litOffset",
+   "lil": "_OutlineLitOffset",
+   "type": "float",
+   "how": "all-segs",
+   "conf": "high",
+   "shapeOK": null
+  },
+  {
+   "path": "rim.blend",
+   "lil": "_RimBlendMode",
+   "type": "int",
+   "how": "words",
+   "conf": "medium",
+   "shapeOK": null
+  },
+  {
+   "path": "rim.color",
+   "lil": "_RimColor",
+   "type": "color",
+   "how": "all-segs",
+   "conf": "high",
+   "shapeOK": true
+  },
+  {
+   "path": "rim.border",
+   "lil": "_RimBorder",
+   "type": "range",
+   "how": "all-segs",
+   "conf": "high",
+   "shapeOK": null
+  },
+  {
+   "path": "rim.blur",
+   "lil": "_RimBlur",
+   "type": "range",
+   "how": "all-segs",
+   "conf": "high",
+   "shapeOK": null
+  },
+  {
+   "path": "rim.fresnelPower",
+   "lil": "_RimFresnelPower",
+   "type": "range",
+   "how": "all-segs",
+   "conf": "high",
+   "shapeOK": null
+  },
+  {
+   "path": "rim.dirStrength",
+   "lil": "_RimDirStrength",
+   "type": "range",
+   "how": "all-segs",
+   "conf": "high",
+   "shapeOK": null
+  },
+  {
+   "path": "rim.dirRange",
+   "lil": "_RimDirRange",
+   "type": "range",
+   "how": "all-segs",
+   "conf": "high",
+   "shapeOK": true
+  },
+  {
+   "path": "rim.indirColor",
+   "lil": "_RimIndirColor",
+   "type": "color",
+   "how": "all-segs",
+   "conf": "high",
+   "shapeOK": true
+  },
+  {
+   "path": "rim.indirBorder",
+   "lil": "_RimIndirBorder",
+   "type": "range",
+   "how": "all-segs",
+   "conf": "high",
+   "shapeOK": true
+  },
+  {
+   "path": "rim.indirBlur",
+   "lil": "_RimIndirBlur",
+   "type": "range",
+   "how": "all-segs",
+   "conf": "high",
+   "shapeOK": true
+  },
+  {
+   "path": "rim.indirRange",
+   "lil": "_RimIndirRange",
+   "type": "range",
+   "how": "all-segs",
+   "conf": "high",
+   "shapeOK": true
+  },
+  {
+   "path": "rim.blendMode",
+   "lil": "_RimBlendMode",
+   "type": "int",
+   "how": "all-segs",
+   "conf": "high",
+   "shapeOK": null
+  },
+  {
+   "path": "rim.enableLighting",
+   "lil": "_RimEnableLighting",
+   "type": "range",
+   "how": "all-segs",
+   "conf": "high",
+   "shapeOK": null
+  },
+  {
+   "path": "rim.mainStrength",
+   "lil": "_RimMainStrength",
+   "type": "range",
+   "how": "all-segs",
+   "conf": "high",
+   "shapeOK": true
+  },
+  {
+   "path": "rim.normalStrength",
+   "lil": "_RimNormalStrength",
+   "type": "range",
+   "how": "all-segs",
+   "conf": "high",
+   "shapeOK": true
+  },
+  {
+   "path": "rim.shadowMask",
+   "lil": "_RimShadowMask",
+   "type": "range",
+   "how": "all-segs",
+   "conf": "high",
+   "shapeOK": null
+  },
+  {
+   "path": "matcap.vrParallax",
+   "lil": "_MatCapVRParallaxStrength",
+   "type": "range",
+   "how": "words",
+   "conf": "medium",
+   "shapeOK": null
+  },
+  {
+   "path": "matcap.lod",
+   "lil": "_MatCapLod",
+   "type": "range",
+   "how": "all-segs",
+   "conf": "high",
+   "shapeOK": null
+  },
+  {
+   "path": "matcap.customNormal",
+   "lil": "_MatCapCustomNormal",
+   "type": "int",
+   "how": "all-segs",
+   "conf": "high",
+   "shapeOK": null
+  },
+  {
+   "path": "matcap.bumpMap",
+   "lil": "_MatCapBumpMap",
+   "type": "texture",
+   "how": "all-segs",
+   "conf": "high",
+   "shapeOK": null
+  },
+  {
+   "path": "matcap.bumpScale",
+   "lil": "_MatCapBumpScale",
+   "type": "range",
+   "how": "all-segs",
+   "conf": "high",
+   "shapeOK": null
+  },
+  {
+   "path": "matcap.url",
+   "lil": "_MatCapTex",
+   "type": "texture",
+   "how": "override",
+   "conf": "manual",
+   "shapeOK": null
+  },
+  {
+   "path": "matcap.blend",
+   "lil": "_MatCapBlend",
+   "type": "range",
+   "how": "all-segs",
+   "conf": "high",
+   "shapeOK": true
+  },
+  {
+   "path": "matcap.blendMode",
+   "lil": "_MatCapBlendMode",
+   "type": "int",
+   "how": "all-segs",
+   "conf": "high",
+   "shapeOK": true
+  },
+  {
+   "path": "matcap.enableLighting",
+   "lil": "_MatCapEnableLighting",
+   "type": "range",
+   "how": "all-segs",
+   "conf": "high",
+   "shapeOK": true
+  },
+  {
+   "path": "matcap.mainStrength",
+   "lil": "_MatCapMainStrength",
+   "type": "range",
+   "how": "all-segs",
+   "conf": "high",
+   "shapeOK": true
+  },
+  {
+   "path": "matcap.normalStrength",
+   "lil": "_MatCapNormalStrength",
+   "type": "range",
+   "how": "all-segs",
+   "conf": "high",
+   "shapeOK": true
+  },
+  {
+   "path": "matcap.mul",
+   "lil": "_MatCapBlend",
+   "type": "range",
+   "how": "override",
+   "conf": "manual",
+   "shapeOK": null
+  },
+  {
+   "path": "matcap.shadowMask",
+   "lil": "_MatCapShadowMask",
+   "type": "range",
+   "how": "all-segs",
+   "conf": "high",
+   "shapeOK": null
+  },
+  {
+   "path": "matcap.color",
+   "lil": "_MatCapColor",
+   "type": "color",
+   "how": "all-segs",
+   "conf": "high",
+   "shapeOK": true
+  },
+  {
+   "path": "matcap.blendMask",
+   "lil": "_MatCapBlendMask",
+   "type": "texture",
+   "how": "all-segs",
+   "conf": "high",
+   "shapeOK": null
+  },
+  {
+   "path": "matcap.backfaceMask",
+   "lil": "_MatCapBackfaceMask",
+   "type": "int",
+   "how": "all-segs",
+   "conf": "high",
+   "shapeOK": null
+  },
+  {
+   "path": "matcap2nd.vrParallax",
+   "lil": "_MatCap2ndVRParallaxStrength",
+   "type": "range",
+   "how": "words",
+   "conf": "medium",
+   "shapeOK": null
+  },
+  {
+   "path": "matcap2nd.lod",
+   "lil": "_MatCap2ndLod",
+   "type": "range",
+   "how": "all-segs",
+   "conf": "high",
+   "shapeOK": null
+  },
+  {
+   "path": "matcap2nd.customNormal",
+   "lil": "_MatCap2ndCustomNormal",
+   "type": "int",
+   "how": "all-segs",
+   "conf": "high",
+   "shapeOK": null
+  },
+  {
+   "path": "matcap2nd.bumpMap",
+   "lil": "_MatCap2ndBumpMap",
+   "type": "texture",
+   "how": "all-segs",
+   "conf": "high",
+   "shapeOK": null
+  },
+  {
+   "path": "matcap2nd.bumpScale",
+   "lil": "_MatCap2ndBumpScale",
+   "type": "range",
+   "how": "all-segs",
+   "conf": "high",
+   "shapeOK": null
+  },
+  {
+   "path": "matcap2nd.url",
+   "lil": "_MatCap2ndTex",
+   "type": "texture",
+   "how": "override",
+   "conf": "manual",
+   "shapeOK": null
+  },
+  {
+   "path": "matcap2nd.blend",
+   "lil": "_MatCap2ndBlend",
+   "type": "range",
+   "how": "all-segs",
+   "conf": "high",
+   "shapeOK": null
+  },
+  {
+   "path": "matcap2nd.blendMode",
+   "lil": "_MatCap2ndBlendMode",
+   "type": "int",
+   "how": "all-segs",
+   "conf": "high",
+   "shapeOK": null
+  },
+  {
+   "path": "matcap2nd.enableLighting",
+   "lil": "_MatCap2ndEnableLighting",
+   "type": "range",
+   "how": "all-segs",
+   "conf": "high",
+   "shapeOK": null
+  },
+  {
+   "path": "matcap2nd.mainStrength",
+   "lil": "_MatCap2ndMainStrength",
+   "type": "range",
+   "how": "all-segs",
+   "conf": "high",
+   "shapeOK": null
+  },
+  {
+   "path": "matcap2nd.normalStrength",
+   "lil": "_MatCap2ndNormalStrength",
+   "type": "range",
+   "how": "all-segs",
+   "conf": "high",
+   "shapeOK": true
+  },
+  {
+   "path": "matcap2nd.mul",
+   "lil": "_MatCap2ndBlend",
+   "type": "range",
+   "how": "override",
+   "conf": "manual",
+   "shapeOK": null
+  },
+  {
+   "path": "matcap2nd.shadowMask",
+   "lil": "_MatCap2ndShadowMask",
+   "type": "range",
+   "how": "all-segs",
+   "conf": "high",
+   "shapeOK": null
+  },
+  {
+   "path": "matcap2nd.color",
+   "lil": "_MatCap2ndColor",
+   "type": "color",
+   "how": "all-segs",
+   "conf": "high",
+   "shapeOK": true
+  },
+  {
+   "path": "matcap2nd.blendMask",
+   "lil": "_MatCap2ndBlendMask",
+   "type": "texture",
+   "how": "all-segs",
+   "conf": "high",
+   "shapeOK": null
+  },
+  {
+   "path": "matcap2nd.backfaceMask",
+   "lil": "_MatCap2ndBackfaceMask",
+   "type": "int",
+   "how": "all-segs",
+   "conf": "high",
+   "shapeOK": null
+  },
+  {
+   "path": "emission.use",
+   "lil": "_UseEmission",
+   "type": "int",
+   "how": "words",
+   "conf": "medium",
+   "shapeOK": null
+  },
+  {
+   "path": "emission.color",
+   "lil": "_EmissionColor",
+   "type": "color",
+   "how": "all-segs",
+   "conf": "high",
+   "shapeOK": true
+  },
+  {
+   "path": "emission.blend",
+   "lil": "_EmissionBlend",
+   "type": "range",
+   "how": "all-segs",
+   "conf": "high",
+   "shapeOK": true
+  },
+  {
+   "path": "emission.blendMode",
+   "lil": "_EmissionBlendMode",
+   "type": "int",
+   "how": "all-segs",
+   "conf": "high",
+   "shapeOK": null
+  },
+  {
+   "path": "emission.uvMode",
+   "lil": "_EmissionMap_UVMode",
+   "type": "int",
+   "how": "words",
+   "conf": "medium",
+   "shapeOK": null
+  },
+  {
+   "path": "emission.mainStrength",
+   "lil": "_EmissionMainStrength",
+   "type": "range",
+   "how": "all-segs",
+   "conf": "high",
+   "shapeOK": true
+  },
+  {
+   "path": "emission.tex",
+   "lil": "_EmissionMap",
+   "type": "texture",
+   "how": "override",
+   "conf": "manual",
+   "shapeOK": null
+  },
+  {
+   "path": "emission.blendMask",
+   "lil": "_EmissionBlendMask",
+   "type": "texture",
+   "how": "all-segs",
+   "conf": "high",
+   "shapeOK": null
+  },
+  {
+   "path": "dither.use",
+   "lil": "_UseDither",
+   "type": "int",
+   "how": "words",
+   "conf": "medium",
+   "shapeOK": null
+  },
+  {
+   "path": "dither.url",
+   "lil": "_DitherTex",
+   "type": "texture",
+   "how": "words",
+   "conf": "medium",
+   "shapeOK": null
+  },
+  {
+   "path": "dither.maxValue",
+   "lil": "_DitherMaxValue",
+   "type": "float",
+   "how": "all-segs",
+   "conf": "high",
+   "shapeOK": null
+  },
+  {
+   "path": "reflection.use",
+   "lil": "_UseReflection",
+   "type": "int",
+   "how": "words",
+   "conf": "medium",
+   "shapeOK": null
+  },
+  {
+   "path": "reflection.apply",
+   "lil": "_ApplyReflection",
+   "type": "int",
+   "how": "words",
+   "conf": "medium",
+   "shapeOK": null
+  },
+  {
+   "path": "reflection.toon",
+   "lil": "_ReflectionBlendMode",
+   "type": "int",
+   "how": "override",
+   "conf": "manual",
+   "shapeOK": null
+  },
+  {
+   "path": "reflection.normalStrength",
+   "lil": "_ReflectionNormalStrength",
+   "type": "range",
+   "how": "all-segs",
+   "conf": "high",
+   "shapeOK": null
+  },
+  {
+   "path": "reflection.smoothness",
+   "lil": "_Smoothness",
+   "type": "range",
+   "how": "leaf",
+   "conf": "high",
+   "shapeOK": null
+  },
+  {
+   "path": "reflection.reflectance",
+   "lil": "_Reflectance",
+   "type": "range",
+   "how": "leaf",
+   "conf": "high",
+   "shapeOK": null
+  },
+  {
+   "path": "reflection.metallic",
+   "lil": "_Metallic",
+   "type": "range",
+   "how": "leaf",
+   "conf": "high",
+   "shapeOK": null
+  },
+  {
+   "path": "reflection.color",
+   "lil": "_ReflectionColor",
+   "type": "color",
+   "how": "all-segs",
+   "conf": "high",
+   "shapeOK": true
+  },
+  {
+   "path": "reflection.blendMode",
+   "lil": "_ReflectionBlendMode",
+   "type": "int",
+   "how": "all-segs",
+   "conf": "high",
+   "shapeOK": null
+  },
+  {
+   "path": "reflection.aaStrength",
+   "lil": "_AAStrength",
+   "type": "range",
+   "how": "leaf",
+   "conf": "high",
+   "shapeOK": null
+  },
+  {
+   "path": "backlight.color",
+   "lil": "_BacklightColor",
+   "type": "color",
+   "how": "all-segs",
+   "conf": "high",
+   "shapeOK": true
+  },
+  {
+   "path": "backlight.border",
+   "lil": "_BacklightBorder",
+   "type": "range",
+   "how": "all-segs",
+   "conf": "high",
+   "shapeOK": true
+  },
+  {
+   "path": "backlight.blur",
+   "lil": "_BacklightBlur",
+   "type": "range",
+   "how": "all-segs",
+   "conf": "high",
+   "shapeOK": true
+  },
+  {
+   "path": "backlight.directivity",
+   "lil": "_BacklightDirectivity",
+   "type": "float",
+   "how": "all-segs",
+   "conf": "high",
+   "shapeOK": true
+  },
+  {
+   "path": "backlight.viewStrength",
+   "lil": "_BacklightViewStrength",
+   "type": "range",
+   "how": "all-segs",
+   "conf": "high",
+   "shapeOK": true
+  },
+  {
+   "path": "backlight.normalStrength",
+   "lil": "_BacklightNormalStrength",
+   "type": "range",
+   "how": "all-segs",
+   "conf": "high",
+   "shapeOK": true
+  },
+  {
+   "path": "backlight.mainStrength",
+   "lil": "_BacklightMainStrength",
+   "type": "range",
+   "how": "all-segs",
+   "conf": "high",
+   "shapeOK": true
+  },
+  {
+   "path": "emission2nd.use",
+   "lil": "_UseEmission2nd",
+   "type": "int",
+   "how": "words",
+   "conf": "medium",
+   "shapeOK": null
+  },
+  {
+   "path": "emission2nd.color",
+   "lil": "_Emission2ndColor",
+   "type": "color",
+   "how": "all-segs",
+   "conf": "high",
+   "shapeOK": true
+  },
+  {
+   "path": "emission2nd.blend",
+   "lil": "_Emission2ndBlend",
+   "type": "range",
+   "how": "all-segs",
+   "conf": "high",
+   "shapeOK": null
+  },
+  {
+   "path": "emission2nd.blendMode",
+   "lil": "_Emission2ndBlendMode",
+   "type": "int",
+   "how": "all-segs",
+   "conf": "high",
+   "shapeOK": null
+  },
+  {
+   "path": "emission2nd.uvMode",
+   "lil": "_Emission2ndMap_UVMode",
+   "type": "int",
+   "how": "words",
+   "conf": "medium",
+   "shapeOK": null
+  },
+  {
+   "path": "emission2nd.tex",
+   "lil": "_Emission2ndMap",
+   "type": "texture",
+   "how": "override",
+   "conf": "manual",
+   "shapeOK": null
+  },
+  {
+   "path": "emission2nd.blendMask",
+   "lil": "_Emission2ndBlendMask",
+   "type": "texture",
+   "how": "all-segs",
+   "conf": "high",
+   "shapeOK": null
+  },
+  {
+   "path": "main2nd.decalDebug",
+   "lil": "_Main2ndTexIsDecal",
+   "type": "int",
+   "how": "override",
+   "conf": "manual",
+   "shapeOK": null
+  },
+  {
+   "path": "main2nd.isDecal",
+   "lil": "_Main2ndTexIsDecal",
+   "type": "int",
+   "how": "words",
+   "conf": "medium",
+   "shapeOK": null
+  },
+  {
+   "path": "main2nd.isLeftOnly",
+   "lil": "_Main2ndTexIsLeftOnly",
+   "type": "int",
+   "how": "words",
+   "conf": "medium",
+   "shapeOK": null
+  },
+  {
+   "path": "main2nd.isRightOnly",
+   "lil": "_Main2ndTexIsRightOnly",
+   "type": "int",
+   "how": "words",
+   "conf": "medium",
+   "shapeOK": null
+  },
+  {
+   "path": "main2nd.shouldCopy",
+   "lil": "_Main2ndTexShouldCopy",
+   "type": "int",
+   "how": "words",
+   "conf": "medium",
+   "shapeOK": null
+  },
+  {
+   "path": "main2nd.shouldFlipMirror",
+   "lil": "_Main2ndTexShouldFlipMirror",
+   "type": "int",
+   "how": "words",
+   "conf": "medium",
+   "shapeOK": null
+  },
+  {
+   "path": "main2nd.shouldFlipCopy",
+   "lil": "_Main2ndTexShouldFlipCopy",
+   "type": "int",
+   "how": "words",
+   "conf": "medium",
+   "shapeOK": null
+  },
+  {
+   "path": "main2nd.decalAnimation",
+   "lil": "_Main2ndTexDecalAnimation",
+   "type": "vector",
+   "how": "words",
+   "conf": "medium",
+   "shapeOK": true
+  },
+  {
+   "path": "main2nd.decalSubParam",
+   "lil": "_Main2ndTexDecalSubParam",
+   "type": "vector",
+   "how": "words",
+   "conf": "medium",
+   "shapeOK": true
+  },
+  {
+   "path": "main2nd.texST",
+   "lil": "_Main2ndTex_ScrollRotate",
+   "type": "vector",
+   "how": "override",
+   "conf": "manual",
+   "shapeOK": true
+  },
+  {
+   "path": "main2nd.texAngle",
+   "lil": "_Main2ndTexAngle",
+   "type": "float",
+   "how": "all-segs",
+   "conf": "high",
+   "shapeOK": true
+  },
+  {
+   "path": "main2nd.alphaMode",
+   "lil": "_Main2ndTexAlphaMode",
+   "type": "int",
+   "how": "words",
+   "conf": "medium",
+   "shapeOK": null
+  },
+  {
+   "path": "main2nd.color",
+   "lil": "_Color",
+   "type": "color",
+   "how": "leaf",
+   "conf": "high",
+   "shapeOK": true
+  },
+  {
+   "path": "main2nd.tex",
+   "lil": "_Main2ndTex",
+   "type": "texture",
+   "how": "all-segs",
+   "conf": "high",
+   "shapeOK": null
+  },
+  {
+   "path": "main2nd.uvMode",
+   "lil": "_Main2ndTex_UVMode",
+   "type": "int",
+   "how": "words",
+   "conf": "medium",
+   "shapeOK": null
+  },
+  {
+   "path": "main2nd.blendMode",
+   "lil": "_Main2ndTexBlendMode",
+   "type": "int",
+   "how": "words",
+   "conf": "medium",
+   "shapeOK": null
+  },
+  {
+   "path": "main2nd.enableLighting",
+   "lil": "_Main2ndEnableLighting",
+   "type": "range",
+   "how": "all-segs",
+   "conf": "high",
+   "shapeOK": null
+  },
+  {
+   "path": "main2nd.blendMask",
+   "lil": "_Main2ndBlendMask",
+   "type": "texture",
+   "how": "all-segs",
+   "conf": "high",
+   "shapeOK": null
+  },
+  {
+   "path": "main2nd.cull",
+   "lil": "_Cull",
+   "type": "int",
+   "how": "leaf",
+   "conf": "high",
+   "shapeOK": null
+  },
+  {
+   "path": "main2nd.dissolveMode",
+   "lil": "_Main2ndDissolveParams",
+   "type": "vector",
+   "how": "override",
+   "conf": "manual",
+   "comp": "x",
+   "shapeOK": null
+  },
+  {
+   "path": "main2nd.dissolveDir",
+   "lil": "_Main2ndDissolvePos",
+   "type": "vector",
+   "how": "override",
+   "conf": "manual",
+   "shapeOK": null
+  },
+  {
+   "path": "main2nd.dissolveThreshold",
+   "lil": "_Main2ndDissolveParams",
+   "type": "vector",
+   "how": "override",
+   "conf": "manual",
+   "comp": "z",
+   "shapeOK": null
+  },
+  {
+   "path": "main2nd.dissolveSoftness",
+   "lil": "_Main2ndDissolveParams",
+   "type": "vector",
+   "how": "override",
+   "conf": "manual",
+   "comp": "w",
+   "shapeOK": null
+  },
+  {
+   "path": "main2nd.dissolvePos",
+   "lil": "_Main2ndDissolvePos",
+   "type": "vector",
+   "how": "all-segs",
+   "conf": "high",
+   "shapeOK": true
+  },
+  {
+   "path": "main2nd.dissolveColor",
+   "lil": "_Main2ndDissolveColor",
+   "type": "color",
+   "how": "all-segs",
+   "conf": "high",
+   "shapeOK": true
+  },
+  {
+   "path": "main2nd.dissolveMask",
+   "lil": "_Main2ndDissolveMask",
+   "type": "texture",
+   "how": "all-segs",
+   "conf": "high",
+   "shapeOK": null
+  },
+  {
+   "path": "main2nd.dissolveNoiseMask",
+   "lil": "_Main2ndDissolveNoiseMask",
+   "type": "texture",
+   "how": "all-segs",
+   "conf": "high",
+   "shapeOK": null
+  },
+  {
+   "path": "main2nd.dissolveNoiseMaskST",
+   "lil": "_Main2ndDissolveNoiseMask_ScrollRotate",
+   "type": "vector",
+   "how": "override",
+   "conf": "manual",
+   "shapeOK": true
+  },
+  {
+   "path": "main2nd.dissolveNoiseScrollRotate",
+   "lil": "_Main2ndDissolveNoiseMask_ScrollRotate",
+   "type": "vector",
+   "how": "override",
+   "conf": "manual",
+   "shapeOK": true
+  },
+  {
+   "path": "main2nd.dissolveNoiseStrength",
+   "lil": "_Main2ndDissolveNoiseStrength",
+   "type": "float",
+   "how": "all-segs",
+   "conf": "high",
+   "shapeOK": null
+  },
+  {
+   "path": "main2nd.distFadeNear",
+   "lil": "_Main2ndDistanceFade",
+   "type": "vector",
+   "how": "override",
+   "conf": "manual",
+   "comp": "x",
+   "shapeOK": null
+  },
+  {
+   "path": "main2nd.distFadeFar",
+   "lil": "_Main2ndDistanceFade",
+   "type": "vector",
+   "how": "override",
+   "conf": "manual",
+   "comp": "y",
+   "shapeOK": null
+  },
+  {
+   "path": "main2nd.distFadeStrength",
+   "lil": "_Main2ndDistanceFade",
+   "type": "vector",
+   "how": "override",
+   "conf": "manual",
+   "comp": "z",
+   "shapeOK": null
+  },
+  {
+   "path": "main3rd.decalDebug",
+   "lil": "_Main3rdTexIsDecal",
+   "type": "int",
+   "how": "override",
+   "conf": "manual",
+   "shapeOK": null
+  },
+  {
+   "path": "main3rd.isDecal",
+   "lil": "_Main3rdTexIsDecal",
+   "type": "int",
+   "how": "words",
+   "conf": "medium",
+   "shapeOK": null
+  },
+  {
+   "path": "main3rd.isLeftOnly",
+   "lil": "_Main3rdTexIsLeftOnly",
+   "type": "int",
+   "how": "words",
+   "conf": "medium",
+   "shapeOK": null
+  },
+  {
+   "path": "main3rd.isRightOnly",
+   "lil": "_Main3rdTexIsRightOnly",
+   "type": "int",
+   "how": "words",
+   "conf": "medium",
+   "shapeOK": null
+  },
+  {
+   "path": "main3rd.shouldCopy",
+   "lil": "_Main3rdTexShouldCopy",
+   "type": "int",
+   "how": "words",
+   "conf": "medium",
+   "shapeOK": null
+  },
+  {
+   "path": "main3rd.shouldFlipMirror",
+   "lil": "_Main3rdTexShouldFlipMirror",
+   "type": "int",
+   "how": "words",
+   "conf": "medium",
+   "shapeOK": null
+  },
+  {
+   "path": "main3rd.shouldFlipCopy",
+   "lil": "_Main3rdTexShouldFlipCopy",
+   "type": "int",
+   "how": "words",
+   "conf": "medium",
+   "shapeOK": null
+  },
+  {
+   "path": "main3rd.decalAnimation",
+   "lil": "_Main3rdTexDecalAnimation",
+   "type": "vector",
+   "how": "words",
+   "conf": "medium",
+   "shapeOK": true
+  },
+  {
+   "path": "main3rd.decalSubParam",
+   "lil": "_Main3rdTexDecalSubParam",
+   "type": "vector",
+   "how": "words",
+   "conf": "medium",
+   "shapeOK": true
+  },
+  {
+   "path": "main3rd.texST",
+   "lil": "_Main3rdTex_ScrollRotate",
+   "type": "vector",
+   "how": "override",
+   "conf": "manual",
+   "shapeOK": true
+  },
+  {
+   "path": "main3rd.texAngle",
+   "lil": "_Main3rdTexAngle",
+   "type": "float",
+   "how": "all-segs",
+   "conf": "high",
+   "shapeOK": true
+  },
+  {
+   "path": "main3rd.alphaMode",
+   "lil": "_Main3rdTexAlphaMode",
+   "type": "int",
+   "how": "words",
+   "conf": "medium",
+   "shapeOK": null
+  },
+  {
+   "path": "main3rd.color",
+   "lil": "_Color",
+   "type": "color",
+   "how": "leaf",
+   "conf": "high",
+   "shapeOK": true
+  },
+  {
+   "path": "main3rd.tex",
+   "lil": "_Main3rdTex",
+   "type": "texture",
+   "how": "all-segs",
+   "conf": "high",
+   "shapeOK": null
+  },
+  {
+   "path": "main3rd.uvMode",
+   "lil": "_Main3rdTex_UVMode",
+   "type": "int",
+   "how": "words",
+   "conf": "medium",
+   "shapeOK": true
+  },
+  {
+   "path": "main3rd.blendMode",
+   "lil": "_Main3rdTexBlendMode",
+   "type": "int",
+   "how": "words",
+   "conf": "medium",
+   "shapeOK": true
+  },
+  {
+   "path": "main3rd.enableLighting",
+   "lil": "_Main3rdEnableLighting",
+   "type": "range",
+   "how": "all-segs",
+   "conf": "high",
+   "shapeOK": true
+  },
+  {
+   "path": "main3rd.blendMask",
+   "lil": "_Main3rdBlendMask",
+   "type": "texture",
+   "how": "all-segs",
+   "conf": "high",
+   "shapeOK": null
+  },
+  {
+   "path": "main3rd.cull",
+   "lil": "_Cull",
+   "type": "int",
+   "how": "leaf",
+   "conf": "high",
+   "shapeOK": true
+  },
+  {
+   "path": "main3rd.dissolveMode",
+   "lil": "_Main3rdDissolveParams",
+   "type": "vector",
+   "how": "override",
+   "conf": "manual",
+   "comp": "x",
+   "shapeOK": null
+  },
+  {
+   "path": "main3rd.dissolveDir",
+   "lil": "_Main3rdDissolvePos",
+   "type": "vector",
+   "how": "override",
+   "conf": "manual",
+   "shapeOK": null
+  },
+  {
+   "path": "main3rd.dissolveThreshold",
+   "lil": "_Main3rdDissolveParams",
+   "type": "vector",
+   "how": "override",
+   "conf": "manual",
+   "comp": "z",
+   "shapeOK": null
+  },
+  {
+   "path": "main3rd.dissolveSoftness",
+   "lil": "_Main3rdDissolveParams",
+   "type": "vector",
+   "how": "override",
+   "conf": "manual",
+   "comp": "w",
+   "shapeOK": null
+  },
+  {
+   "path": "main3rd.dissolvePos",
+   "lil": "_Main3rdDissolvePos",
+   "type": "vector",
+   "how": "all-segs",
+   "conf": "high",
+   "shapeOK": true
+  },
+  {
+   "path": "main3rd.dissolveColor",
+   "lil": "_Main3rdDissolveColor",
+   "type": "color",
+   "how": "all-segs",
+   "conf": "high",
+   "shapeOK": true
+  },
+  {
+   "path": "main3rd.dissolveMask",
+   "lil": "_Main3rdDissolveMask",
+   "type": "texture",
+   "how": "all-segs",
+   "conf": "high",
+   "shapeOK": null
+  },
+  {
+   "path": "main3rd.dissolveNoiseMask",
+   "lil": "_Main3rdDissolveNoiseMask",
+   "type": "texture",
+   "how": "all-segs",
+   "conf": "high",
+   "shapeOK": null
+  },
+  {
+   "path": "main3rd.dissolveNoiseMaskST",
+   "lil": "_Main3rdDissolveNoiseMask_ScrollRotate",
+   "type": "vector",
+   "how": "override",
+   "conf": "manual",
+   "shapeOK": true
+  },
+  {
+   "path": "main3rd.dissolveNoiseScrollRotate",
+   "lil": "_Main3rdDissolveNoiseMask_ScrollRotate",
+   "type": "vector",
+   "how": "override",
+   "conf": "manual",
+   "shapeOK": true
+  },
+  {
+   "path": "main3rd.dissolveNoiseStrength",
+   "lil": "_Main3rdDissolveNoiseStrength",
+   "type": "float",
+   "how": "all-segs",
+   "conf": "high",
+   "shapeOK": null
+  },
+  {
+   "path": "main3rd.distFadeNear",
+   "lil": "_Main3rdDistanceFade",
+   "type": "vector",
+   "how": "override",
+   "conf": "manual",
+   "comp": "x",
+   "shapeOK": null
+  },
+  {
+   "path": "main3rd.distFadeFar",
+   "lil": "_Main3rdDistanceFade",
+   "type": "vector",
+   "how": "override",
+   "conf": "manual",
+   "comp": "y",
+   "shapeOK": null
+  },
+  {
+   "path": "main3rd.distFadeStrength",
+   "lil": "_Main3rdDistanceFade",
+   "type": "vector",
+   "how": "override",
+   "conf": "manual",
+   "comp": "z",
+   "shapeOK": null
+  },
+  {
+   "path": "stencil.use",
+   "lil": "_StencilRef",
+   "type": "range",
+   "how": "override",
+   "conf": "manual",
+   "shapeOK": null
+  },
+  {
+   "path": "stencil.ref",
+   "lil": "_StencilRef",
+   "type": "range",
+   "how": "all-segs",
+   "conf": "high",
+   "shapeOK": null
+  },
+  {
+   "path": "stencil.readMask",
+   "lil": "_StencilReadMask",
+   "type": "range",
+   "how": "all-segs",
+   "conf": "high",
+   "shapeOK": null
+  },
+  {
+   "path": "stencil.writeMask",
+   "lil": "_StencilWriteMask",
+   "type": "range",
+   "how": "all-segs",
+   "conf": "high",
+   "shapeOK": null
+  },
+  {
+   "path": "stencil.comp",
+   "lil": "_StencilComp",
+   "type": "float",
+   "how": "all-segs",
+   "conf": "high",
+   "shapeOK": null
+  },
+  {
+   "path": "stencil.pass",
+   "lil": "_StencilPass",
+   "type": "float",
+   "how": "all-segs",
+   "conf": "high",
+   "shapeOK": null
+  },
+  {
+   "path": "stencil.fail",
+   "lil": "_StencilFail",
+   "type": "float",
+   "how": "all-segs",
+   "conf": "high",
+   "shapeOK": null
+  },
+  {
+   "path": "stencil.zfail",
+   "lil": "_StencilZFail",
+   "type": "float",
+   "how": "all-segs",
+   "conf": "high",
+   "shapeOK": null
+  },
+  {
+   "path": "dissolve.mode",
+   "lil": "_DissolveParams",
+   "type": "vector",
+   "how": "override",
+   "conf": "manual",
+   "comp": "x",
+   "shapeOK": null
+  },
+  {
+   "path": "dissolve.linear",
+   "lil": "_DissolveParams",
+   "type": "vector",
+   "how": "override",
+   "conf": "manual",
+   "comp": "y",
+   "shapeOK": null
+  },
+  {
+   "path": "dissolve.threshold",
+   "lil": "_DissolveParams",
+   "type": "vector",
+   "how": "override",
+   "conf": "manual",
+   "comp": "z",
+   "shapeOK": null
+  },
+  {
+   "path": "dissolve.softness",
+   "lil": "_DissolveParams",
+   "type": "vector",
+   "how": "override",
+   "conf": "manual",
+   "comp": "w",
+   "shapeOK": null
+  },
+  {
+   "path": "dissolve.pos",
+   "lil": "_DissolvePos",
+   "type": "vector",
+   "how": "all-segs",
+   "conf": "high",
+   "shapeOK": true
+  },
+  {
+   "path": "dissolve.color",
+   "lil": "_DissolveColor",
+   "type": "color",
+   "how": "all-segs",
+   "conf": "high",
+   "shapeOK": true
+  },
+  {
+   "path": "dissolve.maskTex",
+   "lil": "_DissolveMask",
+   "type": "texture",
+   "how": "override",
+   "conf": "manual",
+   "shapeOK": null
+  },
+  {
+   "path": "dissolve.noiseTex",
+   "lil": "_DissolveNoiseMask",
+   "type": "texture",
+   "how": "override",
+   "conf": "manual",
+   "shapeOK": null
+  },
+  {
+   "path": "dissolve.noiseStrength",
+   "lil": "_DissolveNoiseStrength",
+   "type": "float",
+   "how": "all-segs",
+   "conf": "high",
+   "shapeOK": true
+  }
+ ],
+ "containers": [
+  "bump",
+  "bump2nd",
+  "outline",
+  "rim",
+  "matcap",
+  "matcap2nd",
+  "emission",
+  "dither",
+  "reflection",
+  "backlight",
+  "emission2nd",
+  "main2nd",
+  "main3rd",
+  "stencil",
+  "dissolve"
+ ],
+ "unmapped": [
+  "enabled",
+  "shadowAmbient",
+  "useVertexMask",
+  "outline.skipTransparent",
+  "outline.skipPattern",
+  "outline.cull",
+  "outline.litShadowDebug",
+  "outline.litShadowBlur",
+  "reflection.border",
+  "reflection.blur",
+  "backlight.blend",
+  "main2nd.dissolveMaskST",
+  "main3rd.dissolveMaskST"
+ ],
+ "shapeMismatch": []
+}

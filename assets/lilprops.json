@@ -1,0 +1,5611 @@
+{
+ "_comment": "lilToon 着色器属性表 —— 由 scripts/gen-lilprops.mjs 从 lts.shader 自动提取，勿手改",
+ "generatedFrom": "liltoon-2.3.4/Shader/lts.shader",
+ "tree": "liltoon-2.3.4",
+ "count": 517,
+ "props": [
+  {
+   "name": "_AAStrength",
+   "type": "range",
+   "dim": 1,
+   "disp": "sAAShading",
+   "attrs": [],
+   "def": 1,
+   "min": 0,
+   "max": 1
+  },
+  {
+   "name": "_AlphaBoostFA",
+   "type": "range",
+   "dim": 1,
+   "disp": "sAlphaBoostFA",
+   "attrs": [],
+   "def": 10,
+   "min": 1,
+   "max": 100
+  },
+  {
+   "name": "_AlphaMask",
+   "type": "texture",
+   "dim": 2,
+   "disp": "AlphaMask",
+   "attrs": [],
+   "def": "white"
+  },
+  {
+   "name": "_AlphaMaskMode",
+   "type": "int",
+   "dim": 1,
+   "disp": "sAlphaMaskModes",
+   "attrs": [
+    "lilEnumLabel"
+   ],
+   "def": 0
+  },
+  {
+   "name": "_AlphaMaskScale",
+   "type": "float",
+   "dim": 1,
+   "disp": "Scale",
+   "attrs": [],
+   "def": 1
+  },
+  {
+   "name": "_AlphaMaskValue",
+   "type": "float",
+   "dim": 1,
+   "disp": "Offset",
+   "attrs": [],
+   "def": 0
+  },
+  {
+   "name": "_AlphaToMask",
+   "type": "int",
+   "dim": 1,
+   "disp": "sAlphaToMask",
+   "attrs": [
+    "lilToggle"
+   ],
+   "def": 0
+  },
+  {
+   "name": "_Anisotropy2MatCap",
+   "type": "int",
+   "dim": 1,
+   "disp": "sMatCap",
+   "attrs": [
+    "lilToggle"
+   ],
+   "def": 0
+  },
+  {
+   "name": "_Anisotropy2MatCap2nd",
+   "type": "int",
+   "dim": 1,
+   "disp": "sMatCap2nd",
+   "attrs": [
+    "lilToggle"
+   ],
+   "def": 0
+  },
+  {
+   "name": "_Anisotropy2ndBitangentWidth",
+   "type": "range",
+   "dim": 1,
+   "disp": "sBitangentWidth",
+   "attrs": [],
+   "def": 1,
+   "min": 0,
+   "max": 10
+  },
+  {
+   "name": "_Anisotropy2ndShift",
+   "type": "range",
+   "dim": 1,
+   "disp": "sOffset",
+   "attrs": [],
+   "def": 0,
+   "min": -10,
+   "max": 10
+  },
+  {
+   "name": "_Anisotropy2ndShiftNoiseScale",
+   "type": "range",
+   "dim": 1,
+   "disp": "sNoiseStrength",
+   "attrs": [],
+   "def": 0,
+   "min": -1,
+   "max": 1
+  },
+  {
+   "name": "_Anisotropy2ndSpecularStrength",
+   "type": "range",
+   "dim": 1,
+   "disp": "sStrength",
+   "attrs": [],
+   "def": 0,
+   "min": 0,
+   "max": 10
+  },
+  {
+   "name": "_Anisotropy2ndTangentWidth",
+   "type": "range",
+   "dim": 1,
+   "disp": "sTangentWidth",
+   "attrs": [],
+   "def": 1,
+   "min": 0,
+   "max": 10
+  },
+  {
+   "name": "_Anisotropy2Reflection",
+   "type": "int",
+   "dim": 1,
+   "disp": "sReflection",
+   "attrs": [
+    "lilToggle"
+   ],
+   "def": 0
+  },
+  {
+   "name": "_AnisotropyBitangentWidth",
+   "type": "range",
+   "dim": 1,
+   "disp": "sBitangentWidth",
+   "attrs": [],
+   "def": 1,
+   "min": 0,
+   "max": 10
+  },
+  {
+   "name": "_AnisotropyScale",
+   "type": "range",
+   "dim": 1,
+   "disp": "Scale",
+   "attrs": [],
+   "def": 1,
+   "min": -1,
+   "max": 1
+  },
+  {
+   "name": "_AnisotropyScaleMask",
+   "type": "texture",
+   "dim": 2,
+   "disp": "Scale Mask",
+   "attrs": [
+    "NoScaleOffset"
+   ],
+   "def": "white"
+  },
+  {
+   "name": "_AnisotropyShift",
+   "type": "range",
+   "dim": 1,
+   "disp": "sOffset",
+   "attrs": [],
+   "def": 0,
+   "min": -10,
+   "max": 10
+  },
+  {
+   "name": "_AnisotropyShiftNoiseMask",
+   "type": "texture",
+   "dim": 2,
+   "disp": "sNoise",
+   "attrs": [],
+   "def": "white"
+  },
+  {
+   "name": "_AnisotropyShiftNoiseScale",
+   "type": "range",
+   "dim": 1,
+   "disp": "sNoiseStrength",
+   "attrs": [],
+   "def": 0,
+   "min": -1,
+   "max": 1
+  },
+  {
+   "name": "_AnisotropySpecularStrength",
+   "type": "range",
+   "dim": 1,
+   "disp": "sStrength",
+   "attrs": [],
+   "def": 1,
+   "min": 0,
+   "max": 10
+  },
+  {
+   "name": "_AnisotropyTangentMap",
+   "type": "texture",
+   "dim": 2,
+   "disp": "Tangent Map",
+   "attrs": [
+    "Normal"
+   ],
+   "def": "bump"
+  },
+  {
+   "name": "_AnisotropyTangentWidth",
+   "type": "range",
+   "dim": 1,
+   "disp": "sTangentWidth",
+   "attrs": [],
+   "def": 1,
+   "min": 0,
+   "max": 10
+  },
+  {
+   "name": "_ApplyReflection",
+   "type": "int",
+   "dim": 1,
+   "disp": "sApplyReflection",
+   "attrs": [
+    "lilToggle"
+   ],
+   "def": 0
+  },
+  {
+   "name": "_ApplySpecular",
+   "type": "int",
+   "dim": 1,
+   "disp": "Apply Specular",
+   "attrs": [
+    "lilToggle"
+   ],
+   "def": 1
+  },
+  {
+   "name": "_ApplySpecularFA",
+   "type": "int",
+   "dim": 1,
+   "disp": "sMultiLightSpecular",
+   "attrs": [
+    "lilToggle"
+   ],
+   "def": 1
+  },
+  {
+   "name": "_AsOverlay",
+   "type": "int",
+   "dim": 1,
+   "disp": "sAsOverlay",
+   "attrs": [
+    "lilToggle"
+   ],
+   "def": 0
+  },
+  {
+   "name": "_AsUnlit",
+   "type": "range",
+   "dim": 1,
+   "disp": "sAsUnlit",
+   "attrs": [],
+   "def": 0,
+   "min": 0,
+   "max": 1
+  },
+  {
+   "name": "_AudioLink2Emission",
+   "type": "int",
+   "dim": 1,
+   "disp": "sEmission",
+   "attrs": [
+    "lilToggle"
+   ],
+   "def": 0
+  },
+  {
+   "name": "_AudioLink2Emission2nd",
+   "type": "int",
+   "dim": 1,
+   "disp": "sEmission2nd",
+   "attrs": [
+    "lilToggle"
+   ],
+   "def": 0
+  },
+  {
+   "name": "_AudioLink2Emission2ndGrad",
+   "type": "int",
+   "dim": 1,
+   "disp": "sEmission2nd+sGradation",
+   "attrs": [
+    "lilToggle"
+   ],
+   "def": 0
+  },
+  {
+   "name": "_AudioLink2EmissionGrad",
+   "type": "int",
+   "dim": 1,
+   "disp": "sEmission+sGradation",
+   "attrs": [
+    "lilToggle"
+   ],
+   "def": 0
+  },
+  {
+   "name": "_AudioLink2Main2nd",
+   "type": "int",
+   "dim": 1,
+   "disp": "sMainColor2nd",
+   "attrs": [
+    "lilToggle"
+   ],
+   "def": 0
+  },
+  {
+   "name": "_AudioLink2Main3rd",
+   "type": "int",
+   "dim": 1,
+   "disp": "sMainColor3rd",
+   "attrs": [
+    "lilToggle"
+   ],
+   "def": 0
+  },
+  {
+   "name": "_AudioLink2Vertex",
+   "type": "int",
+   "dim": 1,
+   "disp": "sVertex",
+   "attrs": [
+    "lilToggle"
+   ],
+   "def": 0
+  },
+  {
+   "name": "_AudioLinkAsLocal",
+   "type": "int",
+   "dim": 1,
+   "disp": "sAudioLinkAsLocal",
+   "attrs": [
+    "lilToggle"
+   ],
+   "def": 0
+  },
+  {
+   "name": "_AudioLinkDefaultValue",
+   "type": "vector",
+   "dim": 4,
+   "disp": "Strength|Blink Strength|Blink Speed|Blink Threshold",
+   "attrs": [
+    "lilFRFR"
+   ],
+   "def": [
+    0,
+    0,
+    2,
+    0.75
+   ]
+  },
+  {
+   "name": "_AudioLinkLocalMap",
+   "type": "texture",
+   "dim": 2,
+   "disp": "Local Map",
+   "attrs": [
+    "NoScaleOffset"
+   ],
+   "def": "black"
+  },
+  {
+   "name": "_AudioLinkLocalMapParams",
+   "type": "vector",
+   "dim": 4,
+   "disp": "sAudioLinkLocalMapParams",
+   "attrs": [
+    "lilALLocal"
+   ],
+   "def": [
+    120,
+    1,
+    0,
+    0
+   ]
+  },
+  {
+   "name": "_AudioLinkMask",
+   "type": "texture",
+   "dim": 2,
+   "disp": "Mask",
+   "attrs": [],
+   "def": "blue"
+  },
+  {
+   "name": "_AudioLinkMask_ScrollRotate",
+   "type": "vector",
+   "dim": 4,
+   "disp": "sScrollRotates",
+   "attrs": [
+    "lilUVAnim"
+   ],
+   "def": [
+    0,
+    0,
+    0,
+    0
+   ]
+  },
+  {
+   "name": "_AudioLinkMask_UVMode",
+   "type": "int",
+   "dim": 1,
+   "disp": "UV Mode|UV0|UV1|UV2|UV3",
+   "attrs": [
+    "lilEnum"
+   ],
+   "def": 0
+  },
+  {
+   "name": "_AudioLinkStart",
+   "type": "vector",
+   "dim": 4,
+   "disp": "sAudioLinkStartPosition",
+   "attrs": [
+    "lilVec3"
+   ],
+   "def": [
+    0,
+    0,
+    0,
+    0
+   ]
+  },
+  {
+   "name": "_AudioLinkUVMode",
+   "type": "int",
+   "dim": 1,
+   "disp": "sAudioLinkUVModes",
+   "attrs": [
+    "lilEnum"
+   ],
+   "def": 1
+  },
+  {
+   "name": "_AudioLinkUVParams",
+   "type": "vector",
+   "dim": 4,
+   "disp": "Scale|Offset|sAngle|Band|Bass|Low Mid|High Mid|Treble",
+   "attrs": [
+    "lilALUVParams"
+   ],
+   "def": [
+    0.25,
+    0,
+    0,
+    0.125
+   ]
+  },
+  {
+   "name": "_AudioLinkVertexStart",
+   "type": "vector",
+   "dim": 4,
+   "disp": "sAudioLinkStartPosition",
+   "attrs": [
+    "lilVec3"
+   ],
+   "def": [
+    0,
+    0,
+    0,
+    0
+   ]
+  },
+  {
+   "name": "_AudioLinkVertexStrength",
+   "type": "vector",
+   "dim": 4,
+   "disp": "sAudioLinkVertexStrengths",
+   "attrs": [
+    "lilVec3Float"
+   ],
+   "def": [
+    0,
+    0,
+    0,
+    1
+   ]
+  },
+  {
+   "name": "_AudioLinkVertexUVMode",
+   "type": "int",
+   "dim": 1,
+   "disp": "sAudioLinkVertexUVModes",
+   "attrs": [
+    "lilEnum"
+   ],
+   "def": 1
+  },
+  {
+   "name": "_AudioLinkVertexUVParams",
+   "type": "vector",
+   "dim": 4,
+   "disp": "Scale|Offset|sAngle|Band|Bass|Low Mid|High Mid|Treble",
+   "attrs": [
+    "lilALUVParams"
+   ],
+   "def": [
+    0.25,
+    0,
+    0,
+    0.125
+   ]
+  },
+  {
+   "name": "_BackfaceColor",
+   "type": "color",
+   "dim": 4,
+   "disp": "sColor",
+   "attrs": [
+    "lilHDR"
+   ],
+   "def": [
+    0,
+    0,
+    0,
+    0
+   ]
+  },
+  {
+   "name": "_BackfaceForceShadow",
+   "type": "range",
+   "dim": 1,
+   "disp": "sBackfaceForceShadow",
+   "attrs": [],
+   "def": 0,
+   "min": 0,
+   "max": 1
+  },
+  {
+   "name": "_BacklightBackfaceMask",
+   "type": "int",
+   "dim": 1,
+   "disp": "sBackfaceMask",
+   "attrs": [
+    "lilToggle"
+   ],
+   "def": 1
+  },
+  {
+   "name": "_BacklightBlur",
+   "type": "range",
+   "dim": 1,
+   "disp": "sBlur",
+   "attrs": [],
+   "def": 0.05,
+   "min": 0,
+   "max": 1
+  },
+  {
+   "name": "_BacklightBorder",
+   "type": "range",
+   "dim": 1,
+   "disp": "Border",
+   "attrs": [],
+   "def": 0.35,
+   "min": 0,
+   "max": 1
+  },
+  {
+   "name": "_BacklightColor",
+   "type": "color",
+   "dim": 4,
+   "disp": "sColor",
+   "attrs": [
+    "lilHDR"
+   ],
+   "def": [
+    0.85,
+    0.8,
+    0.7,
+    1
+   ]
+  },
+  {
+   "name": "_BacklightColorTex",
+   "type": "texture",
+   "dim": 2,
+   "disp": "Texture",
+   "attrs": [
+    "NoScaleOffset"
+   ],
+   "def": "white"
+  },
+  {
+   "name": "_BacklightDirectivity",
+   "type": "float",
+   "dim": 1,
+   "disp": "sDirectivity",
+   "attrs": [],
+   "def": 5
+  },
+  {
+   "name": "_BacklightMainStrength",
+   "type": "range",
+   "dim": 1,
+   "disp": "sMainColorPower",
+   "attrs": [],
+   "def": 0,
+   "min": 0,
+   "max": 1
+  },
+  {
+   "name": "_BacklightNormalStrength",
+   "type": "range",
+   "dim": 1,
+   "disp": "sNormalStrength",
+   "attrs": [],
+   "def": 1,
+   "min": 0,
+   "max": 1
+  },
+  {
+   "name": "_BacklightReceiveShadow",
+   "type": "int",
+   "dim": 1,
+   "disp": "sReceiveShadow",
+   "attrs": [
+    "lilToggle"
+   ],
+   "def": 1
+  },
+  {
+   "name": "_BacklightViewStrength",
+   "type": "range",
+   "dim": 1,
+   "disp": "sViewDirectionStrength",
+   "attrs": [],
+   "def": 1,
+   "min": 0,
+   "max": 1
+  },
+  {
+   "name": "_BaseColor",
+   "type": "color",
+   "dim": 4,
+   "disp": "sColor",
+   "attrs": [
+    "HideInInspector"
+   ],
+   "def": [
+    1,
+    1,
+    1,
+    1
+   ]
+  },
+  {
+   "name": "_BaseColorMap",
+   "type": "texture",
+   "dim": 2,
+   "disp": "Texture",
+   "attrs": [
+    "HideInInspector"
+   ],
+   "def": "white"
+  },
+  {
+   "name": "_BaseMap",
+   "type": "texture",
+   "dim": 2,
+   "disp": "Texture",
+   "attrs": [
+    "HideInInspector"
+   ],
+   "def": "white"
+  },
+  {
+   "name": "_BeforeExposureLimit",
+   "type": "float",
+   "dim": 1,
+   "disp": "sBeforeExposureLimit",
+   "attrs": [],
+   "def": 10000
+  },
+  {
+   "name": "_BlendOp",
+   "type": "int",
+   "dim": 1,
+   "disp": "sBlendOpRGB",
+   "attrs": [
+    "Enum(UnityEngine.Rendering.BlendOp)"
+   ],
+   "def": 0
+  },
+  {
+   "name": "_BlendOpAlpha",
+   "type": "int",
+   "dim": 1,
+   "disp": "sBlendOpAlpha",
+   "attrs": [
+    "Enum(UnityEngine.Rendering.BlendOp)"
+   ],
+   "def": 0
+  },
+  {
+   "name": "_BlendOpAlphaFA",
+   "type": "int",
+   "dim": 1,
+   "disp": "sBlendOpAlpha",
+   "attrs": [
+    "Enum(UnityEngine.Rendering.BlendOp)"
+   ],
+   "def": 4
+  },
+  {
+   "name": "_BlendOpFA",
+   "type": "int",
+   "dim": 1,
+   "disp": "sBlendOpRGB",
+   "attrs": [
+    "Enum(UnityEngine.Rendering.BlendOp)"
+   ],
+   "def": 4
+  },
+  {
+   "name": "_Bump2ndMap",
+   "type": "texture",
+   "dim": 2,
+   "disp": "Normal Map",
+   "attrs": [
+    "Normal"
+   ],
+   "def": "bump"
+  },
+  {
+   "name": "_Bump2ndMap_UVMode",
+   "type": "int",
+   "dim": 1,
+   "disp": "UV Mode|UV0|UV1|UV2|UV3",
+   "attrs": [
+    "lilEnum"
+   ],
+   "def": 0
+  },
+  {
+   "name": "_Bump2ndScale",
+   "type": "range",
+   "dim": 1,
+   "disp": "Scale",
+   "attrs": [],
+   "def": 1,
+   "min": -10,
+   "max": 10
+  },
+  {
+   "name": "_Bump2ndScaleMask",
+   "type": "texture",
+   "dim": 2,
+   "disp": "Mask",
+   "attrs": [
+    "NoScaleOffset"
+   ],
+   "def": "white"
+  },
+  {
+   "name": "_BumpMap",
+   "type": "texture",
+   "dim": 2,
+   "disp": "Normal Map",
+   "attrs": [
+    "Normal"
+   ],
+   "def": "bump"
+  },
+  {
+   "name": "_BumpScale",
+   "type": "range",
+   "dim": 1,
+   "disp": "Scale",
+   "attrs": [],
+   "def": 1,
+   "min": -10,
+   "max": 10
+  },
+  {
+   "name": "_Color",
+   "type": "color",
+   "dim": 4,
+   "disp": "sColor",
+   "attrs": [
+    "lilHDR",
+    "MainColor"
+   ],
+   "def": [
+    1,
+    1,
+    1,
+    1
+   ]
+  },
+  {
+   "name": "_Color2nd",
+   "type": "color",
+   "dim": 4,
+   "disp": "sColor",
+   "attrs": [
+    "lilHDR"
+   ],
+   "def": [
+    1,
+    1,
+    1,
+    1
+   ]
+  },
+  {
+   "name": "_Color3rd",
+   "type": "color",
+   "dim": 4,
+   "disp": "sColor",
+   "attrs": [
+    "lilHDR"
+   ],
+   "def": [
+    1,
+    1,
+    1,
+    1
+   ]
+  },
+  {
+   "name": "_ColorMask",
+   "type": "int",
+   "dim": 1,
+   "disp": "sColorMask",
+   "attrs": [
+    "lilColorMask"
+   ],
+   "def": 15
+  },
+  {
+   "name": "_Cull",
+   "type": "int",
+   "dim": 1,
+   "disp": "sCullModes",
+   "attrs": [
+    "lilEnum"
+   ],
+   "def": 2
+  },
+  {
+   "name": "_Cutoff",
+   "type": "range",
+   "dim": 1,
+   "disp": "sCutoff",
+   "attrs": [],
+   "def": 0.5,
+   "min": -0.001,
+   "max": 1.001
+  },
+  {
+   "name": "_DissolveColor",
+   "type": "color",
+   "dim": 4,
+   "disp": "sColor",
+   "attrs": [
+    "lilHDR"
+   ],
+   "def": [
+    1,
+    1,
+    1,
+    1
+   ]
+  },
+  {
+   "name": "_DissolveMask",
+   "type": "texture",
+   "dim": 2,
+   "disp": "Dissolve Mask",
+   "attrs": [],
+   "def": "white"
+  },
+  {
+   "name": "_DissolveNoiseMask",
+   "type": "texture",
+   "dim": 2,
+   "disp": "Dissolve Noise Mask",
+   "attrs": [],
+   "def": "gray"
+  },
+  {
+   "name": "_DissolveNoiseMask_ScrollRotate",
+   "type": "vector",
+   "dim": 4,
+   "disp": "Scroll",
+   "attrs": [
+    "lilUVAnim"
+   ],
+   "def": [
+    0,
+    0,
+    0,
+    0
+   ]
+  },
+  {
+   "name": "_DissolveNoiseStrength",
+   "type": "float",
+   "dim": 1,
+   "disp": "Dissolve Noise Strength",
+   "attrs": [],
+   "def": 0.1
+  },
+  {
+   "name": "_DissolveParams",
+   "type": "vector",
+   "dim": 4,
+   "disp": "sDissolveParamsModes",
+   "attrs": [
+    "lilDissolve"
+   ],
+   "def": [
+    0,
+    0,
+    0.5,
+    0.1
+   ]
+  },
+  {
+   "name": "_DissolvePos",
+   "type": "vector",
+   "dim": 4,
+   "disp": "Dissolve Position",
+   "attrs": [
+    "lilDissolveP"
+   ],
+   "def": [
+    0,
+    0,
+    0,
+    0
+   ]
+  },
+  {
+   "name": "_DistanceFade",
+   "type": "vector",
+   "dim": 4,
+   "disp": "sDistanceFadeSettings",
+   "attrs": [
+    "lilFFFB"
+   ],
+   "def": [
+    0.1,
+    0.01,
+    0,
+    0
+   ]
+  },
+  {
+   "name": "_DistanceFadeColor",
+   "type": "color",
+   "dim": 4,
+   "disp": "sColor",
+   "attrs": [
+    "lilHDR"
+   ],
+   "def": [
+    0,
+    0,
+    0,
+    1
+   ]
+  },
+  {
+   "name": "_DistanceFadeMode",
+   "type": "int",
+   "dim": 1,
+   "disp": "sDistanceFadeModes",
+   "attrs": [
+    "lilEnum"
+   ],
+   "def": 0
+  },
+  {
+   "name": "_DistanceFadeRimColor",
+   "type": "color",
+   "dim": 4,
+   "disp": "sColor",
+   "attrs": [
+    "lilHDR"
+   ],
+   "def": [
+    0,
+    0,
+    0,
+    0
+   ]
+  },
+  {
+   "name": "_DistanceFadeRimFresnelPower",
+   "type": "range",
+   "dim": 1,
+   "disp": "sFresnelPower",
+   "attrs": [
+    "PowerSlider(3.0)"
+   ],
+   "def": 5,
+   "min": 0.01,
+   "max": 50
+  },
+  {
+   "name": "_DitherMaxValue",
+   "type": "float",
+   "dim": 1,
+   "disp": "Max Value",
+   "attrs": [],
+   "def": 255
+  },
+  {
+   "name": "_DitherTex",
+   "type": "texture",
+   "dim": 2,
+   "disp": "Dither",
+   "attrs": [
+    "NoScaleOffset"
+   ],
+   "def": "white"
+  },
+  {
+   "name": "_DstBlend",
+   "type": "int",
+   "dim": 1,
+   "disp": "sDstBlendRGB",
+   "attrs": [
+    "Enum(UnityEngine.Rendering.BlendMode)"
+   ],
+   "def": 0
+  },
+  {
+   "name": "_DstBlendAlpha",
+   "type": "int",
+   "dim": 1,
+   "disp": "sDstBlendAlpha",
+   "attrs": [
+    "Enum(UnityEngine.Rendering.BlendMode)"
+   ],
+   "def": 10
+  },
+  {
+   "name": "_DstBlendAlphaFA",
+   "type": "int",
+   "dim": 1,
+   "disp": "sDstBlendAlpha",
+   "attrs": [
+    "Enum(UnityEngine.Rendering.BlendMode)"
+   ],
+   "def": 1
+  },
+  {
+   "name": "_DstBlendFA",
+   "type": "int",
+   "dim": 1,
+   "disp": "sDstBlendRGB",
+   "attrs": [
+    "Enum(UnityEngine.Rendering.BlendMode)"
+   ],
+   "def": 1
+  },
+  {
+   "name": "_DummyProperty",
+   "type": "float",
+   "dim": 1,
+   "disp": "If you are seeing this, some script is broken.",
+   "attrs": [],
+   "def": 0
+  },
+  {
+   "name": "_e2ga0",
+   "type": "color",
+   "dim": 4,
+   "disp": "",
+   "attrs": [
+    "HideInInspector"
+   ],
+   "def": [
+    1,
+    0,
+    0,
+    0
+   ]
+  },
+  {
+   "name": "_e2ga1",
+   "type": "color",
+   "dim": 4,
+   "disp": "",
+   "attrs": [
+    "HideInInspector"
+   ],
+   "def": [
+    1,
+    0,
+    0,
+    1
+   ]
+  },
+  {
+   "name": "_e2ga2",
+   "type": "color",
+   "dim": 4,
+   "disp": "",
+   "attrs": [
+    "HideInInspector"
+   ],
+   "def": [
+    1,
+    0,
+    0,
+    0
+   ]
+  },
+  {
+   "name": "_e2ga3",
+   "type": "color",
+   "dim": 4,
+   "disp": "",
+   "attrs": [
+    "HideInInspector"
+   ],
+   "def": [
+    1,
+    0,
+    0,
+    0
+   ]
+  },
+  {
+   "name": "_e2ga4",
+   "type": "color",
+   "dim": 4,
+   "disp": "",
+   "attrs": [
+    "HideInInspector"
+   ],
+   "def": [
+    1,
+    0,
+    0,
+    0
+   ]
+  },
+  {
+   "name": "_e2ga5",
+   "type": "color",
+   "dim": 4,
+   "disp": "",
+   "attrs": [
+    "HideInInspector"
+   ],
+   "def": [
+    1,
+    0,
+    0,
+    0
+   ]
+  },
+  {
+   "name": "_e2ga6",
+   "type": "color",
+   "dim": 4,
+   "disp": "",
+   "attrs": [
+    "HideInInspector"
+   ],
+   "def": [
+    1,
+    0,
+    0,
+    0
+   ]
+  },
+  {
+   "name": "_e2ga7",
+   "type": "color",
+   "dim": 4,
+   "disp": "",
+   "attrs": [
+    "HideInInspector"
+   ],
+   "def": [
+    1,
+    0,
+    0,
+    0
+   ]
+  },
+  {
+   "name": "_e2gai",
+   "type": "int",
+   "dim": 1,
+   "disp": "",
+   "attrs": [
+    "HideInInspector"
+   ],
+   "def": 2
+  },
+  {
+   "name": "_e2gc0",
+   "type": "color",
+   "dim": 4,
+   "disp": "",
+   "attrs": [
+    "HideInInspector"
+   ],
+   "def": [
+    1,
+    1,
+    1,
+    0
+   ]
+  },
+  {
+   "name": "_e2gc1",
+   "type": "color",
+   "dim": 4,
+   "disp": "",
+   "attrs": [
+    "HideInInspector"
+   ],
+   "def": [
+    1,
+    1,
+    1,
+    1
+   ]
+  },
+  {
+   "name": "_e2gc2",
+   "type": "color",
+   "dim": 4,
+   "disp": "",
+   "attrs": [
+    "HideInInspector"
+   ],
+   "def": [
+    1,
+    1,
+    1,
+    0
+   ]
+  },
+  {
+   "name": "_e2gc3",
+   "type": "color",
+   "dim": 4,
+   "disp": "",
+   "attrs": [
+    "HideInInspector"
+   ],
+   "def": [
+    1,
+    1,
+    1,
+    0
+   ]
+  },
+  {
+   "name": "_e2gc4",
+   "type": "color",
+   "dim": 4,
+   "disp": "",
+   "attrs": [
+    "HideInInspector"
+   ],
+   "def": [
+    1,
+    1,
+    1,
+    0
+   ]
+  },
+  {
+   "name": "_e2gc5",
+   "type": "color",
+   "dim": 4,
+   "disp": "",
+   "attrs": [
+    "HideInInspector"
+   ],
+   "def": [
+    1,
+    1,
+    1,
+    0
+   ]
+  },
+  {
+   "name": "_e2gc6",
+   "type": "color",
+   "dim": 4,
+   "disp": "",
+   "attrs": [
+    "HideInInspector"
+   ],
+   "def": [
+    1,
+    1,
+    1,
+    0
+   ]
+  },
+  {
+   "name": "_e2gc7",
+   "type": "color",
+   "dim": 4,
+   "disp": "",
+   "attrs": [
+    "HideInInspector"
+   ],
+   "def": [
+    1,
+    1,
+    1,
+    0
+   ]
+  },
+  {
+   "name": "_e2gci",
+   "type": "int",
+   "dim": 1,
+   "disp": "",
+   "attrs": [
+    "HideInInspector"
+   ],
+   "def": 2
+  },
+  {
+   "name": "_ega0",
+   "type": "color",
+   "dim": 4,
+   "disp": "",
+   "attrs": [
+    "HideInInspector"
+   ],
+   "def": [
+    1,
+    0,
+    0,
+    0
+   ]
+  },
+  {
+   "name": "_ega1",
+   "type": "color",
+   "dim": 4,
+   "disp": "",
+   "attrs": [
+    "HideInInspector"
+   ],
+   "def": [
+    1,
+    0,
+    0,
+    1
+   ]
+  },
+  {
+   "name": "_ega2",
+   "type": "color",
+   "dim": 4,
+   "disp": "",
+   "attrs": [
+    "HideInInspector"
+   ],
+   "def": [
+    1,
+    0,
+    0,
+    0
+   ]
+  },
+  {
+   "name": "_ega3",
+   "type": "color",
+   "dim": 4,
+   "disp": "",
+   "attrs": [
+    "HideInInspector"
+   ],
+   "def": [
+    1,
+    0,
+    0,
+    0
+   ]
+  },
+  {
+   "name": "_ega4",
+   "type": "color",
+   "dim": 4,
+   "disp": "",
+   "attrs": [
+    "HideInInspector"
+   ],
+   "def": [
+    1,
+    0,
+    0,
+    0
+   ]
+  },
+  {
+   "name": "_ega5",
+   "type": "color",
+   "dim": 4,
+   "disp": "",
+   "attrs": [
+    "HideInInspector"
+   ],
+   "def": [
+    1,
+    0,
+    0,
+    0
+   ]
+  },
+  {
+   "name": "_ega6",
+   "type": "color",
+   "dim": 4,
+   "disp": "",
+   "attrs": [
+    "HideInInspector"
+   ],
+   "def": [
+    1,
+    0,
+    0,
+    0
+   ]
+  },
+  {
+   "name": "_ega7",
+   "type": "color",
+   "dim": 4,
+   "disp": "",
+   "attrs": [
+    "HideInInspector"
+   ],
+   "def": [
+    1,
+    0,
+    0,
+    0
+   ]
+  },
+  {
+   "name": "_egai",
+   "type": "int",
+   "dim": 1,
+   "disp": "",
+   "attrs": [
+    "HideInInspector"
+   ],
+   "def": 2
+  },
+  {
+   "name": "_egc0",
+   "type": "color",
+   "dim": 4,
+   "disp": "",
+   "attrs": [
+    "HideInInspector"
+   ],
+   "def": [
+    1,
+    1,
+    1,
+    0
+   ]
+  },
+  {
+   "name": "_egc1",
+   "type": "color",
+   "dim": 4,
+   "disp": "",
+   "attrs": [
+    "HideInInspector"
+   ],
+   "def": [
+    1,
+    1,
+    1,
+    1
+   ]
+  },
+  {
+   "name": "_egc2",
+   "type": "color",
+   "dim": 4,
+   "disp": "",
+   "attrs": [
+    "HideInInspector"
+   ],
+   "def": [
+    1,
+    1,
+    1,
+    0
+   ]
+  },
+  {
+   "name": "_egc3",
+   "type": "color",
+   "dim": 4,
+   "disp": "",
+   "attrs": [
+    "HideInInspector"
+   ],
+   "def": [
+    1,
+    1,
+    1,
+    0
+   ]
+  },
+  {
+   "name": "_egc4",
+   "type": "color",
+   "dim": 4,
+   "disp": "",
+   "attrs": [
+    "HideInInspector"
+   ],
+   "def": [
+    1,
+    1,
+    1,
+    0
+   ]
+  },
+  {
+   "name": "_egc5",
+   "type": "color",
+   "dim": 4,
+   "disp": "",
+   "attrs": [
+    "HideInInspector"
+   ],
+   "def": [
+    1,
+    1,
+    1,
+    0
+   ]
+  },
+  {
+   "name": "_egc6",
+   "type": "color",
+   "dim": 4,
+   "disp": "",
+   "attrs": [
+    "HideInInspector"
+   ],
+   "def": [
+    1,
+    1,
+    1,
+    0
+   ]
+  },
+  {
+   "name": "_egc7",
+   "type": "color",
+   "dim": 4,
+   "disp": "",
+   "attrs": [
+    "HideInInspector"
+   ],
+   "def": [
+    1,
+    1,
+    1,
+    0
+   ]
+  },
+  {
+   "name": "_egci",
+   "type": "int",
+   "dim": 1,
+   "disp": "",
+   "attrs": [
+    "HideInInspector"
+   ],
+   "def": 2
+  },
+  {
+   "name": "_Emission2ndBlend",
+   "type": "range",
+   "dim": 1,
+   "disp": "Blend",
+   "attrs": [],
+   "def": 1,
+   "min": 0,
+   "max": 1
+  },
+  {
+   "name": "_Emission2ndBlendMask",
+   "type": "texture",
+   "dim": 2,
+   "disp": "Mask",
+   "attrs": [],
+   "def": "white"
+  },
+  {
+   "name": "_Emission2ndBlendMask_ScrollRotate",
+   "type": "vector",
+   "dim": 4,
+   "disp": "sScrollRotates",
+   "attrs": [
+    "lilUVAnim"
+   ],
+   "def": [
+    0,
+    0,
+    0,
+    0
+   ]
+  },
+  {
+   "name": "_Emission2ndBlendMode",
+   "type": "int",
+   "dim": 1,
+   "disp": "sBlendModes",
+   "attrs": [
+    "lilEnum"
+   ],
+   "def": 1
+  },
+  {
+   "name": "_Emission2ndBlink",
+   "type": "vector",
+   "dim": 4,
+   "disp": "sBlinkSettings",
+   "attrs": [
+    "lilBlink"
+   ],
+   "def": [
+    0,
+    0,
+    3.141593,
+    0
+   ]
+  },
+  {
+   "name": "_Emission2ndColor",
+   "type": "color",
+   "dim": 4,
+   "disp": "sColor",
+   "attrs": [
+    "HDR",
+    "lilHDR"
+   ],
+   "def": [
+    1,
+    1,
+    1,
+    1
+   ]
+  },
+  {
+   "name": "_Emission2ndFluorescence",
+   "type": "range",
+   "dim": 1,
+   "disp": "sFluorescence",
+   "attrs": [],
+   "def": 0,
+   "min": 0,
+   "max": 1
+  },
+  {
+   "name": "_Emission2ndGradSpeed",
+   "type": "float",
+   "dim": 1,
+   "disp": "Gradation Speed",
+   "attrs": [],
+   "def": 1
+  },
+  {
+   "name": "_Emission2ndGradTex",
+   "type": "texture",
+   "dim": 2,
+   "disp": "Gradation Texture",
+   "attrs": [
+    "NoScaleOffset"
+   ],
+   "def": "white"
+  },
+  {
+   "name": "_Emission2ndMainStrength",
+   "type": "range",
+   "dim": 1,
+   "disp": "sMainColorPower",
+   "attrs": [],
+   "def": 0,
+   "min": 0,
+   "max": 1
+  },
+  {
+   "name": "_Emission2ndMap",
+   "type": "texture",
+   "dim": 2,
+   "disp": "Texture",
+   "attrs": [],
+   "def": "white"
+  },
+  {
+   "name": "_Emission2ndMap_ScrollRotate",
+   "type": "vector",
+   "dim": 4,
+   "disp": "sScrollRotates",
+   "attrs": [
+    "lilUVAnim"
+   ],
+   "def": [
+    0,
+    0,
+    0,
+    0
+   ]
+  },
+  {
+   "name": "_Emission2ndMap_UVMode",
+   "type": "int",
+   "dim": 1,
+   "disp": "UV Mode|UV0|UV1|UV2|UV3|Rim",
+   "attrs": [
+    "lilEnum"
+   ],
+   "def": 0
+  },
+  {
+   "name": "_Emission2ndParallaxDepth",
+   "type": "float",
+   "dim": 1,
+   "disp": "sParallaxDepth",
+   "attrs": [],
+   "def": 0
+  },
+  {
+   "name": "_Emission2ndUseGrad",
+   "type": "int",
+   "dim": 1,
+   "disp": "sGradation",
+   "attrs": [
+    "lilToggle"
+   ],
+   "def": 0
+  },
+  {
+   "name": "_EmissionBlend",
+   "type": "range",
+   "dim": 1,
+   "disp": "Blend",
+   "attrs": [],
+   "def": 1,
+   "min": 0,
+   "max": 1
+  },
+  {
+   "name": "_EmissionBlendMask",
+   "type": "texture",
+   "dim": 2,
+   "disp": "Mask",
+   "attrs": [],
+   "def": "white"
+  },
+  {
+   "name": "_EmissionBlendMask_ScrollRotate",
+   "type": "vector",
+   "dim": 4,
+   "disp": "sScrollRotates",
+   "attrs": [
+    "lilUVAnim"
+   ],
+   "def": [
+    0,
+    0,
+    0,
+    0
+   ]
+  },
+  {
+   "name": "_EmissionBlendMode",
+   "type": "int",
+   "dim": 1,
+   "disp": "sBlendModes",
+   "attrs": [
+    "lilEnum"
+   ],
+   "def": 1
+  },
+  {
+   "name": "_EmissionBlink",
+   "type": "vector",
+   "dim": 4,
+   "disp": "sBlinkSettings",
+   "attrs": [
+    "lilBlink"
+   ],
+   "def": [
+    0,
+    0,
+    3.141593,
+    0
+   ]
+  },
+  {
+   "name": "_EmissionColor",
+   "type": "color",
+   "dim": 4,
+   "disp": "sColor",
+   "attrs": [
+    "HDR",
+    "lilHDR"
+   ],
+   "def": [
+    1,
+    1,
+    1,
+    1
+   ]
+  },
+  {
+   "name": "_EmissionFluorescence",
+   "type": "range",
+   "dim": 1,
+   "disp": "sFluorescence",
+   "attrs": [],
+   "def": 0,
+   "min": 0,
+   "max": 1
+  },
+  {
+   "name": "_EmissionGradSpeed",
+   "type": "float",
+   "dim": 1,
+   "disp": "Gradation Speed",
+   "attrs": [],
+   "def": 1
+  },
+  {
+   "name": "_EmissionGradTex",
+   "type": "texture",
+   "dim": 2,
+   "disp": "Gradation Texture",
+   "attrs": [
+    "NoScaleOffset"
+   ],
+   "def": "white"
+  },
+  {
+   "name": "_EmissionMainStrength",
+   "type": "range",
+   "dim": 1,
+   "disp": "sMainColorPower",
+   "attrs": [],
+   "def": 0,
+   "min": 0,
+   "max": 1
+  },
+  {
+   "name": "_EmissionMap",
+   "type": "texture",
+   "dim": 2,
+   "disp": "Texture",
+   "attrs": [],
+   "def": "white"
+  },
+  {
+   "name": "_EmissionMap_ScrollRotate",
+   "type": "vector",
+   "dim": 4,
+   "disp": "sScrollRotates",
+   "attrs": [
+    "lilUVAnim"
+   ],
+   "def": [
+    0,
+    0,
+    0,
+    0
+   ]
+  },
+  {
+   "name": "_EmissionMap_UVMode",
+   "type": "int",
+   "dim": 1,
+   "disp": "UV Mode|UV0|UV1|UV2|UV3|Rim",
+   "attrs": [
+    "lilEnum"
+   ],
+   "def": 0
+  },
+  {
+   "name": "_EmissionParallaxDepth",
+   "type": "float",
+   "dim": 1,
+   "disp": "sParallaxDepth",
+   "attrs": [],
+   "def": 0
+  },
+  {
+   "name": "_EmissionUseGrad",
+   "type": "int",
+   "dim": 1,
+   "disp": "sGradation",
+   "attrs": [
+    "lilToggle"
+   ],
+   "def": 0
+  },
+  {
+   "name": "_EnvRimBlur",
+   "type": "range",
+   "dim": 1,
+   "disp": "[VRCLV] Rim Blur",
+   "attrs": [],
+   "def": 0.35,
+   "min": 0,
+   "max": 1
+  },
+  {
+   "name": "_EnvRimBorder",
+   "type": "range",
+   "dim": 1,
+   "disp": "[VRCLV] Rim Border",
+   "attrs": [],
+   "def": 3,
+   "min": 0,
+   "max": 3
+  },
+  {
+   "name": "_FlipNormal",
+   "type": "int",
+   "dim": 1,
+   "disp": "sFlipBackfaceNormal",
+   "attrs": [
+    "lilToggle"
+   ],
+   "def": 0
+  },
+  {
+   "name": "_GlitterAngleRandomize",
+   "type": "int",
+   "dim": 1,
+   "disp": "sRandomize+ (+sAngle+)",
+   "attrs": [
+    "lilToggle"
+   ],
+   "def": 0
+  },
+  {
+   "name": "_GlitterApplyShape",
+   "type": "int",
+   "dim": 1,
+   "disp": "Shape",
+   "attrs": [
+    "lilToggle"
+   ],
+   "def": 0
+  },
+  {
+   "name": "_GlitterApplyTransparency",
+   "type": "int",
+   "dim": 1,
+   "disp": "sApplyTransparency",
+   "attrs": [
+    "lilToggle"
+   ],
+   "def": 1
+  },
+  {
+   "name": "_GlitterAtras",
+   "type": "vector",
+   "dim": 4,
+   "disp": "Atras",
+   "attrs": [
+    "lilVec2"
+   ],
+   "def": [
+    1,
+    1,
+    0,
+    0
+   ]
+  },
+  {
+   "name": "_GlitterBackfaceMask",
+   "type": "int",
+   "dim": 1,
+   "disp": "sBackfaceMask",
+   "attrs": [
+    "lilToggle"
+   ],
+   "def": 0
+  },
+  {
+   "name": "_GlitterColor",
+   "type": "color",
+   "dim": 4,
+   "disp": "sColor",
+   "attrs": [
+    "lilHDR"
+   ],
+   "def": [
+    1,
+    1,
+    1,
+    1
+   ]
+  },
+  {
+   "name": "_GlitterColorTex",
+   "type": "texture",
+   "dim": 2,
+   "disp": "Texture",
+   "attrs": [],
+   "def": "white"
+  },
+  {
+   "name": "_GlitterColorTex_UVMode",
+   "type": "int",
+   "dim": 1,
+   "disp": "UV Mode|UV0|UV1|UV2|UV3",
+   "attrs": [
+    "lilEnum"
+   ],
+   "def": 0
+  },
+  {
+   "name": "_GlitterEnableLighting",
+   "type": "range",
+   "dim": 1,
+   "disp": "sEnableLighting",
+   "attrs": [],
+   "def": 1,
+   "min": 0,
+   "max": 1
+  },
+  {
+   "name": "_GlitterMainStrength",
+   "type": "range",
+   "dim": 1,
+   "disp": "sMainColorPower",
+   "attrs": [],
+   "def": 0,
+   "min": 0,
+   "max": 1
+  },
+  {
+   "name": "_GlitterNormalStrength",
+   "type": "range",
+   "dim": 1,
+   "disp": "sNormalStrength",
+   "attrs": [],
+   "def": 1,
+   "min": 0,
+   "max": 1
+  },
+  {
+   "name": "_GlitterParams1",
+   "type": "vector",
+   "dim": 4,
+   "disp": "Tiling|Particle Size|Contrast",
+   "attrs": [
+    "lilGlitParam1"
+   ],
+   "def": [
+    256,
+    256,
+    0.16,
+    50
+   ]
+  },
+  {
+   "name": "_GlitterParams2",
+   "type": "vector",
+   "dim": 4,
+   "disp": "sGlitterParams2",
+   "attrs": [
+    "lilGlitParam2"
+   ],
+   "def": [
+    0.25,
+    0,
+    0,
+    0
+   ]
+  },
+  {
+   "name": "_GlitterPostContrast",
+   "type": "float",
+   "dim": 1,
+   "disp": "sPostContrast",
+   "attrs": [],
+   "def": 1
+  },
+  {
+   "name": "_GlitterScaleRandomize",
+   "type": "range",
+   "dim": 1,
+   "disp": "sRandomize+ (Size)",
+   "attrs": [],
+   "def": 0,
+   "min": 0,
+   "max": 1
+  },
+  {
+   "name": "_GlitterSensitivity",
+   "type": "float",
+   "dim": 1,
+   "disp": "Sensitivity",
+   "attrs": [],
+   "def": 0.25
+  },
+  {
+   "name": "_GlitterShadowMask",
+   "type": "range",
+   "dim": 1,
+   "disp": "sShadowMask",
+   "attrs": [],
+   "def": 0,
+   "min": 0,
+   "max": 1
+  },
+  {
+   "name": "_GlitterShapeTex",
+   "type": "texture",
+   "dim": 2,
+   "disp": "Texture",
+   "attrs": [],
+   "def": "white"
+  },
+  {
+   "name": "_GlitterUVMode",
+   "type": "int",
+   "dim": 1,
+   "disp": "UV Mode|UV0|UV1",
+   "attrs": [
+    "lilEnum"
+   ],
+   "def": 0
+  },
+  {
+   "name": "_GlitterVRParallaxStrength",
+   "type": "range",
+   "dim": 1,
+   "disp": "sVRParallaxStrength",
+   "attrs": [],
+   "def": 0,
+   "min": 0,
+   "max": 1
+  },
+  {
+   "name": "_GSAAStrength",
+   "type": "range",
+   "dim": 1,
+   "disp": "GSAA",
+   "attrs": [],
+   "def": 0,
+   "min": 0,
+   "max": 1
+  },
+  {
+   "name": "_IDMask1",
+   "type": "int",
+   "dim": 1,
+   "disp": "_IDMask1",
+   "attrs": [
+    "ToggleUI"
+   ],
+   "def": 0
+  },
+  {
+   "name": "_IDMask2",
+   "type": "int",
+   "dim": 1,
+   "disp": "_IDMask2",
+   "attrs": [
+    "ToggleUI"
+   ],
+   "def": 0
+  },
+  {
+   "name": "_IDMask3",
+   "type": "int",
+   "dim": 1,
+   "disp": "_IDMask3",
+   "attrs": [
+    "ToggleUI"
+   ],
+   "def": 0
+  },
+  {
+   "name": "_IDMask4",
+   "type": "int",
+   "dim": 1,
+   "disp": "_IDMask4",
+   "attrs": [
+    "ToggleUI"
+   ],
+   "def": 0
+  },
+  {
+   "name": "_IDMask5",
+   "type": "int",
+   "dim": 1,
+   "disp": "_IDMask5",
+   "attrs": [
+    "ToggleUI"
+   ],
+   "def": 0
+  },
+  {
+   "name": "_IDMask6",
+   "type": "int",
+   "dim": 1,
+   "disp": "_IDMask6",
+   "attrs": [
+    "ToggleUI"
+   ],
+   "def": 0
+  },
+  {
+   "name": "_IDMask7",
+   "type": "int",
+   "dim": 1,
+   "disp": "_IDMask7",
+   "attrs": [
+    "ToggleUI"
+   ],
+   "def": 0
+  },
+  {
+   "name": "_IDMask8",
+   "type": "int",
+   "dim": 1,
+   "disp": "_IDMask8",
+   "attrs": [
+    "ToggleUI"
+   ],
+   "def": 0
+  },
+  {
+   "name": "_IDMaskCompile",
+   "type": "int",
+   "dim": 1,
+   "disp": "_IDMaskCompile",
+   "attrs": [
+    "ToggleUI"
+   ],
+   "def": 0
+  },
+  {
+   "name": "_IDMaskControlsDissolve",
+   "type": "int",
+   "dim": 1,
+   "disp": "_IDMaskControlsDissolve",
+   "attrs": [
+    "ToggleUI"
+   ],
+   "def": 0
+  },
+  {
+   "name": "_IDMaskFrom",
+   "type": "int",
+   "dim": 1,
+   "disp": "_IDMaskFrom|0: UV0|1: UV1|2: UV2|3: UV3|4: UV4|5: UV5|6: UV6|7: UV7|8: VertexID",
+   "attrs": [
+    "lilEnum"
+   ],
+   "def": 8
+  },
+  {
+   "name": "_IDMaskIndex1",
+   "type": "int",
+   "dim": 1,
+   "disp": "_IDMaskIndex1",
+   "attrs": [],
+   "def": 0
+  },
+  {
+   "name": "_IDMaskIndex2",
+   "type": "int",
+   "dim": 1,
+   "disp": "_IDMaskIndex2",
+   "attrs": [],
+   "def": 0
+  },
+  {
+   "name": "_IDMaskIndex3",
+   "type": "int",
+   "dim": 1,
+   "disp": "_IDMaskIndex3",
+   "attrs": [],
+   "def": 0
+  },
+  {
+   "name": "_IDMaskIndex4",
+   "type": "int",
+   "dim": 1,
+   "disp": "_IDMaskIndex4",
+   "attrs": [],
+   "def": 0
+  },
+  {
+   "name": "_IDMaskIndex5",
+   "type": "int",
+   "dim": 1,
+   "disp": "_IDMaskIndex5",
+   "attrs": [],
+   "def": 0
+  },
+  {
+   "name": "_IDMaskIndex6",
+   "type": "int",
+   "dim": 1,
+   "disp": "_IDMaskIndex6",
+   "attrs": [],
+   "def": 0
+  },
+  {
+   "name": "_IDMaskIndex7",
+   "type": "int",
+   "dim": 1,
+   "disp": "_IDMaskIndex7",
+   "attrs": [],
+   "def": 0
+  },
+  {
+   "name": "_IDMaskIndex8",
+   "type": "int",
+   "dim": 1,
+   "disp": "_IDMaskIndex8",
+   "attrs": [],
+   "def": 0
+  },
+  {
+   "name": "_IDMaskIsBitmap",
+   "type": "int",
+   "dim": 1,
+   "disp": "_IDMaskIsBitmap",
+   "attrs": [
+    "ToggleUI"
+   ],
+   "def": 0
+  },
+  {
+   "name": "_IDMaskPrior1",
+   "type": "int",
+   "dim": 1,
+   "disp": "_IDMaskPrior1",
+   "attrs": [
+    "ToggleUI"
+   ],
+   "def": 0
+  },
+  {
+   "name": "_IDMaskPrior2",
+   "type": "int",
+   "dim": 1,
+   "disp": "_IDMaskPrior2",
+   "attrs": [
+    "ToggleUI"
+   ],
+   "def": 0
+  },
+  {
+   "name": "_IDMaskPrior3",
+   "type": "int",
+   "dim": 1,
+   "disp": "_IDMaskPrior3",
+   "attrs": [
+    "ToggleUI"
+   ],
+   "def": 0
+  },
+  {
+   "name": "_IDMaskPrior4",
+   "type": "int",
+   "dim": 1,
+   "disp": "_IDMaskPrior4",
+   "attrs": [
+    "ToggleUI"
+   ],
+   "def": 0
+  },
+  {
+   "name": "_IDMaskPrior5",
+   "type": "int",
+   "dim": 1,
+   "disp": "_IDMaskPrior5",
+   "attrs": [
+    "ToggleUI"
+   ],
+   "def": 0
+  },
+  {
+   "name": "_IDMaskPrior6",
+   "type": "int",
+   "dim": 1,
+   "disp": "_IDMaskPrior6",
+   "attrs": [
+    "ToggleUI"
+   ],
+   "def": 0
+  },
+  {
+   "name": "_IDMaskPrior7",
+   "type": "int",
+   "dim": 1,
+   "disp": "_IDMaskPrior7",
+   "attrs": [
+    "ToggleUI"
+   ],
+   "def": 0
+  },
+  {
+   "name": "_IDMaskPrior8",
+   "type": "int",
+   "dim": 1,
+   "disp": "_IDMaskPrior8",
+   "attrs": [
+    "ToggleUI"
+   ],
+   "def": 0
+  },
+  {
+   "name": "_Invisible",
+   "type": "int",
+   "dim": 1,
+   "disp": "sInvisible",
+   "attrs": [
+    "lilToggle"
+   ],
+   "def": 0
+  },
+  {
+   "name": "_LightDirectionOverride",
+   "type": "vector",
+   "dim": 4,
+   "disp": "sLightDirectionOverrides",
+   "attrs": [
+    "lilVec3B"
+   ],
+   "def": [
+    0.001,
+    0.002,
+    0.001,
+    0
+   ]
+  },
+  {
+   "name": "_LightMaxLimit",
+   "type": "range",
+   "dim": 1,
+   "disp": "sLightMaxLimit",
+   "attrs": [],
+   "def": 1,
+   "min": 0,
+   "max": 10
+  },
+  {
+   "name": "_LightMinLimit",
+   "type": "range",
+   "dim": 1,
+   "disp": "sLightMinLimit",
+   "attrs": [],
+   "def": 0.05,
+   "min": 0,
+   "max": 1
+  },
+  {
+   "name": "_lilDirectionalLightStrength",
+   "type": "range",
+   "dim": 1,
+   "disp": "sDirectionalLightStrength",
+   "attrs": [],
+   "def": 1,
+   "min": 0,
+   "max": 1
+  },
+  {
+   "name": "_lilShadowCasterBias",
+   "type": "float",
+   "dim": 1,
+   "disp": "Shadow Caster Bias",
+   "attrs": [],
+   "def": 0
+  },
+  {
+   "name": "_lilToonVersion",
+   "type": "int",
+   "dim": 1,
+   "disp": "Version",
+   "attrs": [
+    "HideInInspector"
+   ],
+   "def": 45
+  },
+  {
+   "name": "_Main2ndBlendMask",
+   "type": "texture",
+   "dim": 2,
+   "disp": "Mask",
+   "attrs": [
+    "NoScaleOffset"
+   ],
+   "def": "white"
+  },
+  {
+   "name": "_Main2ndDissolveColor",
+   "type": "color",
+   "dim": 4,
+   "disp": "sColor",
+   "attrs": [
+    "lilHDR"
+   ],
+   "def": [
+    1,
+    1,
+    1,
+    1
+   ]
+  },
+  {
+   "name": "_Main2ndDissolveMask",
+   "type": "texture",
+   "dim": 2,
+   "disp": "Dissolve Mask",
+   "attrs": [],
+   "def": "white"
+  },
+  {
+   "name": "_Main2ndDissolveNoiseMask",
+   "type": "texture",
+   "dim": 2,
+   "disp": "Dissolve Noise Mask",
+   "attrs": [],
+   "def": "gray"
+  },
+  {
+   "name": "_Main2ndDissolveNoiseMask_ScrollRotate",
+   "type": "vector",
+   "dim": 4,
+   "disp": "Scroll",
+   "attrs": [
+    "lilUVAnim"
+   ],
+   "def": [
+    0,
+    0,
+    0,
+    0
+   ]
+  },
+  {
+   "name": "_Main2ndDissolveNoiseStrength",
+   "type": "float",
+   "dim": 1,
+   "disp": "Dissolve Noise Strength",
+   "attrs": [],
+   "def": 0.1
+  },
+  {
+   "name": "_Main2ndDissolveParams",
+   "type": "vector",
+   "dim": 4,
+   "disp": "sDissolveParams",
+   "attrs": [
+    "lilDissolve"
+   ],
+   "def": [
+    0,
+    0,
+    0.5,
+    0.1
+   ]
+  },
+  {
+   "name": "_Main2ndDissolvePos",
+   "type": "vector",
+   "dim": 4,
+   "disp": "Dissolve Position",
+   "attrs": [
+    "lilDissolveP"
+   ],
+   "def": [
+    0,
+    0,
+    0,
+    0
+   ]
+  },
+  {
+   "name": "_Main2ndDistanceFade",
+   "type": "vector",
+   "dim": 4,
+   "disp": "sDistanceFadeSettings",
+   "attrs": [
+    "lilFFFB"
+   ],
+   "def": [
+    0.1,
+    0.01,
+    0,
+    0
+   ]
+  },
+  {
+   "name": "_Main2ndEnableLighting",
+   "type": "range",
+   "dim": 1,
+   "disp": "sEnableLighting",
+   "attrs": [],
+   "def": 1,
+   "min": 0,
+   "max": 1
+  },
+  {
+   "name": "_Main2ndTex",
+   "type": "texture",
+   "dim": 2,
+   "disp": "Texture",
+   "attrs": [],
+   "def": "white"
+  },
+  {
+   "name": "_Main2ndTex_Cull",
+   "type": "int",
+   "dim": 1,
+   "disp": "sCullModes",
+   "attrs": [
+    "lilEnum"
+   ],
+   "def": 0
+  },
+  {
+   "name": "_Main2ndTex_ScrollRotate",
+   "type": "vector",
+   "dim": 4,
+   "disp": "sScrollRotates",
+   "attrs": [
+    "lilUVAnim"
+   ],
+   "def": [
+    0,
+    0,
+    0,
+    0
+   ]
+  },
+  {
+   "name": "_Main2ndTex_UVMode",
+   "type": "int",
+   "dim": 1,
+   "disp": "UV Mode|UV0|UV1|UV2|UV3|MatCap",
+   "attrs": [
+    "lilEnum"
+   ],
+   "def": 0
+  },
+  {
+   "name": "_Main2ndTexAlphaMode",
+   "type": "int",
+   "dim": 1,
+   "disp": "sAlphaModes",
+   "attrs": [
+    "lilEnum"
+   ],
+   "def": 0
+  },
+  {
+   "name": "_Main2ndTexAngle",
+   "type": "float",
+   "dim": 1,
+   "disp": "sAngle",
+   "attrs": [
+    "lilAngle"
+   ],
+   "def": 0
+  },
+  {
+   "name": "_Main2ndTexBlendMode",
+   "type": "int",
+   "dim": 1,
+   "disp": "sBlendModes",
+   "attrs": [
+    "lilEnum"
+   ],
+   "def": 0
+  },
+  {
+   "name": "_Main2ndTexDecalAnimation",
+   "type": "vector",
+   "dim": 4,
+   "disp": "sDecalAnimations",
+   "attrs": [
+    "lilDecalAnim"
+   ],
+   "def": [
+    1,
+    1,
+    1,
+    30
+   ]
+  },
+  {
+   "name": "_Main2ndTexDecalSubParam",
+   "type": "vector",
+   "dim": 4,
+   "disp": "sDecalSubParams",
+   "attrs": [
+    "lilDecalSub"
+   ],
+   "def": [
+    1,
+    1,
+    0,
+    1
+   ]
+  },
+  {
+   "name": "_Main2ndTexIsDecal",
+   "type": "int",
+   "dim": 1,
+   "disp": "sAsDecal",
+   "attrs": [
+    "lilToggle"
+   ],
+   "def": 0
+  },
+  {
+   "name": "_Main2ndTexIsLeftOnly",
+   "type": "int",
+   "dim": 1,
+   "disp": "Left Only",
+   "attrs": [
+    "lilToggle"
+   ],
+   "def": 0
+  },
+  {
+   "name": "_Main2ndTexIsMSDF",
+   "type": "int",
+   "dim": 1,
+   "disp": "sAsMSDF",
+   "attrs": [
+    "lilToggle"
+   ],
+   "def": 0
+  },
+  {
+   "name": "_Main2ndTexIsRightOnly",
+   "type": "int",
+   "dim": 1,
+   "disp": "Right Only",
+   "attrs": [
+    "lilToggle"
+   ],
+   "def": 0
+  },
+  {
+   "name": "_Main2ndTexShouldCopy",
+   "type": "int",
+   "dim": 1,
+   "disp": "Copy",
+   "attrs": [
+    "lilToggle"
+   ],
+   "def": 0
+  },
+  {
+   "name": "_Main2ndTexShouldFlipCopy",
+   "type": "int",
+   "dim": 1,
+   "disp": "Flip Copy",
+   "attrs": [
+    "lilToggle"
+   ],
+   "def": 0
+  },
+  {
+   "name": "_Main2ndTexShouldFlipMirror",
+   "type": "int",
+   "dim": 1,
+   "disp": "Flip Mirror",
+   "attrs": [
+    "lilToggle"
+   ],
+   "def": 0
+  },
+  {
+   "name": "_Main3rdBlendMask",
+   "type": "texture",
+   "dim": 2,
+   "disp": "Mask",
+   "attrs": [
+    "NoScaleOffset"
+   ],
+   "def": "white"
+  },
+  {
+   "name": "_Main3rdDissolveColor",
+   "type": "color",
+   "dim": 4,
+   "disp": "sColor",
+   "attrs": [
+    "lilHDR"
+   ],
+   "def": [
+    1,
+    1,
+    1,
+    1
+   ]
+  },
+  {
+   "name": "_Main3rdDissolveMask",
+   "type": "texture",
+   "dim": 2,
+   "disp": "Dissolve Mask",
+   "attrs": [],
+   "def": "white"
+  },
+  {
+   "name": "_Main3rdDissolveNoiseMask",
+   "type": "texture",
+   "dim": 2,
+   "disp": "Dissolve Noise Mask",
+   "attrs": [],
+   "def": "gray"
+  },
+  {
+   "name": "_Main3rdDissolveNoiseMask_ScrollRotate",
+   "type": "vector",
+   "dim": 4,
+   "disp": "Scroll",
+   "attrs": [
+    "lilUVAnim"
+   ],
+   "def": [
+    0,
+    0,
+    0,
+    0
+   ]
+  },
+  {
+   "name": "_Main3rdDissolveNoiseStrength",
+   "type": "float",
+   "dim": 1,
+   "disp": "Dissolve Noise Strength",
+   "attrs": [],
+   "def": 0.1
+  },
+  {
+   "name": "_Main3rdDissolveParams",
+   "type": "vector",
+   "dim": 4,
+   "disp": "sDissolveParams",
+   "attrs": [
+    "lilDissolve"
+   ],
+   "def": [
+    0,
+    0,
+    0.5,
+    0.1
+   ]
+  },
+  {
+   "name": "_Main3rdDissolvePos",
+   "type": "vector",
+   "dim": 4,
+   "disp": "Dissolve Position",
+   "attrs": [
+    "lilDissolveP"
+   ],
+   "def": [
+    0,
+    0,
+    0,
+    0
+   ]
+  },
+  {
+   "name": "_Main3rdDistanceFade",
+   "type": "vector",
+   "dim": 4,
+   "disp": "sDistanceFadeSettings",
+   "attrs": [
+    "lilFFFB"
+   ],
+   "def": [
+    0.1,
+    0.01,
+    0,
+    0
+   ]
+  },
+  {
+   "name": "_Main3rdEnableLighting",
+   "type": "range",
+   "dim": 1,
+   "disp": "sEnableLighting",
+   "attrs": [],
+   "def": 1,
+   "min": 0,
+   "max": 1
+  },
+  {
+   "name": "_Main3rdTex",
+   "type": "texture",
+   "dim": 2,
+   "disp": "Texture",
+   "attrs": [],
+   "def": "white"
+  },
+  {
+   "name": "_Main3rdTex_Cull",
+   "type": "int",
+   "dim": 1,
+   "disp": "sCullModes",
+   "attrs": [
+    "lilEnum"
+   ],
+   "def": 0
+  },
+  {
+   "name": "_Main3rdTex_ScrollRotate",
+   "type": "vector",
+   "dim": 4,
+   "disp": "sScrollRotates",
+   "attrs": [
+    "lilUVAnim"
+   ],
+   "def": [
+    0,
+    0,
+    0,
+    0
+   ]
+  },
+  {
+   "name": "_Main3rdTex_UVMode",
+   "type": "int",
+   "dim": 1,
+   "disp": "UV Mode|UV0|UV1|UV2|UV3|MatCap",
+   "attrs": [
+    "lilEnum"
+   ],
+   "def": 0
+  },
+  {
+   "name": "_Main3rdTexAlphaMode",
+   "type": "int",
+   "dim": 1,
+   "disp": "sAlphaModes",
+   "attrs": [
+    "lilEnum"
+   ],
+   "def": 0
+  },
+  {
+   "name": "_Main3rdTexAngle",
+   "type": "float",
+   "dim": 1,
+   "disp": "sAngle",
+   "attrs": [
+    "lilAngle"
+   ],
+   "def": 0
+  },
+  {
+   "name": "_Main3rdTexBlendMode",
+   "type": "int",
+   "dim": 1,
+   "disp": "sBlendModes",
+   "attrs": [
+    "lilEnum"
+   ],
+   "def": 0
+  },
+  {
+   "name": "_Main3rdTexDecalAnimation",
+   "type": "vector",
+   "dim": 4,
+   "disp": "sDecalAnimations",
+   "attrs": [
+    "lilDecalAnim"
+   ],
+   "def": [
+    1,
+    1,
+    1,
+    30
+   ]
+  },
+  {
+   "name": "_Main3rdTexDecalSubParam",
+   "type": "vector",
+   "dim": 4,
+   "disp": "sDecalSubParams",
+   "attrs": [
+    "lilDecalSub"
+   ],
+   "def": [
+    1,
+    1,
+    0,
+    1
+   ]
+  },
+  {
+   "name": "_Main3rdTexIsDecal",
+   "type": "int",
+   "dim": 1,
+   "disp": "sAsDecal",
+   "attrs": [
+    "lilToggle"
+   ],
+   "def": 0
+  },
+  {
+   "name": "_Main3rdTexIsLeftOnly",
+   "type": "int",
+   "dim": 1,
+   "disp": "Left Only",
+   "attrs": [
+    "lilToggle"
+   ],
+   "def": 0
+  },
+  {
+   "name": "_Main3rdTexIsMSDF",
+   "type": "int",
+   "dim": 1,
+   "disp": "sAsMSDF",
+   "attrs": [
+    "lilToggle"
+   ],
+   "def": 0
+  },
+  {
+   "name": "_Main3rdTexIsRightOnly",
+   "type": "int",
+   "dim": 1,
+   "disp": "Right Only",
+   "attrs": [
+    "lilToggle"
+   ],
+   "def": 0
+  },
+  {
+   "name": "_Main3rdTexShouldCopy",
+   "type": "int",
+   "dim": 1,
+   "disp": "Copy",
+   "attrs": [
+    "lilToggle"
+   ],
+   "def": 0
+  },
+  {
+   "name": "_Main3rdTexShouldFlipCopy",
+   "type": "int",
+   "dim": 1,
+   "disp": "Flip Copy",
+   "attrs": [
+    "lilToggle"
+   ],
+   "def": 0
+  },
+  {
+   "name": "_Main3rdTexShouldFlipMirror",
+   "type": "int",
+   "dim": 1,
+   "disp": "Flip Mirror",
+   "attrs": [
+    "lilToggle"
+   ],
+   "def": 0
+  },
+  {
+   "name": "_MainColorAdjustMask",
+   "type": "texture",
+   "dim": 2,
+   "disp": "Adjust Mask",
+   "attrs": [
+    "NoScaleOffset"
+   ],
+   "def": "white"
+  },
+  {
+   "name": "_MainGradationStrength",
+   "type": "range",
+   "dim": 1,
+   "disp": "Gradation Strength",
+   "attrs": [],
+   "def": 0,
+   "min": 0,
+   "max": 1
+  },
+  {
+   "name": "_MainGradationTex",
+   "type": "texture",
+   "dim": 2,
+   "disp": "Gradation Map",
+   "attrs": [
+    "NoScaleOffset"
+   ],
+   "def": "white"
+  },
+  {
+   "name": "_MainTex",
+   "type": "texture",
+   "dim": 2,
+   "disp": "Texture",
+   "attrs": [
+    "MainTexture"
+   ],
+   "def": "white"
+  },
+  {
+   "name": "_MainTex_ScrollRotate",
+   "type": "vector",
+   "dim": 4,
+   "disp": "sScrollRotates",
+   "attrs": [
+    "lilUVAnim"
+   ],
+   "def": [
+    0,
+    0,
+    0,
+    0
+   ]
+  },
+  {
+   "name": "_MainTexHSVG",
+   "type": "vector",
+   "dim": 4,
+   "disp": "sHSVGs",
+   "attrs": [
+    "lilHSVG"
+   ],
+   "def": [
+    0,
+    1,
+    1,
+    1
+   ]
+  },
+  {
+   "name": "_MatCap2ndApplyTransparency",
+   "type": "int",
+   "dim": 1,
+   "disp": "sApplyTransparency",
+   "attrs": [
+    "lilToggle"
+   ],
+   "def": 1
+  },
+  {
+   "name": "_MatCap2ndBackfaceMask",
+   "type": "int",
+   "dim": 1,
+   "disp": "sBackfaceMask",
+   "attrs": [
+    "lilToggle"
+   ],
+   "def": 0
+  },
+  {
+   "name": "_MatCap2ndBlend",
+   "type": "range",
+   "dim": 1,
+   "disp": "Blend",
+   "attrs": [],
+   "def": 1,
+   "min": 0,
+   "max": 1
+  },
+  {
+   "name": "_MatCap2ndBlendMask",
+   "type": "texture",
+   "dim": 2,
+   "disp": "Mask",
+   "attrs": [
+    "NoScaleOffset"
+   ],
+   "def": "white"
+  },
+  {
+   "name": "_MatCap2ndBlendMode",
+   "type": "int",
+   "dim": 1,
+   "disp": "sBlendModes",
+   "attrs": [
+    "lilEnum"
+   ],
+   "def": 1
+  },
+  {
+   "name": "_MatCap2ndBlendUV1",
+   "type": "vector",
+   "dim": 4,
+   "disp": "sBlendUV1",
+   "attrs": [
+    "lilVec2R"
+   ],
+   "def": [
+    0,
+    0,
+    0,
+    0
+   ]
+  },
+  {
+   "name": "_MatCap2ndBumpMap",
+   "type": "texture",
+   "dim": 2,
+   "disp": "Normal Map",
+   "attrs": [
+    "Normal"
+   ],
+   "def": "bump"
+  },
+  {
+   "name": "_MatCap2ndBumpScale",
+   "type": "range",
+   "dim": 1,
+   "disp": "Scale",
+   "attrs": [],
+   "def": 1,
+   "min": -10,
+   "max": 10
+  },
+  {
+   "name": "_MatCap2ndColor",
+   "type": "color",
+   "dim": 4,
+   "disp": "sColor",
+   "attrs": [
+    "lilHDR"
+   ],
+   "def": [
+    1,
+    1,
+    1,
+    1
+   ]
+  },
+  {
+   "name": "_MatCap2ndCustomNormal",
+   "type": "int",
+   "dim": 1,
+   "disp": "sMatCapCustomNormal",
+   "attrs": [
+    "lilToggle"
+   ],
+   "def": 0
+  },
+  {
+   "name": "_MatCap2ndEnableLighting",
+   "type": "range",
+   "dim": 1,
+   "disp": "sEnableLighting",
+   "attrs": [],
+   "def": 1,
+   "min": 0,
+   "max": 1
+  },
+  {
+   "name": "_MatCap2ndLod",
+   "type": "range",
+   "dim": 1,
+   "disp": "sBlur",
+   "attrs": [],
+   "def": 0,
+   "min": 0,
+   "max": 10
+  },
+  {
+   "name": "_MatCap2ndMainStrength",
+   "type": "range",
+   "dim": 1,
+   "disp": "sMainColorPower",
+   "attrs": [],
+   "def": 0,
+   "min": 0,
+   "max": 1
+  },
+  {
+   "name": "_MatCap2ndNormalStrength",
+   "type": "range",
+   "dim": 1,
+   "disp": "sNormalStrength",
+   "attrs": [],
+   "def": 1,
+   "min": 0,
+   "max": 1
+  },
+  {
+   "name": "_MatCap2ndPerspective",
+   "type": "int",
+   "dim": 1,
+   "disp": "sFixPerspective",
+   "attrs": [
+    "lilToggle"
+   ],
+   "def": 1
+  },
+  {
+   "name": "_MatCap2ndShadowMask",
+   "type": "range",
+   "dim": 1,
+   "disp": "sShadowMask",
+   "attrs": [],
+   "def": 0,
+   "min": 0,
+   "max": 1
+  },
+  {
+   "name": "_MatCap2ndTex",
+   "type": "texture",
+   "dim": 2,
+   "disp": "Texture",
+   "attrs": [],
+   "def": "white"
+  },
+  {
+   "name": "_MatCap2ndVRParallaxStrength",
+   "type": "range",
+   "dim": 1,
+   "disp": "sVRParallaxStrength",
+   "attrs": [],
+   "def": 1,
+   "min": 0,
+   "max": 1
+  },
+  {
+   "name": "_MatCap2ndZRotCancel",
+   "type": "int",
+   "dim": 1,
+   "disp": "sMatCapZRotCancel",
+   "attrs": [
+    "lilToggle"
+   ],
+   "def": 1
+  },
+  {
+   "name": "_MatCapApplyTransparency",
+   "type": "int",
+   "dim": 1,
+   "disp": "sApplyTransparency",
+   "attrs": [
+    "lilToggle"
+   ],
+   "def": 1
+  },
+  {
+   "name": "_MatCapBackfaceMask",
+   "type": "int",
+   "dim": 1,
+   "disp": "sBackfaceMask",
+   "attrs": [
+    "lilToggle"
+   ],
+   "def": 0
+  },
+  {
+   "name": "_MatCapBlend",
+   "type": "range",
+   "dim": 1,
+   "disp": "Blend",
+   "attrs": [],
+   "def": 1,
+   "min": 0,
+   "max": 1
+  },
+  {
+   "name": "_MatCapBlendMask",
+   "type": "texture",
+   "dim": 2,
+   "disp": "Mask",
+   "attrs": [
+    "NoScaleOffset"
+   ],
+   "def": "white"
+  },
+  {
+   "name": "_MatCapBlendMode",
+   "type": "int",
+   "dim": 1,
+   "disp": "sBlendModes",
+   "attrs": [
+    "lilEnum"
+   ],
+   "def": 1
+  },
+  {
+   "name": "_MatCapBlendUV1",
+   "type": "vector",
+   "dim": 4,
+   "disp": "sBlendUV1",
+   "attrs": [
+    "lilVec2R"
+   ],
+   "def": [
+    0,
+    0,
+    0,
+    0
+   ]
+  },
+  {
+   "name": "_MatCapBumpMap",
+   "type": "texture",
+   "dim": 2,
+   "disp": "Normal Map",
+   "attrs": [
+    "Normal"
+   ],
+   "def": "bump"
+  },
+  {
+   "name": "_MatCapBumpScale",
+   "type": "range",
+   "dim": 1,
+   "disp": "Scale",
+   "attrs": [],
+   "def": 1,
+   "min": -10,
+   "max": 10
+  },
+  {
+   "name": "_MatCapColor",
+   "type": "color",
+   "dim": 4,
+   "disp": "sColor",
+   "attrs": [
+    "lilHDR"
+   ],
+   "def": [
+    1,
+    1,
+    1,
+    1
+   ]
+  },
+  {
+   "name": "_MatCapCustomNormal",
+   "type": "int",
+   "dim": 1,
+   "disp": "sMatCapCustomNormal",
+   "attrs": [
+    "lilToggle"
+   ],
+   "def": 0
+  },
+  {
+   "name": "_MatCapEnableLighting",
+   "type": "range",
+   "dim": 1,
+   "disp": "sEnableLighting",
+   "attrs": [],
+   "def": 1,
+   "min": 0,
+   "max": 1
+  },
+  {
+   "name": "_MatCapLod",
+   "type": "range",
+   "dim": 1,
+   "disp": "sBlur",
+   "attrs": [],
+   "def": 0,
+   "min": 0,
+   "max": 10
+  },
+  {
+   "name": "_MatCapMainStrength",
+   "type": "range",
+   "dim": 1,
+   "disp": "sMainColorPower",
+   "attrs": [],
+   "def": 0,
+   "min": 0,
+   "max": 1
+  },
+  {
+   "name": "_MatCapNormalStrength",
+   "type": "range",
+   "dim": 1,
+   "disp": "sNormalStrength",
+   "attrs": [],
+   "def": 1,
+   "min": 0,
+   "max": 1
+  },
+  {
+   "name": "_MatCapPerspective",
+   "type": "int",
+   "dim": 1,
+   "disp": "sFixPerspective",
+   "attrs": [
+    "lilToggle"
+   ],
+   "def": 1
+  },
+  {
+   "name": "_MatCapShadowMask",
+   "type": "range",
+   "dim": 1,
+   "disp": "sShadowMask",
+   "attrs": [],
+   "def": 0,
+   "min": 0,
+   "max": 1
+  },
+  {
+   "name": "_MatCapTex",
+   "type": "texture",
+   "dim": 2,
+   "disp": "Texture",
+   "attrs": [],
+   "def": "white"
+  },
+  {
+   "name": "_MatCapVRParallaxStrength",
+   "type": "range",
+   "dim": 1,
+   "disp": "sVRParallaxStrength",
+   "attrs": [],
+   "def": 1,
+   "min": 0,
+   "max": 1
+  },
+  {
+   "name": "_MatCapZRotCancel",
+   "type": "int",
+   "dim": 1,
+   "disp": "sMatCapZRotCancel",
+   "attrs": [
+    "lilToggle"
+   ],
+   "def": 1
+  },
+  {
+   "name": "_Metallic",
+   "type": "range",
+   "dim": 1,
+   "disp": "Metallic",
+   "attrs": [
+    "Gamma"
+   ],
+   "def": 0,
+   "min": 0,
+   "max": 1
+  },
+  {
+   "name": "_MetallicGlossMap",
+   "type": "texture",
+   "dim": 2,
+   "disp": "Metallic",
+   "attrs": [
+    "NoScaleOffset"
+   ],
+   "def": "white"
+  },
+  {
+   "name": "_MonochromeLighting",
+   "type": "range",
+   "dim": 1,
+   "disp": "sMonochromeLighting",
+   "attrs": [],
+   "def": 0,
+   "min": 0,
+   "max": 1
+  },
+  {
+   "name": "_OffsetFactor",
+   "type": "float",
+   "dim": 1,
+   "disp": "sOffsetFactor",
+   "attrs": [],
+   "def": 0
+  },
+  {
+   "name": "_OffsetUnits",
+   "type": "float",
+   "dim": 1,
+   "disp": "sOffsetUnits",
+   "attrs": [],
+   "def": 0
+  },
+  {
+   "name": "_OutlineAlphaToMask",
+   "type": "int",
+   "dim": 1,
+   "disp": "sAlphaToMask",
+   "attrs": [
+    "lilToggle"
+   ],
+   "def": 0
+  },
+  {
+   "name": "_OutlineBlendOp",
+   "type": "int",
+   "dim": 1,
+   "disp": "sBlendOpRGB",
+   "attrs": [
+    "Enum(UnityEngine.Rendering.BlendOp)"
+   ],
+   "def": 0
+  },
+  {
+   "name": "_OutlineBlendOpAlpha",
+   "type": "int",
+   "dim": 1,
+   "disp": "sBlendOpAlpha",
+   "attrs": [
+    "Enum(UnityEngine.Rendering.BlendOp)"
+   ],
+   "def": 0
+  },
+  {
+   "name": "_OutlineBlendOpAlphaFA",
+   "type": "int",
+   "dim": 1,
+   "disp": "sBlendOpAlpha",
+   "attrs": [
+    "Enum(UnityEngine.Rendering.BlendOp)"
+   ],
+   "def": 4
+  },
+  {
+   "name": "_OutlineBlendOpFA",
+   "type": "int",
+   "dim": 1,
+   "disp": "sBlendOpRGB",
+   "attrs": [
+    "Enum(UnityEngine.Rendering.BlendOp)"
+   ],
+   "def": 4
+  },
+  {
+   "name": "_OutlineColor",
+   "type": "color",
+   "dim": 4,
+   "disp": "sColor",
+   "attrs": [
+    "lilHDR"
+   ],
+   "def": [
+    0.6,
+    0.56,
+    0.73,
+    1
+   ]
+  },
+  {
+   "name": "_OutlineColorMask",
+   "type": "int",
+   "dim": 1,
+   "disp": "sColorMask",
+   "attrs": [
+    "lilColorMask"
+   ],
+   "def": 15
+  },
+  {
+   "name": "_OutlineCull",
+   "type": "int",
+   "dim": 1,
+   "disp": "sCullModes",
+   "attrs": [
+    "lilEnum"
+   ],
+   "def": 1
+  },
+  {
+   "name": "_OutlineDeleteMesh",
+   "type": "int",
+   "dim": 1,
+   "disp": "sDeleteMesh0",
+   "attrs": [
+    "lilToggle"
+   ],
+   "def": 0
+  },
+  {
+   "name": "_OutlineDisableInVR",
+   "type": "int",
+   "dim": 1,
+   "disp": "sDisableInVR",
+   "attrs": [
+    "lilToggle"
+   ],
+   "def": 0
+  },
+  {
+   "name": "_OutlineDstBlend",
+   "type": "int",
+   "dim": 1,
+   "disp": "sDstBlendRGB",
+   "attrs": [
+    "Enum(UnityEngine.Rendering.BlendMode)"
+   ],
+   "def": 0
+  },
+  {
+   "name": "_OutlineDstBlendAlpha",
+   "type": "int",
+   "dim": 1,
+   "disp": "sDstBlendAlpha",
+   "attrs": [
+    "Enum(UnityEngine.Rendering.BlendMode)"
+   ],
+   "def": 10
+  },
+  {
+   "name": "_OutlineDstBlendAlphaFA",
+   "type": "int",
+   "dim": 1,
+   "disp": "sDstBlendAlpha",
+   "attrs": [
+    "Enum(UnityEngine.Rendering.BlendMode)"
+   ],
+   "def": 1
+  },
+  {
+   "name": "_OutlineDstBlendFA",
+   "type": "int",
+   "dim": 1,
+   "disp": "sDstBlendRGB",
+   "attrs": [
+    "Enum(UnityEngine.Rendering.BlendMode)"
+   ],
+   "def": 1
+  },
+  {
+   "name": "_OutlineEnableLighting",
+   "type": "range",
+   "dim": 1,
+   "disp": "sEnableLighting",
+   "attrs": [],
+   "def": 1,
+   "min": 0,
+   "max": 1
+  },
+  {
+   "name": "_OutlineFixWidth",
+   "type": "range",
+   "dim": 1,
+   "disp": "sFixWidth",
+   "attrs": [],
+   "def": 0.5,
+   "min": 0,
+   "max": 1
+  },
+  {
+   "name": "_OutlineLitApplyTex",
+   "type": "int",
+   "dim": 1,
+   "disp": "sColorFromMain",
+   "attrs": [
+    "lilToggle"
+   ],
+   "def": 0
+  },
+  {
+   "name": "_OutlineLitColor",
+   "type": "color",
+   "dim": 4,
+   "disp": "sColor",
+   "attrs": [
+    "lilHDR"
+   ],
+   "def": [
+    1,
+    0.2,
+    0,
+    0
+   ]
+  },
+  {
+   "name": "_OutlineLitOffset",
+   "type": "float",
+   "dim": 1,
+   "disp": "Offset",
+   "attrs": [],
+   "def": -8
+  },
+  {
+   "name": "_OutlineLitScale",
+   "type": "float",
+   "dim": 1,
+   "disp": "Scale",
+   "attrs": [],
+   "def": 10
+  },
+  {
+   "name": "_OutlineLitShadowReceive",
+   "type": "int",
+   "dim": 1,
+   "disp": "sReceiveShadow",
+   "attrs": [
+    "lilToggle"
+   ],
+   "def": 0
+  },
+  {
+   "name": "_OutlineOffsetFactor",
+   "type": "float",
+   "dim": 1,
+   "disp": "sOffsetFactor",
+   "attrs": [],
+   "def": 0
+  },
+  {
+   "name": "_OutlineOffsetUnits",
+   "type": "float",
+   "dim": 1,
+   "disp": "sOffsetUnits",
+   "attrs": [],
+   "def": 0
+  },
+  {
+   "name": "_OutlineSrcBlend",
+   "type": "int",
+   "dim": 1,
+   "disp": "sSrcBlendRGB",
+   "attrs": [
+    "Enum(UnityEngine.Rendering.BlendMode)"
+   ],
+   "def": 1
+  },
+  {
+   "name": "_OutlineSrcBlendAlpha",
+   "type": "int",
+   "dim": 1,
+   "disp": "sSrcBlendAlpha",
+   "attrs": [
+    "Enum(UnityEngine.Rendering.BlendMode)"
+   ],
+   "def": 1
+  },
+  {
+   "name": "_OutlineSrcBlendAlphaFA",
+   "type": "int",
+   "dim": 1,
+   "disp": "sSrcBlendAlpha",
+   "attrs": [
+    "Enum(UnityEngine.Rendering.BlendMode)"
+   ],
+   "def": 0
+  },
+  {
+   "name": "_OutlineSrcBlendFA",
+   "type": "int",
+   "dim": 1,
+   "disp": "sSrcBlendRGB",
+   "attrs": [
+    "Enum(UnityEngine.Rendering.BlendMode)"
+   ],
+   "def": 1
+  },
+  {
+   "name": "_OutlineStencilComp",
+   "type": "float",
+   "dim": 1,
+   "disp": "Comp",
+   "attrs": [
+    "Enum(UnityEngine.Rendering.CompareFunction)"
+   ],
+   "def": 8
+  },
+  {
+   "name": "_OutlineStencilFail",
+   "type": "float",
+   "dim": 1,
+   "disp": "Fail",
+   "attrs": [
+    "Enum(UnityEngine.Rendering.StencilOp)"
+   ],
+   "def": 0
+  },
+  {
+   "name": "_OutlineStencilPass",
+   "type": "float",
+   "dim": 1,
+   "disp": "Pass",
+   "attrs": [
+    "Enum(UnityEngine.Rendering.StencilOp)"
+   ],
+   "def": 0
+  },
+  {
+   "name": "_OutlineStencilReadMask",
+   "type": "range",
+   "dim": 1,
+   "disp": "ReadMask",
+   "attrs": [
+    "IntRange"
+   ],
+   "def": 255,
+   "min": 0,
+   "max": 255
+  },
+  {
+   "name": "_OutlineStencilRef",
+   "type": "range",
+   "dim": 1,
+   "disp": "Ref",
+   "attrs": [
+    "IntRange"
+   ],
+   "def": 0,
+   "min": 0,
+   "max": 255
+  },
+  {
+   "name": "_OutlineStencilWriteMask",
+   "type": "range",
+   "dim": 1,
+   "disp": "WriteMask",
+   "attrs": [
+    "IntRange"
+   ],
+   "def": 255,
+   "min": 0,
+   "max": 255
+  },
+  {
+   "name": "_OutlineStencilZFail",
+   "type": "float",
+   "dim": 1,
+   "disp": "ZFail",
+   "attrs": [
+    "Enum(UnityEngine.Rendering.StencilOp)"
+   ],
+   "def": 0
+  },
+  {
+   "name": "_OutlineTex",
+   "type": "texture",
+   "dim": 2,
+   "disp": "Texture",
+   "attrs": [],
+   "def": "white"
+  },
+  {
+   "name": "_OutlineTex_ScrollRotate",
+   "type": "vector",
+   "dim": 4,
+   "disp": "sScrollRotates",
+   "attrs": [
+    "lilUVAnim"
+   ],
+   "def": [
+    0,
+    0,
+    0,
+    0
+   ]
+  },
+  {
+   "name": "_OutlineTexHSVG",
+   "type": "vector",
+   "dim": 4,
+   "disp": "sHSVGs",
+   "attrs": [
+    "lilHSVG"
+   ],
+   "def": [
+    0,
+    1,
+    1,
+    1
+   ]
+  },
+  {
+   "name": "_OutlineVectorScale",
+   "type": "range",
+   "dim": 1,
+   "disp": "Vector scale",
+   "attrs": [],
+   "def": 1,
+   "min": -10,
+   "max": 10
+  },
+  {
+   "name": "_OutlineVectorTex",
+   "type": "texture",
+   "dim": 2,
+   "disp": "Vector",
+   "attrs": [
+    "NoScaleOffset",
+    "Normal"
+   ],
+   "def": "bump"
+  },
+  {
+   "name": "_OutlineVectorUVMode",
+   "type": "int",
+   "dim": 1,
+   "disp": "UV Mode|UV0|UV1|UV2|UV3",
+   "attrs": [
+    "lilEnum"
+   ],
+   "def": 0
+  },
+  {
+   "name": "_OutlineVertexR2Width",
+   "type": "int",
+   "dim": 1,
+   "disp": "sOutlineVertexColorUsages",
+   "attrs": [
+    "lilEnum"
+   ],
+   "def": 0
+  },
+  {
+   "name": "_OutlineWidth",
+   "type": "range",
+   "dim": 1,
+   "disp": "Width",
+   "attrs": [
+    "lilOLWidth"
+   ],
+   "def": 0.08,
+   "min": 0,
+   "max": 1
+  },
+  {
+   "name": "_OutlineWidthMask",
+   "type": "texture",
+   "dim": 2,
+   "disp": "Width",
+   "attrs": [
+    "NoScaleOffset"
+   ],
+   "def": "white"
+  },
+  {
+   "name": "_OutlineZBias",
+   "type": "float",
+   "dim": 1,
+   "disp": "Z Bias",
+   "attrs": [],
+   "def": 0
+  },
+  {
+   "name": "_OutlineZClip",
+   "type": "int",
+   "dim": 1,
+   "disp": "sZClip",
+   "attrs": [
+    "lilToggle"
+   ],
+   "def": 1
+  },
+  {
+   "name": "_OutlineZTest",
+   "type": "int",
+   "dim": 1,
+   "disp": "sZTest",
+   "attrs": [
+    "Enum(UnityEngine.Rendering.CompareFunction)"
+   ],
+   "def": 2
+  },
+  {
+   "name": "_OutlineZWrite",
+   "type": "int",
+   "dim": 1,
+   "disp": "sZWrite",
+   "attrs": [
+    "lilToggle"
+   ],
+   "def": 1
+  },
+  {
+   "name": "_Parallax",
+   "type": "float",
+   "dim": 1,
+   "disp": "Parallax Scale",
+   "attrs": [],
+   "def": 0.02
+  },
+  {
+   "name": "_ParallaxMap",
+   "type": "texture",
+   "dim": 2,
+   "disp": "Parallax Map",
+   "attrs": [
+    "NoScaleOffset"
+   ],
+   "def": "gray"
+  },
+  {
+   "name": "_ParallaxOffset",
+   "type": "float",
+   "dim": 1,
+   "disp": "sParallaxOffset",
+   "attrs": [],
+   "def": 0.5
+  },
+  {
+   "name": "_Ramp",
+   "type": "texture",
+   "dim": 2,
+   "disp": "Shadow Ramp",
+   "attrs": [],
+   "def": "white"
+  },
+  {
+   "name": "_Reflectance",
+   "type": "range",
+   "dim": 1,
+   "disp": "sReflectance",
+   "attrs": [
+    "Gamma"
+   ],
+   "def": 0.04,
+   "min": 0,
+   "max": 1
+  },
+  {
+   "name": "_ReflectionApplyTransparency",
+   "type": "int",
+   "dim": 1,
+   "disp": "sApplyTransparency",
+   "attrs": [
+    "lilToggle"
+   ],
+   "def": 1
+  },
+  {
+   "name": "_ReflectionBlendMode",
+   "type": "int",
+   "dim": 1,
+   "disp": "sBlendModes",
+   "attrs": [
+    "lilEnum"
+   ],
+   "def": 1
+  },
+  {
+   "name": "_ReflectionColor",
+   "type": "color",
+   "dim": 4,
+   "disp": "sColor",
+   "attrs": [
+    "lilHDR"
+   ],
+   "def": [
+    1,
+    1,
+    1,
+    1
+   ]
+  },
+  {
+   "name": "_ReflectionColorTex",
+   "type": "texture",
+   "dim": 2,
+   "disp": "sColor",
+   "attrs": [
+    "NoScaleOffset"
+   ],
+   "def": "white"
+  },
+  {
+   "name": "_ReflectionCubeColor",
+   "type": "color",
+   "dim": 4,
+   "disp": "sColor",
+   "attrs": [
+    "lilHDR"
+   ],
+   "def": [
+    0,
+    0,
+    0,
+    1
+   ]
+  },
+  {
+   "name": "_ReflectionCubeEnableLighting",
+   "type": "range",
+   "dim": 1,
+   "disp": "sEnableLighting+ (Fallback)",
+   "attrs": [],
+   "def": 1,
+   "min": 0,
+   "max": 1
+  },
+  {
+   "name": "_ReflectionCubeOverride",
+   "type": "int",
+   "dim": 1,
+   "disp": "Override",
+   "attrs": [
+    "lilToggle"
+   ],
+   "def": 0
+  },
+  {
+   "name": "_ReflectionCubeTex",
+   "type": "cubemap",
+   "dim": 2,
+   "disp": "Cubemap Fallback",
+   "attrs": [
+    "NoScaleOffset"
+   ],
+   "def": "black"
+  },
+  {
+   "name": "_ReflectionNormalStrength",
+   "type": "range",
+   "dim": 1,
+   "disp": "sNormalStrength",
+   "attrs": [],
+   "def": 1,
+   "min": 0,
+   "max": 1
+  },
+  {
+   "name": "_RimApplyTransparency",
+   "type": "int",
+   "dim": 1,
+   "disp": "sApplyTransparency",
+   "attrs": [
+    "lilToggle"
+   ],
+   "def": 1
+  },
+  {
+   "name": "_RimBackfaceMask",
+   "type": "int",
+   "dim": 1,
+   "disp": "sBackfaceMask",
+   "attrs": [
+    "lilToggle"
+   ],
+   "def": 1
+  },
+  {
+   "name": "_RimBlendMode",
+   "type": "int",
+   "dim": 1,
+   "disp": "sBlendModes",
+   "attrs": [
+    "lilEnum"
+   ],
+   "def": 1
+  },
+  {
+   "name": "_RimBlur",
+   "type": "range",
+   "dim": 1,
+   "disp": "sBlur",
+   "attrs": [],
+   "def": 0.65,
+   "min": 0,
+   "max": 1
+  },
+  {
+   "name": "_RimBorder",
+   "type": "range",
+   "dim": 1,
+   "disp": "sBorder",
+   "attrs": [],
+   "def": 0.5,
+   "min": 0,
+   "max": 1
+  },
+  {
+   "name": "_RimColor",
+   "type": "color",
+   "dim": 4,
+   "disp": "sColor",
+   "attrs": [
+    "lilHDR"
+   ],
+   "def": [
+    0.66,
+    0.5,
+    0.48,
+    1
+   ]
+  },
+  {
+   "name": "_RimColorTex",
+   "type": "texture",
+   "dim": 2,
+   "disp": "Texture",
+   "attrs": [
+    "NoScaleOffset"
+   ],
+   "def": "white"
+  },
+  {
+   "name": "_RimDirRange",
+   "type": "range",
+   "dim": 1,
+   "disp": "sRimDirectionRange",
+   "attrs": [],
+   "def": 0,
+   "min": -1,
+   "max": 1
+  },
+  {
+   "name": "_RimDirStrength",
+   "type": "range",
+   "dim": 1,
+   "disp": "sRimLightDirection",
+   "attrs": [],
+   "def": 0,
+   "min": 0,
+   "max": 1
+  },
+  {
+   "name": "_RimEnableLighting",
+   "type": "range",
+   "dim": 1,
+   "disp": "sEnableLighting",
+   "attrs": [],
+   "def": 1,
+   "min": 0,
+   "max": 1
+  },
+  {
+   "name": "_RimFresnelPower",
+   "type": "range",
+   "dim": 1,
+   "disp": "sFresnelPower",
+   "attrs": [
+    "PowerSlider(3.0)"
+   ],
+   "def": 3.5,
+   "min": 0.01,
+   "max": 50
+  },
+  {
+   "name": "_RimIndirBlur",
+   "type": "range",
+   "dim": 1,
+   "disp": "sBlur",
+   "attrs": [],
+   "def": 0.1,
+   "min": 0,
+   "max": 1
+  },
+  {
+   "name": "_RimIndirBorder",
+   "type": "range",
+   "dim": 1,
+   "disp": "sBorder",
+   "attrs": [],
+   "def": 0.5,
+   "min": 0,
+   "max": 1
+  },
+  {
+   "name": "_RimIndirColor",
+   "type": "color",
+   "dim": 4,
+   "disp": "sColor",
+   "attrs": [
+    "lilHDR"
+   ],
+   "def": [
+    1,
+    1,
+    1,
+    1
+   ]
+  },
+  {
+   "name": "_RimIndirRange",
+   "type": "range",
+   "dim": 1,
+   "disp": "sRimIndirectionRange",
+   "attrs": [],
+   "def": 0,
+   "min": -1,
+   "max": 1
+  },
+  {
+   "name": "_RimMainStrength",
+   "type": "range",
+   "dim": 1,
+   "disp": "sMainColorPower",
+   "attrs": [],
+   "def": 0,
+   "min": 0,
+   "max": 1
+  },
+  {
+   "name": "_RimNormalStrength",
+   "type": "range",
+   "dim": 1,
+   "disp": "sNormalStrength",
+   "attrs": [],
+   "def": 1,
+   "min": 0,
+   "max": 1
+  },
+  {
+   "name": "_RimShadeBlur",
+   "type": "range",
+   "dim": 1,
+   "disp": "sBlur",
+   "attrs": [],
+   "def": 1,
+   "min": 0,
+   "max": 1
+  },
+  {
+   "name": "_RimShadeBorder",
+   "type": "range",
+   "dim": 1,
+   "disp": "sBorder",
+   "attrs": [],
+   "def": 0.5,
+   "min": 0,
+   "max": 1
+  },
+  {
+   "name": "_RimShadeColor",
+   "type": "color",
+   "dim": 4,
+   "disp": "sColor",
+   "attrs": [],
+   "def": [
+    0.5,
+    0.5,
+    0.5,
+    1
+   ]
+  },
+  {
+   "name": "_RimShadeFresnelPower",
+   "type": "range",
+   "dim": 1,
+   "disp": "sFresnelPower",
+   "attrs": [
+    "PowerSlider(3.0)"
+   ],
+   "def": 1,
+   "min": 0.01,
+   "max": 50
+  },
+  {
+   "name": "_RimShadeMask",
+   "type": "texture",
+   "dim": 2,
+   "disp": "Mask",
+   "attrs": [
+    "NoScaleOffset"
+   ],
+   "def": "white"
+  },
+  {
+   "name": "_RimShadeNormalStrength",
+   "type": "range",
+   "dim": 1,
+   "disp": "sNormalStrength",
+   "attrs": [],
+   "def": 1,
+   "min": 0,
+   "max": 1
+  },
+  {
+   "name": "_RimShadowMask",
+   "type": "range",
+   "dim": 1,
+   "disp": "sShadowMask",
+   "attrs": [],
+   "def": 0.5,
+   "min": 0,
+   "max": 1
+  },
+  {
+   "name": "_RimVRParallaxStrength",
+   "type": "range",
+   "dim": 1,
+   "disp": "sVRParallaxStrength",
+   "attrs": [],
+   "def": 1,
+   "min": 0,
+   "max": 1
+  },
+  {
+   "name": "_Shadow2ndBlur",
+   "type": "range",
+   "dim": 1,
+   "disp": "sBlur",
+   "attrs": [],
+   "def": 0.1,
+   "min": 0,
+   "max": 1
+  },
+  {
+   "name": "_Shadow2ndBorder",
+   "type": "range",
+   "dim": 1,
+   "disp": "sBorder",
+   "attrs": [],
+   "def": 0.15,
+   "min": 0,
+   "max": 1
+  },
+  {
+   "name": "_Shadow2ndColor",
+   "type": "color",
+   "dim": 4,
+   "disp": "2nd Color",
+   "attrs": [],
+   "def": [
+    0.68,
+    0.66,
+    0.79,
+    1
+   ]
+  },
+  {
+   "name": "_Shadow2ndColorTex",
+   "type": "texture",
+   "dim": 2,
+   "disp": "2nd Color",
+   "attrs": [
+    "NoScaleOffset"
+   ],
+   "def": "black"
+  },
+  {
+   "name": "_Shadow2ndNormalStrength",
+   "type": "range",
+   "dim": 1,
+   "disp": "sNormalStrength",
+   "attrs": [],
+   "def": 1,
+   "min": 0,
+   "max": 1
+  },
+  {
+   "name": "_Shadow2ndReceive",
+   "type": "range",
+   "dim": 1,
+   "disp": "sReceiveShadow",
+   "attrs": [],
+   "def": 0,
+   "min": 0,
+   "max": 1
+  },
+  {
+   "name": "_Shadow3rdBlur",
+   "type": "range",
+   "dim": 1,
+   "disp": "sBlur",
+   "attrs": [],
+   "def": 0.1,
+   "min": 0,
+   "max": 1
+  },
+  {
+   "name": "_Shadow3rdBorder",
+   "type": "range",
+   "dim": 1,
+   "disp": "sBorder",
+   "attrs": [],
+   "def": 0.25,
+   "min": 0,
+   "max": 1
+  },
+  {
+   "name": "_Shadow3rdColor",
+   "type": "color",
+   "dim": 4,
+   "disp": "3rd Color",
+   "attrs": [],
+   "def": [
+    0,
+    0,
+    0,
+    0
+   ]
+  },
+  {
+   "name": "_Shadow3rdColorTex",
+   "type": "texture",
+   "dim": 2,
+   "disp": "3rd Color",
+   "attrs": [
+    "NoScaleOffset"
+   ],
+   "def": "black"
+  },
+  {
+   "name": "_Shadow3rdNormalStrength",
+   "type": "range",
+   "dim": 1,
+   "disp": "sNormalStrength",
+   "attrs": [],
+   "def": 1,
+   "min": 0,
+   "max": 1
+  },
+  {
+   "name": "_Shadow3rdReceive",
+   "type": "range",
+   "dim": 1,
+   "disp": "sReceiveShadow",
+   "attrs": [],
+   "def": 0,
+   "min": 0,
+   "max": 1
+  },
+  {
+   "name": "_ShadowAOShift",
+   "type": "vector",
+   "dim": 4,
+   "disp": "1st Scale|1st Offset|2nd Scale|2nd Offset",
+   "attrs": [
+    "lilFFFF"
+   ],
+   "def": [
+    1,
+    0,
+    1,
+    0
+   ]
+  },
+  {
+   "name": "_ShadowAOShift2",
+   "type": "vector",
+   "dim": 4,
+   "disp": "3rd Scale|3rd Offset",
+   "attrs": [
+    "lilFF"
+   ],
+   "def": [
+    1,
+    0,
+    1,
+    0
+   ]
+  },
+  {
+   "name": "_ShadowBlur",
+   "type": "range",
+   "dim": 1,
+   "disp": "sBlur",
+   "attrs": [],
+   "def": 0.1,
+   "min": 0,
+   "max": 1
+  },
+  {
+   "name": "_ShadowBlurMask",
+   "type": "texture",
+   "dim": 2,
+   "disp": "sBlur",
+   "attrs": [
+    "NoScaleOffset"
+   ],
+   "def": "white"
+  },
+  {
+   "name": "_ShadowBlurMaskLOD",
+   "type": "range",
+   "dim": 1,
+   "disp": "LOD",
+   "attrs": [
+    "lilLOD"
+   ],
+   "def": 0,
+   "min": 0,
+   "max": 1
+  },
+  {
+   "name": "_ShadowBorder",
+   "type": "range",
+   "dim": 1,
+   "disp": "sBorder",
+   "attrs": [],
+   "def": 0.5,
+   "min": 0,
+   "max": 1
+  },
+  {
+   "name": "_ShadowBorderColor",
+   "type": "color",
+   "dim": 4,
+   "disp": "sShadowBorderColor",
+   "attrs": [],
+   "def": [
+    1,
+    0.1,
+    0,
+    1
+   ]
+  },
+  {
+   "name": "_ShadowBorderMask",
+   "type": "texture",
+   "dim": 2,
+   "disp": "sBorder",
+   "attrs": [
+    "NoScaleOffset"
+   ],
+   "def": "white"
+  },
+  {
+   "name": "_ShadowBorderMaskLOD",
+   "type": "range",
+   "dim": 1,
+   "disp": "LOD",
+   "attrs": [
+    "lilLOD"
+   ],
+   "def": 0,
+   "min": 0,
+   "max": 1
+  },
+  {
+   "name": "_ShadowBorderRange",
+   "type": "range",
+   "dim": 1,
+   "disp": "sShadowBorderRange",
+   "attrs": [],
+   "def": 0.08,
+   "min": 0,
+   "max": 1
+  },
+  {
+   "name": "_ShadowColor",
+   "type": "color",
+   "dim": 4,
+   "disp": "Shadow Color",
+   "attrs": [],
+   "def": [
+    0.82,
+    0.76,
+    0.85,
+    1
+   ]
+  },
+  {
+   "name": "_ShadowColorTex",
+   "type": "texture",
+   "dim": 2,
+   "disp": "Shadow Color",
+   "attrs": [
+    "NoScaleOffset"
+   ],
+   "def": "black"
+  },
+  {
+   "name": "_ShadowColorType",
+   "type": "int",
+   "dim": 1,
+   "disp": "sShadowColorTypes",
+   "attrs": [
+    "lilEnum"
+   ],
+   "def": 0
+  },
+  {
+   "name": "_ShadowEnvStrength",
+   "type": "range",
+   "dim": 1,
+   "disp": "sShadowEnvStrength",
+   "attrs": [],
+   "def": 0,
+   "min": 0,
+   "max": 1
+  },
+  {
+   "name": "_ShadowFlatBlur",
+   "type": "range",
+   "dim": 1,
+   "disp": "sBlur",
+   "attrs": [],
+   "def": 1,
+   "min": 0.001,
+   "max": 2
+  },
+  {
+   "name": "_ShadowFlatBorder",
+   "type": "range",
+   "dim": 1,
+   "disp": "sBorder",
+   "attrs": [],
+   "def": 1,
+   "min": -2,
+   "max": 2
+  },
+  {
+   "name": "_ShadowMainStrength",
+   "type": "range",
+   "dim": 1,
+   "disp": "sContrast",
+   "attrs": [],
+   "def": 0,
+   "min": 0,
+   "max": 1
+  },
+  {
+   "name": "_ShadowMaskType",
+   "type": "int",
+   "dim": 1,
+   "disp": "sShadowMaskTypes",
+   "attrs": [
+    "lilEnum"
+   ],
+   "def": 0
+  },
+  {
+   "name": "_ShadowNormalStrength",
+   "type": "range",
+   "dim": 1,
+   "disp": "sNormalStrength",
+   "attrs": [],
+   "def": 1,
+   "min": 0,
+   "max": 1
+  },
+  {
+   "name": "_ShadowPostAO",
+   "type": "int",
+   "dim": 1,
+   "disp": "sIgnoreBorderProperties",
+   "attrs": [
+    "lilToggle"
+   ],
+   "def": 0
+  },
+  {
+   "name": "_ShadowReceive",
+   "type": "range",
+   "dim": 1,
+   "disp": "sReceiveShadow",
+   "attrs": [],
+   "def": 0,
+   "min": 0,
+   "max": 1
+  },
+  {
+   "name": "_ShadowStrength",
+   "type": "range",
+   "dim": 1,
+   "disp": "sStrength",
+   "attrs": [],
+   "def": 1,
+   "min": 0,
+   "max": 1
+  },
+  {
+   "name": "_ShadowStrengthMask",
+   "type": "texture",
+   "dim": 2,
+   "disp": "sStrength",
+   "attrs": [
+    "NoScaleOffset"
+   ],
+   "def": "white"
+  },
+  {
+   "name": "_ShadowStrengthMaskLOD",
+   "type": "range",
+   "dim": 1,
+   "disp": "LOD",
+   "attrs": [
+    "lilLOD"
+   ],
+   "def": 0,
+   "min": 0,
+   "max": 1
+  },
+  {
+   "name": "_ShiftBackfaceUV",
+   "type": "int",
+   "dim": 1,
+   "disp": "sShiftBackfaceUV",
+   "attrs": [
+    "lilToggle"
+   ],
+   "def": 0
+  },
+  {
+   "name": "_Smoothness",
+   "type": "range",
+   "dim": 1,
+   "disp": "Smoothness",
+   "attrs": [],
+   "def": 1,
+   "min": 0,
+   "max": 1
+  },
+  {
+   "name": "_SmoothnessTex",
+   "type": "texture",
+   "dim": 2,
+   "disp": "Smoothness",
+   "attrs": [
+    "NoScaleOffset"
+   ],
+   "def": "white"
+  },
+  {
+   "name": "_SpecularBlur",
+   "type": "range",
+   "dim": 1,
+   "disp": "sBlur",
+   "attrs": [],
+   "def": 0,
+   "min": 0,
+   "max": 1
+  },
+  {
+   "name": "_SpecularBorder",
+   "type": "range",
+   "dim": 1,
+   "disp": "sBorder",
+   "attrs": [],
+   "def": 0.5,
+   "min": 0,
+   "max": 1
+  },
+  {
+   "name": "_SpecularNormalStrength",
+   "type": "range",
+   "dim": 1,
+   "disp": "sNormalStrength",
+   "attrs": [],
+   "def": 1,
+   "min": 0,
+   "max": 1
+  },
+  {
+   "name": "_SpecularToon",
+   "type": "int",
+   "dim": 1,
+   "disp": "Specular Toon",
+   "attrs": [
+    "lilToggle"
+   ],
+   "def": 1
+  },
+  {
+   "name": "_SrcBlend",
+   "type": "int",
+   "dim": 1,
+   "disp": "sSrcBlendRGB",
+   "attrs": [
+    "Enum(UnityEngine.Rendering.BlendMode)"
+   ],
+   "def": 1
+  },
+  {
+   "name": "_SrcBlendAlpha",
+   "type": "int",
+   "dim": 1,
+   "disp": "sSrcBlendAlpha",
+   "attrs": [
+    "Enum(UnityEngine.Rendering.BlendMode)"
+   ],
+   "def": 1
+  },
+  {
+   "name": "_SrcBlendAlphaFA",
+   "type": "int",
+   "dim": 1,
+   "disp": "sSrcBlendAlpha",
+   "attrs": [
+    "Enum(UnityEngine.Rendering.BlendMode)"
+   ],
+   "def": 0
+  },
+  {
+   "name": "_SrcBlendFA",
+   "type": "int",
+   "dim": 1,
+   "disp": "sSrcBlendRGB",
+   "attrs": [
+    "Enum(UnityEngine.Rendering.BlendMode)"
+   ],
+   "def": 1
+  },
+  {
+   "name": "_StencilComp",
+   "type": "float",
+   "dim": 1,
+   "disp": "Comp",
+   "attrs": [
+    "Enum(UnityEngine.Rendering.CompareFunction)"
+   ],
+   "def": 8
+  },
+  {
+   "name": "_StencilFail",
+   "type": "float",
+   "dim": 1,
+   "disp": "Fail",
+   "attrs": [
+    "Enum(UnityEngine.Rendering.StencilOp)"
+   ],
+   "def": 0
+  },
+  {
+   "name": "_StencilPass",
+   "type": "float",
+   "dim": 1,
+   "disp": "Pass",
+   "attrs": [
+    "Enum(UnityEngine.Rendering.StencilOp)"
+   ],
+   "def": 0
+  },
+  {
+   "name": "_StencilReadMask",
+   "type": "range",
+   "dim": 1,
+   "disp": "ReadMask",
+   "attrs": [
+    "IntRange"
+   ],
+   "def": 255,
+   "min": 0,
+   "max": 255
+  },
+  {
+   "name": "_StencilRef",
+   "type": "range",
+   "dim": 1,
+   "disp": "Ref",
+   "attrs": [
+    "IntRange"
+   ],
+   "def": 0,
+   "min": 0,
+   "max": 255
+  },
+  {
+   "name": "_StencilWriteMask",
+   "type": "range",
+   "dim": 1,
+   "disp": "WriteMask",
+   "attrs": [
+    "IntRange"
+   ],
+   "def": 255,
+   "min": 0,
+   "max": 255
+  },
+  {
+   "name": "_StencilZFail",
+   "type": "float",
+   "dim": 1,
+   "disp": "ZFail",
+   "attrs": [
+    "Enum(UnityEngine.Rendering.StencilOp)"
+   ],
+   "def": 0
+  },
+  {
+   "name": "_SubpassCutoff",
+   "type": "range",
+   "dim": 1,
+   "disp": "sSubpassCutoff",
+   "attrs": [],
+   "def": 0.5,
+   "min": 0,
+   "max": 1
+  },
+  {
+   "name": "_TessEdge",
+   "type": "range",
+   "dim": 1,
+   "disp": "sTessellationEdge",
+   "attrs": [],
+   "def": 10,
+   "min": 1,
+   "max": 100
+  },
+  {
+   "name": "_TessFactorMax",
+   "type": "range",
+   "dim": 1,
+   "disp": "sTessellationFactor",
+   "attrs": [
+    "IntRange"
+   ],
+   "def": 3,
+   "min": 1,
+   "max": 8
+  },
+  {
+   "name": "_TessShrink",
+   "type": "range",
+   "dim": 1,
+   "disp": "sTessellationShrink",
+   "attrs": [],
+   "def": 0,
+   "min": 0,
+   "max": 1
+  },
+  {
+   "name": "_TessStrength",
+   "type": "range",
+   "dim": 1,
+   "disp": "sStrength",
+   "attrs": [],
+   "def": 0.5,
+   "min": 0,
+   "max": 1
+  },
+  {
+   "name": "_TransparentMode",
+   "type": "int",
+   "dim": 1,
+   "disp": "Rendering Mode|Opaque|Cutout|Transparent|Refraction|Fur|FurCutout|Gem",
+   "attrs": [
+    "lilEnum"
+   ],
+   "def": 0
+  },
+  {
+   "name": "_UDIMDiscardCompile",
+   "type": "int",
+   "dim": 1,
+   "disp": "sUDIMDiscard",
+   "attrs": [
+    "lilToggleLeft"
+   ],
+   "def": 0
+  },
+  {
+   "name": "_UDIMDiscardMode",
+   "type": "int",
+   "dim": 1,
+   "disp": "sUDIMDiscardMode|0: Vertex|1: Pixel (slower)",
+   "attrs": [
+    "lilEnum"
+   ],
+   "def": 0
+  },
+  {
+   "name": "_UDIMDiscardRow0_0",
+   "type": "int",
+   "dim": 1,
+   "disp": "",
+   "attrs": [
+    "lilToggle"
+   ],
+   "def": 0
+  },
+  {
+   "name": "_UDIMDiscardRow0_1",
+   "type": "int",
+   "dim": 1,
+   "disp": "",
+   "attrs": [
+    "lilToggle"
+   ],
+   "def": 0
+  },
+  {
+   "name": "_UDIMDiscardRow0_2",
+   "type": "int",
+   "dim": 1,
+   "disp": "",
+   "attrs": [
+    "lilToggle"
+   ],
+   "def": 0
+  },
+  {
+   "name": "_UDIMDiscardRow0_3",
+   "type": "int",
+   "dim": 1,
+   "disp": "",
+   "attrs": [
+    "lilToggle"
+   ],
+   "def": 0
+  },
+  {
+   "name": "_UDIMDiscardRow1_0",
+   "type": "int",
+   "dim": 1,
+   "disp": "",
+   "attrs": [
+    "lilToggle"
+   ],
+   "def": 0
+  },
+  {
+   "name": "_UDIMDiscardRow1_1",
+   "type": "int",
+   "dim": 1,
+   "disp": "",
+   "attrs": [
+    "lilToggle"
+   ],
+   "def": 0
+  },
+  {
+   "name": "_UDIMDiscardRow1_2",
+   "type": "int",
+   "dim": 1,
+   "disp": "",
+   "attrs": [
+    "lilToggle"
+   ],
+   "def": 0
+  },
+  {
+   "name": "_UDIMDiscardRow1_3",
+   "type": "int",
+   "dim": 1,
+   "disp": "",
+   "attrs": [
+    "lilToggle"
+   ],
+   "def": 0
+  },
+  {
+   "name": "_UDIMDiscardRow2_0",
+   "type": "int",
+   "dim": 1,
+   "disp": "",
+   "attrs": [
+    "lilToggle"
+   ],
+   "def": 0
+  },
+  {
+   "name": "_UDIMDiscardRow2_1",
+   "type": "int",
+   "dim": 1,
+   "disp": "",
+   "attrs": [
+    "lilToggle"
+   ],
+   "def": 0
+  },
+  {
+   "name": "_UDIMDiscardRow2_2",
+   "type": "int",
+   "dim": 1,
+   "disp": "",
+   "attrs": [
+    "lilToggle"
+   ],
+   "def": 0
+  },
+  {
+   "name": "_UDIMDiscardRow2_3",
+   "type": "int",
+   "dim": 1,
+   "disp": "",
+   "attrs": [
+    "lilToggle"
+   ],
+   "def": 0
+  },
+  {
+   "name": "_UDIMDiscardRow3_0",
+   "type": "int",
+   "dim": 1,
+   "disp": "",
+   "attrs": [
+    "lilToggle"
+   ],
+   "def": 0
+  },
+  {
+   "name": "_UDIMDiscardRow3_1",
+   "type": "int",
+   "dim": 1,
+   "disp": "",
+   "attrs": [
+    "lilToggle"
+   ],
+   "def": 0
+  },
+  {
+   "name": "_UDIMDiscardRow3_2",
+   "type": "int",
+   "dim": 1,
+   "disp": "",
+   "attrs": [
+    "lilToggle"
+   ],
+   "def": 0
+  },
+  {
+   "name": "_UDIMDiscardRow3_3",
+   "type": "int",
+   "dim": 1,
+   "disp": "",
+   "attrs": [
+    "lilToggle"
+   ],
+   "def": 0
+  },
+  {
+   "name": "_UDIMDiscardUV",
+   "type": "int",
+   "dim": 1,
+   "disp": "sUDIMDiscardUV|0: UV0|1: UV1|2: UV2|3: UV3",
+   "attrs": [
+    "lilEnum"
+   ],
+   "def": 0
+  },
+  {
+   "name": "_UseAnisotropy",
+   "type": "int",
+   "dim": 1,
+   "disp": "sAnisotropy",
+   "attrs": [
+    "lilToggleLeft"
+   ],
+   "def": 0
+  },
+  {
+   "name": "_UseAudioLink",
+   "type": "int",
+   "dim": 1,
+   "disp": "sAudioLink",
+   "attrs": [
+    "lilToggleLeft"
+   ],
+   "def": 0
+  },
+  {
+   "name": "_UseBacklight",
+   "type": "int",
+   "dim": 1,
+   "disp": "sBacklight",
+   "attrs": [
+    "lilToggleLeft"
+   ],
+   "def": 0
+  },
+  {
+   "name": "_UseBump2ndMap",
+   "type": "int",
+   "dim": 1,
+   "disp": "sNormalMap2nd",
+   "attrs": [
+    "lilToggleLeft"
+   ],
+   "def": 0
+  },
+  {
+   "name": "_UseBumpMap",
+   "type": "int",
+   "dim": 1,
+   "disp": "sNormalMap",
+   "attrs": [
+    "lilToggleLeft"
+   ],
+   "def": 0
+  },
+  {
+   "name": "_UseClippingCanceller",
+   "type": "int",
+   "dim": 1,
+   "disp": "sSettingClippingCanceller",
+   "attrs": [
+    "lilToggle"
+   ],
+   "def": 0
+  },
+  {
+   "name": "_UseDither",
+   "type": "int",
+   "dim": 1,
+   "disp": "sDither",
+   "attrs": [
+    "lilToggle"
+   ],
+   "def": 0
+  },
+  {
+   "name": "_UseEmission",
+   "type": "int",
+   "dim": 1,
+   "disp": "sEmission",
+   "attrs": [
+    "lilToggleLeft"
+   ],
+   "def": 0
+  },
+  {
+   "name": "_UseEmission2nd",
+   "type": "int",
+   "dim": 1,
+   "disp": "sEmission2nd",
+   "attrs": [
+    "lilToggleLeft"
+   ],
+   "def": 0
+  },
+  {
+   "name": "_UseGlitter",
+   "type": "int",
+   "dim": 1,
+   "disp": "sGlitter",
+   "attrs": [
+    "lilToggleLeft"
+   ],
+   "def": 0
+  },
+  {
+   "name": "_UseMain2ndTex",
+   "type": "int",
+   "dim": 1,
+   "disp": "sMainColor2nd",
+   "attrs": [
+    "lilToggleLeft"
+   ],
+   "def": 0
+  },
+  {
+   "name": "_UseMain3rdTex",
+   "type": "int",
+   "dim": 1,
+   "disp": "sMainColor3rd",
+   "attrs": [
+    "lilToggleLeft"
+   ],
+   "def": 0
+  },
+  {
+   "name": "_UseMatCap",
+   "type": "int",
+   "dim": 1,
+   "disp": "sMatCap",
+   "attrs": [
+    "lilToggleLeft"
+   ],
+   "def": 0
+  },
+  {
+   "name": "_UseMatCap2nd",
+   "type": "int",
+   "dim": 1,
+   "disp": "sMatCap2nd",
+   "attrs": [
+    "lilToggleLeft"
+   ],
+   "def": 0
+  },
+  {
+   "name": "_UseOutline",
+   "type": "int",
+   "dim": 1,
+   "disp": "Use Outline",
+   "attrs": [
+    "lilToggleLeft"
+   ],
+   "def": 0
+  },
+  {
+   "name": "_UseParallax",
+   "type": "int",
+   "dim": 1,
+   "disp": "sParallax",
+   "attrs": [
+    "lilToggleLeft"
+   ],
+   "def": 0
+  },
+  {
+   "name": "_UsePOM",
+   "type": "int",
+   "dim": 1,
+   "disp": "sPOM",
+   "attrs": [
+    "lilToggle"
+   ],
+   "def": 0
+  },
+  {
+   "name": "_UseReflection",
+   "type": "int",
+   "dim": 1,
+   "disp": "sReflection",
+   "attrs": [
+    "lilToggleLeft"
+   ],
+   "def": 0
+  },
+  {
+   "name": "_UseRim",
+   "type": "int",
+   "dim": 1,
+   "disp": "sRimLight",
+   "attrs": [
+    "lilToggleLeft"
+   ],
+   "def": 0
+  },
+  {
+   "name": "_UseRimShade",
+   "type": "int",
+   "dim": 1,
+   "disp": "RimShade",
+   "attrs": [
+    "lilToggleLeft"
+   ],
+   "def": 0
+  },
+  {
+   "name": "_UseShadow",
+   "type": "int",
+   "dim": 1,
+   "disp": "sShadow",
+   "attrs": [
+    "lilToggleLeft"
+   ],
+   "def": 0
+  },
+  {
+   "name": "_VertexLightStrength",
+   "type": "range",
+   "dim": 1,
+   "disp": "sVertexLightStrength",
+   "attrs": [],
+   "def": 0,
+   "min": 0,
+   "max": 1
+  },
+  {
+   "name": "_ZClip",
+   "type": "int",
+   "dim": 1,
+   "disp": "sZClip",
+   "attrs": [
+    "lilToggle"
+   ],
+   "def": 1
+  },
+  {
+   "name": "_ZTest",
+   "type": "int",
+   "dim": 1,
+   "disp": "sZTest",
+   "attrs": [
+    "Enum(UnityEngine.Rendering.CompareFunction)"
+   ],
+   "def": 4
+  },
+  {
+   "name": "_ZWrite",
+   "type": "int",
+   "dim": 1,
+   "disp": "sZWrite",
+   "attrs": [
+    "lilToggle"
+   ],
+   "def": 1
+  }
+ ]
+}
