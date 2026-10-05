@@ -11,14 +11,16 @@
     /* 查看器背景默认透明，所以这里就是「下方网页内容」 */
     background: radial-gradient(120% 90% at 50% 0%, #1c2434 0%, #0b0e15 72%);
   }
-  #app { position: fixed; inset: 0; touch-action: none; }
+  #app { position: absolute; inset: 0; touch-action: none; }
+  /* 暗角：跟着场景窗口（absolute、不再是整页 fixed。） */
   #vignette {
-    position: fixed; inset: 0; pointer-events: none; z-index: 5;
+    position: absolute; inset: 0; pointer-events: none; z-index: 5;
     background: radial-gradient(circle at 50% 40%, transparent 40%, rgba(0,0,0,.55) 100%);
   }
+  /* #hud 现在是「工具栏」浮窗**里面**的内容（不再是 fixed 整页浮层。） */
   #hud {
-    position: fixed; left: 16px; bottom: 16px; z-index: 10;
-    display: flex; gap: 8px; flex-wrap: wrap;
+    position: static;
+    display: flex; gap: 8px; flex-wrap: wrap; align-content: flex-start;
     font: 13px/1.4 system-ui, -apple-system, "PingFang SC", sans-serif;
     color: #cfd3dc;
   }
@@ -54,9 +56,11 @@
   #loading.hide { opacity: 0; pointer-events: none; }
   #bar { width: 220px; height: 3px; border-radius: 2px; background: rgba(255,255,255,.1); overflow: hidden; }
   #bar i { display: block; height: 100%; width: 0%; background: #5b8cf5; transition: width .2s; }
+  /* #info 现在是「状态」浮窗里面的内容 */
   #info {
-    position: fixed; right: 16px; bottom: 16px; z-index: 10;
-    font: 12px/1.6 ui-monospace, monospace; color: #6b7385; text-align: right;
+    position: static;
+    font: 12px/1.6 ui-monospace, monospace; color: #6b7385;
+    white-space: pre-wrap; word-break: break-all;
   }
 
   /* ---------- 自定义模型：本地文件上传 ---------- */
@@ -70,9 +74,96 @@
     box-shadow: 0 12px 40px rgba(0,0,0,.4);
   }
   #upload.hidden { display: none; }
+
+  /* 右侧浮层面板（lilToon 参数 / 导出配置共用）*/
+  .lp {
+    /* ⚠️ z-index 必须高于 #upload（12 ）
+       两者都在 top:16px、且 #upload 在 DOM 里排在 #lilPanel 之后 
+       同层级时后出现的在上、于是窗口不够宽时自定义模型选单会盖住参数面板 
+       表现就是「点了像没反应」，其实面板已经打开了。 */
+    position: fixed; right: 16px; top: 16px; z-index: 15;
+    width: 400px; max-height: calc(100vh - 32px);
+    overflow-y: auto; overflow-x: hidden;   /* 不要左右滚轮 */
+    padding: 14px;
+    border: 1px solid rgba(255,255,255,.14); border-radius: 12px;
+    background: rgba(18,22,30,.86); backdrop-filter: blur(10px);
+    font: 12.5px/1.5 system-ui, -apple-system, "PingFang SC", sans-serif;
+    color: #cfd3dc;
+    box-shadow: 0 12px 40px rgba(0,0,0,.4);
+  }
+  /**
+   * ★★ 面板缩放改用 **CSS 原生 `resize`** ——
+   *
+   *   ⚠️⚠️ 原来走 JS 手柄（`makePanelResizable` 运行时 `appendChild` 一个 `.fw-grip`）
+   *     但**面板内容会被反复重建**（`buildPartsPanel` 里 `innerHTML = ''`。）⇒
+   *     手柄被一起删掉、800ms 的扫描**也没补回来**（实测：打开部件后 手柄数 0。）
+   *     ⇒ 用户看到的就是「部件 panel 不能调大小」。
+   *
+   *   ⇒ CSS 的 `resize` 是**浏览器原生**的、不依赖 DOM 里有没有手柄元素
+   *     ⇒ 重建多少次都不受影响。（虽然不做持久化、但至少**能用**。）
+   *
+   *   ⚠️ `resize` 要求 `overflow` 不是 `visible` ⇒ 一起给上。
+   *   ⚠️ 给个 `min-width/min-height`、不然能拖到看不见。
+   */
+  .lp { resize: both; overflow: auto; min-width: 220px; min-height: 80px; }
+  .lp.hidden { display: none; }
+  /* 部件面板放左侧，避开右上的 lilToon / 导出面板与左上的自定义模型选单 */
+  .lp.parts { left: 16px; right: auto; top: 300px; width: 340px; max-height: calc(100vh - 320px); }
+  .lp .mrow { display: flex; align-items: center; gap: 6px; margin-bottom: 3px; font-size: 11.5px; }
+  .lp .mrow input[type=checkbox] { flex: 0 0 auto; }
+  .lp .mrow .mname { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .lp .mrow .mtri { flex: 0 0 auto; color: #6b7385; font-size: 10.5px; }
+  .lp .mrow button { flex: 0 0 auto; padding: 1px 6px; font-size: 10.5px; }
+  .lp h4 { margin: 12px 0 6px; font-size: 12px; color: #8fa4c8; font-weight: 600; }
+  .lp h4:first-child { margin-top: 0; }
+  /* —— 面板标题栏：同时充当拖拽把手 —— */
+  .lp .lp-title {
+    /* 负外边距抵消 .lp 的 padding、让标题栏贴满顶部。 */
+    margin: -14px -14px 10px; padding: 9px 14px;
+    background: rgba(255,255,255,.055);
+    border-radius: 11px 11px 0 0;
+    border-bottom: 1px solid rgba(255,255,255,.09);
+    font-weight: 600; font-size: 12.5px; color: #c3ccdd;
+    cursor: move; user-select: none;
+    position: sticky; top: -14px; z-index: 2;
+    display: flex; align-items: center; gap: 6px;
+  }
+  .lp .lp-title:active { cursor: grabbing; }
+  .lp .lp-title .lp-dot { width: 7px; height: 7px; border-radius: 50%; background: #3d6fe0; flex: 0 0 auto; }
+  /* 标题区可按住拖动面板（监听挂在面板上用事件委托、重建面板也不会失效）*/
+  .lp h4 { cursor: move; }
+  .lp h4:active { cursor: grabbing; }
+  .lp .row { display: flex; align-items: center; gap: 6px; margin-bottom: 5px; }
+  .lp .row > span { flex: 0 0 74px; color: #9aa3b5; }
+  .lp .row input[type=range] { flex: 1; min-width: 0; }
+  .lp .row input[type=number] { width: 52px; flex: 0 0 auto; }
+  .lp .row input[type=text] { flex: 1; min-width: 0; }
+  .lp .hint { margin: 6px 0 10px; font-size: 11px; color: #6b7385; }
+  .lp textarea {
+    width: 100%; height: 150px; margin-top: 8px; resize: vertical;
+    background: #0e1117; color: #b9c2d0; border: 1px solid rgba(255,255,255,.12);
+    border-radius: 6px; padding: 8px; font: 11px/1.4 ui-monospace, Consolas, monospace;
+  }
+  .lp .actions { display: flex; gap: 8px; margin-top: 10px; }
+  .lp button {
+    flex: 1; padding: 6px 10px; border-radius: 7px; cursor: pointer;
+    background: rgba(38,44,56,.9); color: #cfd3dc;
+    border: 1px solid rgba(255,255,255,.14); font-size: 12px;
+  }
+  .lp button:hover { background: rgba(50,58,74,.95); }
+  .lp button.primary { background: #3d6fe0; border-color: #5b8cf5; color: #fff; }
+  /* —— 统一标题栏（.lp-title 与 #upload .u-title 同一套视觉）—— */
   #upload .u-title {
-    font-size: 12px; color: #8b93a7; margin-bottom: 10px;
-    padding-bottom: 9px; border-bottom: 1px solid rgba(255,255,255,.09);
+    font-size: 12.5px; font-weight: 600; color: #c3ccdd;
+    margin-bottom: 10px; padding-bottom: 9px;
+    border-bottom: 1px solid rgba(255,255,255,.09);
+    cursor: move; user-select: none;
+    display: flex; align-items: center; gap: 6px;
+  }
+  #upload .u-title:active { cursor: grabbing; }
+  #upload .u-title::before {
+    content: ''; width: 7px; height: 7px; border-radius: 50%;
+    background: #3d6fe0; flex: 0 0 auto;
   }
   #upload .u-row { margin-bottom: 9px; }
   #upload .u-pick {
@@ -102,15 +193,339 @@
   #upload .u-actions button.primary:hover:not(:disabled) { background: #4a7cf0; }
   #upload .u-actions button:disabled { opacity: .45; cursor: not-allowed; }
   #upload .u-msg { margin-top: 9px; font-size: 11px; color: #7de0a8; min-height: 14px; word-break: break-all; }
+  /* ============================================================
+   * 浮窗底座（fw = floating window）
+   *
+   * 目标：像 Unity 那样 —— 场景是一个浮窗 · 参数面板是另一个浮窗 ·
+   *       互不嵌套 · 都能拖动和缩放。
+   *
+   * ⚠️ 为什么场景也要浮窗化：
+   *   frameModel() 按 **container.clientHeight** 把模型缩放到固定像素高。
+   *   而 #app 原来是 position:fixed; inset:0（铺满视口。）⇒
+   *   浏览器窗口一变扁 ⇒ clientHeight 变小 ⇒ **模型跟着缩** · 很意外。
+   *   固定尺寸的浮窗 ⇒ clientHeight 恒定 ⇒ 模型大小恒定。
+   *   （⚠️ 用户**主动**缩放场景窗口时仍会重新取景 ——
+   *     这是预期行为 · Unity 的 Scene 视图也是这样。）
+   * ============================================================ */
+  .fw {
+    position: fixed; z-index: 8;
+    display: flex; flex-direction: column;
+    background: #14161c;
+    border: 1px solid #2b3040; border-radius: 8px;
+    box-shadow: 0 10px 34px rgba(0,0,0,.5);
+    overflow: hidden;
+    min-width: 240px; min-height: 160px;
+  }
+  .fw.hidden { display: none; }
+  .fw.dragging, .fw.resizing { user-select: none; }
+  .fw.raised { z-index: 30; }
+  .fw-title {
+    flex: 0 0 auto; height: 26px;
+    display: flex; align-items: center; gap: 6px;
+    padding: 0 8px;
+    font-size: 11.5px; color: #9fb0cc; font-weight: 600;
+    background: linear-gradient(#20242e, #191c24);
+    border-bottom: 1px solid #2b3040;
+    cursor: move; touch-action: none;
+  }
+  .fw-title .fw-name { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .fw-title .fw-btn {
+    flex: 0 0 auto; padding: 0 6px; height: 18px; line-height: 16px;
+    font-size: 11px; background: #262b37; color: #9fb0cc;
+    border: 1px solid #333a4a; border-radius: 4px; cursor: pointer;
+  }
+  .fw-title .fw-btn:hover { background: #313847; color: #d6e2f5; }
+  .fw-body { flex: 1 1 auto; position: relative; min-height: 0; overflow: hidden; }
+  #sceneWin { left: 16px; top: 16px; width: 960px; height: 700px; z-index: 8; }
+  #sceneWin .fw-body { background: #0d0f13; }
+  .fw-grip {
+    position: absolute; right: 0; bottom: 0; width: 16px; height: 16px;
+    cursor: nwse-resize; touch-action: none; z-index: 3;
+    background:
+      linear-gradient(135deg, transparent 0 46%, #4a5468 46% 54%, transparent 54%),
+      linear-gradient(135deg, transparent 0 68%, #4a5468 68% 76%, transparent 76%);
+  }
+  .fw-grip:hover { filter: brightness(1.6); }
+  /* 工具栏浮窗（收纳 #hud 的按钮 + 各种滑杆。） */
+  /*
+   * ⚠️ 高度是**截图实测**调出来的 —— 210px 时最下面一行控件（光照夹取 / 渲染。）
+   *    会被裁掉、虽然 body 能滚、但看起来像「控件没了」
+   *    300px 能完整放下（16 组控件 + 折行。）
+   */
+  /*
+   * 高度用 **min(绝对值, 视口百分比)** —— 截图实测：
+   *   210px ⇒ 裁掉 2 行 · 300px ⇒ 还裁 1 行（骨骼 / 顶点色 / 部件 / 描边 那排。）
+   *   固定值在矮屏上会顶出视口 ⇒ 用 min() 兼顾两边。
+   * ⚠️ body 本来就有 overflow-y:auto ⇒ 裁了也能滚、但看起来像「控件没了」
+   */
+  #hudWin { left: 16px; bottom: 16px; width: 680px; height: min(400px, 46vh); z-index: 10; }
+  #hudWin .fw-body { overflow-y: auto; overflow-x: hidden; padding: 8px 10px; }
+  /* 状态浮窗（#info。） */
+  /* 场景设置浮窗：放左上 · 避开右边的 lilToon / 导出面板 */
+  #scenePanel { left: 16px; top: 16px; width: 364px; max-height: calc(100vh - 32px); z-index: 16; }
+  #scenePanel .sp-row { display: flex; align-items: center; gap: 6px; margin: 3px 0; font-size: 11.5px; }
+  #scenePanel .sp-row > span:first-child { flex: 0 0 86px; color: #8fa4c8; }
+  #scenePanel .sp-row input[type=range] { flex: 1; min-width: 0; }
+  #scenePanel .sp-row input[type=number] { flex: 0 0 62px; }
+  #scenePanel .sp-row input[type=color] { flex: 0 0 34px; height: 20px; padding: 0; }
+  #scenePanel .sp-row select { flex: 1; min-width: 0; }
+  #scenePanel .sp-row button { flex: 0 0 auto; padding: 3px 8px; font-size: 11px; }
+  #scenePanel .sp-grp { margin: 10px 0 4px; font-size: 12px; color: #8fa4c8; font-weight: 600; }
+  #scenePanel .sp-grp:first-child { margin-top: 0; }
+  #scenePanel .sp-chk { flex: 0 0 auto; margin: 0 3px 0 0; }
+  body.light #scenePanel .sp-row > span:first-child { color: #43536e; }
+  body.light #scenePanel .sp-grp { color: #43536e; }
+  #infoWin { right: 16px; bottom: 16px; width: 300px; height: min(150px, 20vh); z-index: 10; }
+  #infoWin .fw-body { overflow-y: auto; padding: 8px 10px; }
+  /* .lp 面板的缩放手柄在右下角 ⇒ 留点内边距别压住最后一行。 */
+  .lp { padding-bottom: 14px; }
+  /* ============================================================
+   * 窄屏 / 矮屏兜底 —— 浮窗在手机上不实用 ⇒ 退回铺满
+   *
+   * ⚠️ 这个文件原来**一个 @media 都没有**（纯桌面布局。）
+   *    浮窗化之后必须补：否则手机上场景只有 960×700 的一小块 
+   *    参数面板也只有 400px 宽 ⇒ 完全没法用。
+   *
+   * 策略：
+   *   · 场景浮窗 ⇒ 铺满视口 · 去掉边框圆角 · 隐藏标题栏和手柄（拖不动也没关系。）
+   *   · 参数面板 ⇒ 全屏覆盖（它本来就有滚动。）
+   *   · 工具栏 / 状态 ⇒ 变成底部两条（不遮住整个场景。）
+   * ============================================================ */
+  @media (max-width: 820px), (max-height: 560px) {
+    #sceneWin {
+      left: 0 !important; top: 0 !important;
+      width: 100vw !important; height: 100vh !important;
+      border: none !important; border-radius: 0 !important;
+    }
+    /* 标题栏是拖拽把手、窄屏没地方放 ⇒ 隐藏（手柄同理。） */
+    .fw-title { display: none !important; }
+    .fw-grip { display: none !important; }
+    .fw { border-radius: 0 !important; }
+    /* 参数面板 / 导出 / 部件：全屏覆盖（它们内部本来就能滚。） */
+    .lp {
+      left: 0 !important; top: 0 !important; right: auto !important; bottom: auto !important;
+      width: 100vw !important; max-width: 100vw !important;
+      height: 100vh !important; max-height: 100vh !important;
+      border-radius: 0 !important;
+      z-index: 40 !important;
+    }
+    /* 工具栏 / 状态：底部两条（场景被盖一部分、但至少能用。） */
+    #hudWin {
+      left: 0 !important; right: 0 !important; top: auto !important; bottom: 0 !important;
+      width: 100vw !important; height: 34vh !important;
+      border-radius: 10px 10px 0 0 !important;
+      z-index: 35 !important;
+    }
+    #infoWin {
+      left: 0 !important; right: 0 !important; top: auto !important; bottom: 0 !important;
+      width: 100vw !important; height: 20vh !important;
+      border-radius: 0 !important;
+      z-index: 36 !important;
+    }
+    /* 上传面板（自定义模型。）：全宽 */
+    #upload {
+      left: 0 !important; top: 0 !important;
+      width: 100vw !important; max-width: 100vw !important;
+      height: 100vh !important; max-height: 100vh !important;
+      border-radius: 0 !important; overflow-y: auto !important;
+      z-index: 45 !important;
+    }
+  }
+  /* ============================================================
+   * ★ 日间模式（`body.light`）
+   *
+   * ⚠️ 做法是**增量覆盖**、不动上面任何一条暗色规则 ⇒
+   *    夜间模式零风险（一个字节都没变。）
+   *
+   * ⇒ 想加一处、就在这里补一条同选择器的规则（后写的赢。）
+   * ============================================================ */
+  body.light {
+    background: radial-gradient(120% 90% at 50% 0%, #eef2f8 0%, #dde4ee 72%);
+  }
+  /* —— 浮窗（.fw）—— */
+  body.light .fw {
+    background: #ffffff;
+    border-color: #d5dbe6;
+    box-shadow: 0 10px 30px rgba(30,45,70,.16);
+  }
+  body.light .fw-title {
+    background: linear-gradient(#f7f9fc, #eef1f7);
+    border-bottom-color: #d5dbe6;
+    color: #46536a;
+  }
+  body.light .fw-title .fw-btn {
+    background: #eef1f7; color: #46536a; border-color: #ccd4e0;
+  }
+  body.light .fw-title .fw-btn:hover { background: #e2e8f2; color: #1f2a3a; }
+  body.light .fw-grip {
+    background:
+      linear-gradient(135deg, transparent 0 46%, #9aa8bd 46% 54%, transparent 54%),
+      linear-gradient(135deg, transparent 0 68%, #9aa8bd 68% 76%, transparent 76%);
+  }
+  body.light #sceneWin .fw-body { background: #e9edf4; }
+  /* —— 工具栏（#hud 在 #hudWin 里。）—— */
+  body.light #hud { color: #2b3340; }
+  body.light #hud label { color: #2b3340; }
+  body.light #hud button {
+    background: rgba(238,242,248,.95);
+    border-color: rgba(0,0,0,.16);
+    color: #2b3340;
+  }
+  body.light #hud button:hover { background: #e3e9f3; border-color: rgba(0,0,0,.28); }
+  body.light #hud button.on { background: #3d6fe0; border-color: #5b8cf5; color: #fff; }
+  body.light #hud .sep { background: rgba(0,0,0,.14); }
+  body.light #hud select, body.light #hud input[type=color], body.light #hud input[type=number] {
+    background: rgba(238,242,248,.95); color: #2b3340; border-color: rgba(0,0,0,.16);
+  }
+  body.light #hud option { background: #ffffff; color: #2b3340; }
+  /* —— 参数面板（.lp）—— */
+  body.light .lp {
+    background: rgba(255,255,255,.96);
+    border-color: #d5dbe6;
+    box-shadow: 0 12px 34px rgba(30,45,70,.16);
+    color: #2b3340;
+  }
+  body.light .lp .lp-title { background: rgba(0,0,0,.035); color: #46536a; }
+  body.light .lp h4 { color: #43536e; }
+  body.light .lp button {
+    background: rgba(238,242,248,.95); color: #2b3340; border-color: rgba(0,0,0,.16);
+  }
+  body.light .lp button:hover { background: #e3e9f3; }
+  body.light .lp button.primary { background: #3d6fe0; border-color: #5b8cf5; color: #fff; }
+  body.light .lp textarea {
+    background: #f7f9fc; color: #2b3340; border-color: rgba(0,0,0,.14);
+  }
+  body.light .lp input, body.light .lp select { color: #2b3340; }
+  /* —— 上传面板（#upload）—— */
+  body.light #upload {
+    background: rgba(255,255,255,.94);
+    border-color: #d5dbe6;
+    box-shadow: 0 12px 34px rgba(30,45,70,.16);
+    color: #2b3340;
+  }
+  body.light #upload .u-title { color: #46536a; }
+  body.light #upload .u-pick { background: rgba(0,0,0,.022); color: #2b3340; border-color: rgba(0,0,0,.18); }
+  body.light #upload .u-pick:hover { border-color: rgba(61,111,224,.6); background: rgba(61,111,224,.07); }
+  body.light #upload .u-name { color: #68738a; }
+  body.light #upload .u-actions button {
+    background: rgba(238,242,248,.95); color: #2b3340; border-color: rgba(0,0,0,.16);
+  }
+  body.light #upload .u-actions button:hover:not(:disabled) { background: #e3e9f3; }
+  body.light #upload .u-actions button.primary { background: #3d6fe0; border-color: #5b8cf5; color: #fff; }
+  /* —— 状态 / 加载 / 进度 —— */
+  body.light #info { color: #5a6272; }
+  body.light #loading { background: #eef2f8; color: #5a6272; }
+  body.light #bar { background: rgba(0,0,0,.1); }
+  /* —— 暗角在日间要更轻（否则四角发黑很脏。）—— */
+  body.light #vignette {
+    background: radial-gradient(circle at 50% 40%, transparent 55%, rgba(60,80,110,.16) 100%);
+  }
+/* ★ 显示模式分段按钮（view / edit。）*/
+.seg { display: inline-flex; border: 1px solid #cfd6e4; border-radius: 6px; overflow: hidden; }
+.seg > button { border: 0; border-radius: 0; margin: 0; padding: 3px 10px; background: transparent; }
+.seg > button + button { border-left: 1px solid #cfd6e4; }
+.seg > button.on { background: #3b82f6; color: #fff; font-weight: 600; }
+/* ★ 场景浮窗左上角的工具条（显示模式 + 场景按钮。）*/
+.scbar {
+  /* ⚠️ 挪到**右上** —— 左上和浮窗标题「场景」重合（用户指出的。）*/
+  position: absolute; top: 8px; right: 8px; z-index: 6;
+  display: inline-flex; gap: 6px; align-items: center;
+}
+.scbar > button {
+  border: 1px solid #cfd6e4; border-radius: 6px; padding: 3px 10px;
+  background: rgba(255,255,255,.92); cursor: pointer;
+}
+#sceneWin { position: relative; }   /* ⚠️ 绝对定位要有个定位祖先。 */
+/* ============================================================
+ * ★ 最小化 → 左下角停靠（纵向叠放。）
+ *
+ *   · 每个浮窗标题栏加一个 [—]
+ *   · 点了 ⇒ 只留标题、元素挪进 #dock、竖着叠。
+ *   · 再点 ⇒ 放回原来的位置和大小。
+ * ============================================================ */
+#dock {
+  position: fixed; left: 10px; bottom: 10px; z-index: 45;
+  display: flex; flex-direction: column-reverse; gap: 4px;   /* 从下往上叠。 */
+  align-items: flex-start; pointer-events: none;
+}
+#dock > * { pointer-events: auto; }
+/* 停靠中的浮窗：位置交给 flex、自己不再定位。 */
+#dock > .fw, #dock > .lp {
+  position: static !important; left: auto !important; top: auto !important;
+  width: auto !important; height: auto !important; min-width: 0 !important;
+  resize: none !important; margin: 0 !important;
+}
+/* 最小化态：除了标题、别的都藏起来。 */
+.min > *:not(.fw-title):not(.lp-title) { display: none !important; }
+.min { min-height: 0 !important; }
+/**
+ * ⚠️⚠️ 最小化态下的标题（用户截图里「通用着色器参数」折成了两行 
+ *   还带滚动条 ⇒ 布局坏了。）
+ *
+ *   原因：
+ *     · 停靠区是 flex 列、默认会**压缩**子项宽度 ⇒ 文字折行。
+ *     · 面板原来的 `height/min(...)` 和 `.lp` 的 overflow 还生效 ⇒ 出滚动条。
+ *   ⇒ 用 `width: max-content` + 干掉 overflow。
+ */
+.min > .fw-title, .min > .lp-title {
+  border-radius: 6px; cursor: pointer;
+  white-space: nowrap !important;
+  width: max-content !important;
+  min-width: 0 !important;
+  display: flex !important;
+  align-items: center;
+  gap: 4px;
+}
+/* 停靠区里的面板：按内容宽、且**不滚动**。 */
+#dock > .min {
+  width: max-content !important;
+  max-width: 92vw !important;
+  overflow: hidden !important;
+  resize: none !important;
+}
+/* 标题栏里的 [—] 按钮。 */
+.fw-min, .fw-close {
+  margin-left: 6px; border: 0; background: transparent; cursor: pointer;
+  font: inherit; line-height: 1; padding: 0 3px; opacity: .75;
+}
+.fw-min:hover, .fw-close:hover { opacity: 1; }
+/* ★ 通用着色器参数面板 */
+#shaderPanel { left: 16px; top: 120px; width: 360px; height: min(340px, 46vh); z-index: 11; }
+#shaderPanel .lp-body { padding: 8px 10px; overflow-y: auto; }
 </style>
 </head>
 <body>
 
-<div id="app"></div>
-<div id="vignette"></div>
+<!-- ★ 场景浮窗（Unity 风格的独立窗口 · 可拖动 / 可缩放。） -->
+<div id="sceneWin" class="fw">
+    <!-- ★ 场景浮窗左上角：显示模式 + 场景按钮（用户指定的位置。） -->
+    <div class="scbar" id="dispSeg">
+      <span class="seg" title="view：只看地面网格 · edit：辅助全开（网格和轴长拉到最大）">
+        <button data-disp="view" class="on">view</button>
+        <button data-disp="edit">edit</button>
+      </span>
+      <button id="btnScene" title="场景设置：辅助显示 / 光照 / 相机">场景</button>
+    </div>
+  <div class="fw-title">
+    <span class="fw-name">场景</span>
+  </div>
+  <div class="fw-body">
+    <div id="app"></div>
+    <div id="vignette"></div>
+    <div class="fw-grip" data-fw-grip="sceneWin"></div>
+  </div>
+</div>
+<!-- #vignette 已挪进 #sceneWin -->
 
-<div id="hud">
+<!-- ★ 工具栏浮窗 -->
+<div id="hudWin" class="fw">
+  <div class="fw-title"><span class="fw-name">工具栏</span></div>
+  <div class="fw-body">
+  <div id="hud">
   <button id="btnUpload" title="上传本地模型文件后直接加载">自定义模型</button>
+  <button id="btnExport" title="导出配置 JSON（只写与默认值不同的项）">导出 JSON</button>
+  <button id="btnShot" title="把当前画面保存为 PNG（含描边、透明背景时合成背景色。）">保存 PNG</button>
+  <button id="btnTheme" type="button" title="切换日间 / 夜间配色（记忆在浏览器里）">日间</button>
   <span class="sep"></span>
   <label>动作
     <select id="animMenu" disabled><option>载入中…</option></select>
@@ -119,39 +534,89 @@
   <label>打光
     <select id="lightMenu"></select>
   </label>
+  <label title="打光整体亮度倍率（PBR 与卡通都生效；1.0 = 预设原值）">光照亮度
+    <input id="lightScale" type="range" min="0.1" max="4" step="0.05" value="1" title="拖动调整整体亮度">
+    <input id="lightScaleNum" type="number" min="0.1" max="4" step="0.05" value="1" title="精确输入亮度倍率">
+  </label>
+  <label title="投射阴影里保留多少主光：0 = 原来的硬阴影，1 = 完全没有投射阴影（仅卡通模式生效）">阴影浓淡
+    <input id="celShadow" type="range" min="0" max="0.95" step="0.05" value="0.3" title="拖动：往右阴影越淡">
+    <input id="celShadowNum" type="number" min="0" max="0.95" step="0.05" value="0.3" title="精确输入：0=硬阴影，1=无阴影">
+  </label>
+  <label title="脸部投射阴影浓度。需先用「面部阴影」按钮开启（按钮点亮 = 面部接收阴影）。未动过此滑块时跟随「阴影浓淡」">脸部
+    <input id="celFaceShadow" type="range" min="0" max="0.95" step="0.05" value="0.7" title="脸部投射阴影里保留多少主光：0 = 满强度硬影（往左越深）">
+    <input id="celFaceShadowNum" type="number" min="0" max="0.95" step="0.05" value="0.7" title="精确输入脸部浓度：0=满强度，0.95≈没有">
+  </label>
+
+  <label title="分档色（阶段 1 ①）：勾上以后、每一档明暗用**各自的颜色**、而不是单一暗色。四个色标从最暗段到最亮段线性插值。不勾 = 原来的单一暗色公式（完全不变）">
+    <input type="checkbox" id="celRampOn" style="margin:0 4px 0 0;vertical-align:middle">分档色
+    <input type="color" id="celRamp0" value="#2a2440" title="最暗段（背光面）">
+    <input type="color" id="celRamp1" value="#6a6488" title="次暗段">
+    <input type="color" id="celRamp2" value="#a8a2c0" title="次亮段">
+    <input type="color" id="celRamp3" value="#ffffff" title="最亮段（受光面）">
+  </label>
+  <label title="段与段之间的过渡带宽度：0 = 硬边（和老公式一致），0.5 = 段内后半段平滑、1 = 整段都在过渡（接近连续渐变）。只对「分档色」生效">
+    过渡带
+    <input id="celBandSoft" type="range" min="0" max="1" step="0.05" value="0" title="拖动：往右段间过渡越柔">
+  </label>
+
+  <label title="光照夹取（lilToon 的 _LightMinLimit / _LightMaxLimit · 默认关）。夹的是**纯光照**（灯光颜色 × 阴影衰减），不含材质色 —— 和 lilToon 的 clamp(fd.lightColor) 对应。效果：太暗的光照被抬到下限（≈ 暗部地板）、太亮的光照被压到上限。⚠️ 上限默认 2.2 是因为我们主光强度是 2.0~2.1（lilToon 默认 1 是按 Unity 主光≈1 定的，照抄会把主光砍一半）。⚠️ 与 lilToon 的差异：three 的环境光是独立相加的、不受这个夹取影响，所以下限拉很高时会比 lilToon 略亮">
+    <input type="checkbox" id="lightClampOn" style="margin:0 4px 0 0;vertical-align:middle">光照夹取
+    <input id="lightMinLimit" type="range" min="0" max="0.6" step="0.005" value="0.05" title="下限 _LightMinLimit · lilToon 默认 0.05（很轻微）。抬高 = 把太暗的整体提亮 ⇒ 暗部变亮、对比降低。0.3 以上是很强的风格化">
+    <input id="lightMaxLimit" type="range" min="0.2" max="4" step="0.05" value="2.2" title="上限 _LightMaxLimit。lilToon 默认 1（按 Unity 主光强度≈1 定的）· 但我们预设主光是 2.0~2.1 ⇒ 用 1 会把主光砍一半。取 2.2 = 只抬暗部不压主光 · 想压高光再往低调">
+  </label>
   <span class="sep"></span>
   <label>渲染
-    <select id="shadingMenu"></select>
+    <select id="renderMenu" title="材质模型：用哪个 three.js 材质类"></select>
   </label>
+  <label>着色器
+    <select id="shaderMenu" title="往 toon 材质里注入什么着色器（非 toon 材质时不生效）"></select>
+  </label>
+  
+  <button id="btnShader" title="通用着色器参数（光照亮度 / 阴影浓淡 / 分档色 / 描边）">通用着色器</button>
+<button id="btnLil" title="lilToon 参数（免改 JSON）">lilToon 参数</button>
   <span class="sep"></span>
   <label>背景
     <select id="bgMenu"></select>
   </label>
   <input type="color" id="bgColor" value="#10131a" title="自定义背景色" />
   <span class="sep"></span>
-  <label>基准X
-    <input id="pivotX" type="range" min="-2" max="2" step="0.01" value="0" title="旋转中心左右偏移">
-    <input id="pivotXNum" type="number" min="-2" max="2" step="0.01" value="0" title="精确输入左右偏移">
-  </label>
-  <label>基准Z
-    <input id="pivotZ" type="range" min="-2" max="2" step="0.01" value="0" title="旋转中心前后偏移">
-    <input id="pivotZNum" type="number" min="-2" max="2" step="0.01" value="0" title="精确输入前后偏移">
-  </label>
-  <button id="btnPivotReset" title="基准归零">基准归零</button>
-  <span class="sep"></span>
   <button id="btnAuto">自动旋转</button>
   <button id="btnReset">重置视角</button>
   <button id="btnAnim" class="on">播放动画</button>
   <button id="btnWire">线框</button>
   <button id="btnSkel">骨骼</button>
+  <button id="btnVC" title="顶点色预览：R→MatCap G→Rim B→自发光（白=无顶点色或全为1）">顶点色</button>
+<button id="btnParts" title="列出模型的所有网格，可逐个显示/隐藏">部件</button>
+<!-- 详细日志开关：控制阴影自检 / syncRenderUI 判定输入 / [lilPanel] 等诊断输出 -->
+<label id="debugWrap" title="打开后会打印诊断信息（阴影自检 / 着色器判定 / 面板日志）。viewer.js 里的 console.debug 还受 DevTools 的 Verbose 级别控制。">
+  <input type="checkbox" id="chkDebug" style="margin:0 4px 0 0;vertical-align:middle">详细日志
+</label>
   <button id="btnOutline" class="on">描边</button>
   <label>粗细
     <input id="outlineWidth" type="range" min="0" max="0.02" step="0.0005" value="0.004" title="描边粗细">
     <input id="outlineWidthNum" type="number" min="0" max="0.02" step="0.0005" value="0.004" title="精确输入描边粗细">
   </label>
-</div>
+  </div><!-- /#hud -->
+  <div class="fw-grip" data-fw-grip="hudWin"></div>
+  </div><!-- /.fw-body -->
+</div><!-- /#hudWin -->
 
-<div id="info"></div>
+<!-- ★ 通用着色器参数（光照亮度 / 阴影浓淡 / 分档色 / 描边 ⇒ 从工具栏搬进来。） -->
+<div id="shaderPanel" class="lp hidden"></div>
+<div id="lilPanel" class="lp hidden"></div>
+<div id="exportPanel" class="lp hidden"></div>
+<div id="partsPanel" class="lp parts hidden"></div>
+
+<!-- ★ 状态浮窗 -->
+<!-- ★ 场景设置浮窗（Unity 风格的辅助显示 / 光照 / 相机。） -->
+<div id="scenePanel" class="lp sp hidden"></div>
+<div id="infoWin" class="fw">
+  <div class="fw-title"><span class="fw-name">状态</span></div>
+  <div class="fw-body">
+    <div id="info"></div>
+    <div class="fw-grip" data-fw-grip="infoWin"></div>
+  </div>
+</div>
 
 <!-- 自定义模型：依次选好文件 → 点「加载」 -->
 <div id="upload" class="hidden">
@@ -159,8 +624,8 @@
 
   <div class="u-row">
     <label class="u-pick">
-      <input type="file" id="fileModel" accept=".glb,.gltf,model/gltf-binary,model/gltf+json" />
-      选择模型文件 <em>.glb / .gltf</em>
+      <input type="file" id="fileModel" accept=".glb,.gltf,.fbx,model/gltf-binary,model/gltf+json" />
+      选择模型文件 <em>.glb / .gltf / .fbx</em>
     </label>
     <div class="u-name" id="nameModel">未选择</div>
   </div>
@@ -179,6 +644,27 @@
       选择基准调整 JSON <em>（可选）</em>
     </label>
     <div class="u-name" id="nameConfig">未选择（用默认设置）</div>
+  </div>
+
+  <!-- ★ lilToon 参数**和主配置分开选**（用户的需求。） -->
+  <div class="u-row">
+    <label class="u-pick">
+      <input type="file" id="fileLilConfig" accept=".json,.asset,.mat,application/json,text/plain" />
+      选择 lilToon 参数 <em>.lilToon.json（可选）</em>
+    </label>
+    <div class="u-name" id="nameLilConfig">未选择（按主配置自动探测 / 用出厂默认）</div>
+  </div>
+
+  <div class="u-row">
+    <label class="u-pick">
+      <input type="file" id="fileTex" accept="image/*,.tga,.dds" multiple />
+      选择贴图 <em>可多选（FBX 用）</em>
+    </label>
+    <label class="u-pick">
+      <input type="file" id="fileTexDir" accept="image/*,.tga,.dds" multiple webkitdirectory />
+      选整个贴图文件夹
+    </label>
+    <div class="u-name" id="nameTex">未选择（按 FBX 里存的路径自动找）</div>
   </div>
 
   <div class="u-actions">
@@ -203,7 +689,742 @@
 </script>
 
 <script type="module">
+
+/* ============================================================
+/* ============================================================
+ * ★ 浮窗最小化 → 左下角停靠（用户需求。）
+ *
+ *   ⚠️ 浮窗有两套：`.fw`（#sceneWin / 工具栏 / 状态）和 `.lp`（各种参数面板。）
+ *      ⇒ 两边都要能最小化、所以要统一处理。
+ *
+ *   ⚠️ 位置是浮窗底座用**内联样式**管的（left/top/width/height。）
+ *      ⇒ 最小化前把内联样式存下来、恢复时原样写回。
+ *        否则放回去就跑到别处了。
+ * ============================================================ */
+const DOCK = document.getElementById('dock');
+
+function addMinBtn(el) {
+  if (!el) return;
+  const title = el.querySelector(':scope > .fw-title, :scope > .lp-title');
+  if (!title) return;                 // 标题还没建出来 ⇒ 下次扫描再试。
+  /**
+   * ⚠️⚠️⚠️ **判据必须是「标题里真的有没有那个按钮」· 不能用 `el.__hasMin`** ——
+   *
+   *   `lilPanel` / `partsPanel` 的内容是**重建**的（`lilPanel.innerHTML = ''`。）
+   *   ⇒ 标题被删掉、`ensurePanelTitle` 又建了一个**新的**标题
+   *     （新的里面没有 [—]。）
+   *   ⇒ 而 `__hasMin` 还是 true ⇒ **永远不再补** ⇒
+   *     用户看到的就是「lilToon 参数 / 部件 面板没有最小化按钮」。
+   *
+   *   ⇒ 换成**看当前 DOM**：标题里已经有了就跳过、没有就补。
+   *     （幂等、反复扫描也安全。）
+   */
+  if (title.querySelector('.fw-min')) return;
+  const b = document.createElement('button');
+  b.className = 'fw-min';
+  b.type = 'button';
+  b.title = '最小化（收进左下角 · 再点标题展开）';
+  b.textContent = '—';
+  b.addEventListener('click', (ev) => { ev.stopPropagation(); toggleMin(el); });
+  title.appendChild(b);
+  // 最小化态下点标题也能展开。
+  /**
+   * ⚠️ 标题里还有 `<span class="fw-name">状态</span>`（`.lp-title` 里也有文本节点。）
+   *   ⇒ 点文字时 `ev.target` 是那个 **span**、不是 title。
+   *   我原来写 `ev.target === title` ⇒ **最小化后点文字展不开**。
+   *   ⇒ 改成「最小化态下点标题区域任意位置都展开」，用 contains 判断。
+   */
+  title.addEventListener('click', (ev) => {
+    if (!el.classList.contains('min')) return;
+    if (ev.target.closest('.fw-min')) return;   // 点的是 [—] 按钮 ⇒ 别管。
+    if (title.contains(ev.target)) toggleMin(el);
+  });
+}
+
+function toggleMin(el) {
+  if (!DOCK) return;
+  if (el.classList.contains('min')) {
+    // —— 展开：放回原处。
+    el.classList.remove('min');
+    const save = el.__minSave || {};
+    el.style.cssText = save.css || '';
+    if (save.parent) save.parent.insertBefore(el, save.next || null);
+    else document.body.appendChild(el);
+    delete el.__minSave;
+    el.__wasMin = true;
+  } else {
+    // —— 最小化：存样式 + 挪进停靠区。
+    el.__minSave = {
+      css: el.getAttribute('style') || '',
+      parent: el.parentNode,
+      next: el.nextSibling,
+    };
+    el.classList.add('min');
+    DOCK.appendChild(el);
+  }
+}
+
+/** 扫描所有浮窗补 [—] 按钮（标题可能是异步建的 ⇒ 要反复扫。）*/
+/**
+ * ★★ 焦点窗口置顶（用户需求：焦点窗口默认在顶部显示。）
+ *
+ *   ⚠️ 原来各浮窗的 z-index 是**写死的**（sceneWin 8 / hudWin 10 / infoWin 10 /
+ *     shaderPanel 11。）⇒ 点谁谁也不会浮上来 ⇒ 被压住的窗口点不到。
+ *
+ *   ⇒ 用一个**递增计数器**：谁被按到就给一个更大的 z-index。
+ *     起点 100 ⇒ 远高于所有写死的值。
+ *
+ *   ⚠️ 两个事件：`mousedown` 管鼠标点、`focusin` 管 Tab / 程序聚焦。
+ *   ⚠️ 用**捕获阶段**（第三参 true。）⇒ 早于内部控件处理、更跟手。
+ *   ⚠️ 停靠区里的不抬（它自己就是 flex 顺序。）
+ */
+let __zTop = 100;
+function raiseFloatWin(el) {
+  if (!el) return;
+  if (el.closest && el.closest('#dock')) return;
+  try { el.style.zIndex = String(++__zTop); } catch (e) {}
+}
+document.addEventListener('mousedown', (ev) => {
+  const el = ev.target && ev.target.closest && ev.target.closest('.fw, .lp');
+  if (el) raiseFloatWin(el);
+}, true);
+document.addEventListener('focusin', (ev) => {
+  const el = ev.target && ev.target.closest && ev.target.closest('.fw, .lp');
+  if (el) raiseFloatWin(el);
+}, true);
+
+/**
+ * ⚠️ 面板内容会被重建 ⇒ [—] 按钮和缩放手柄**都会被删掉**。
+ *   ⇒ 扫描时两个都补、不然用户要刷新才能恢复。
+ */
+function scanMinBtns() {
+  document.querySelectorAll('.fw, .lp').forEach((el) => {
+    addMinBtn(el);
+    try {
+      if (typeof makePanelResizable === 'function') makePanelResizable(el);
+    } catch (e) { console.warn('[panel] makePanelResizable 抛错：' + e.message + ' @' + (el.id || el.className)); }
+  });
+}
+scanMinBtns();
+setInterval(scanMinBtns, 800);
+
+/**
+ * ★ 默认只留「角色显示」「工具栏（启动器。）」「状态」，其余收起。
+ *
+ *   ⚠️ 判据：**含打开其他面板的按钮**的那个浮窗就是启动器。
+ *     （找 #btnLil / #btnScene / #btnParts 之类。 —— 不写死 id、更耐改。）
+ *   ⚠️ 只跑一次、否则用户手动打开的面板会被反复关上。
+ */
+function hidePanelsByDefault() {
+  document.querySelectorAll('.fw, .lp').forEach((el) => {
+    if (el.id === 'sceneWin') return;                       // 角色显示 ⇒ 永远留。
+    if (el.id === 'infoWin') return;                        // ★ 状态浮窗 ⇒ 用户要求也留。
+    if (el.closest('#dock')) return;                        // 停靠区里的别动。
+    if (el.querySelector('#btnLil, #btnParts, #btnExport, #btnScene')) return;  // 启动器。
+    el.classList.add('hidden');
+  });
+}
+setTimeout(hidePanelsByDefault, 1200);
+
+/* ============================================================
+ * ★ 通用着色器参数面板（用户需求。）
+ *
+ *   搬进独立面板的几组：
+ *     光照亮度 · 阴影浓淡（全身）· 脸部（面部）· 分档色（含过渡带）·
+ *     描边开关 · 描边粗细
+ *
+ *   ⚠️⚠️ **不重写控件 · 直接搬 DOM** ——
+ *     这些控件的 addEventListener 已经在 viewer.js 里挂好了 ⇒
+ *     重建一套 HTML 就得把绑定全重写一遍、很容易漏。
+ *     ⇒ `appendChild` 搬过去、绑定**原样保留**。 最稳。
+ *
+ *   ⚠️ 块边界：多数控件包在 `<label>` 里 ⇒ `closest('label')` 拿整块。
+ *     但 `#btnOutline` 是裸 `<button>` ⇒ `closest` 返回 null ⇒ 用元素本身。
+ *   ⚠️ 顺序 = ID 列表的顺序、所以列表要按逻辑排。
+ * ============================================================ */
+const SHADER_MOVE_IDS = [
+  'lightScale',        // 光照亮度
+  'celShadow',         // 阴影浓淡（全身）
+  'celFaceShadow',     // 脸部（面部阴影浓淡）
+  'celRampOn',         // 分档色（含四个色标）
+  'celBandSoft',       // 过渡带
+  'btnOutline',        // 描边开关
+  'outlineWidth',      // 描边粗细
+];
+
+/**
+ * ★ 清掉「两边都空」的分隔符（`<span class="sep">`。）
+ *
+ *   ⚠️ 用户指出：控件搬走之后、原来夹在它们之间的分隔符就孤零零留着了。
+ *   ⇒ 扫一遍：往左往右各找第一个**不是 sep** 的兄弟 
+ *     哪边没有（或不可见。）⇒ 这个分隔没意义 ⇒ 藏起来。
+ *   ⚠️ 用 `offsetParent !== null` 判可见（`hidden` 之外、被 CSS 藏起来的也算。）
+ */
+function cleanOrphanSeps(root) {
+  if (!root) return 0;
+  const kids = [...root.children];
+  const vis = (e) => !!e && !e.hidden && e.offsetParent !== null;
+  let hid = 0;
+  for (let i = 0; i < kids.length; i++) {
+    const el = kids[i];
+    if (!el.classList.contains('sep')) continue;
+    let a = null, b = null;
+    for (let j = i - 1; j >= 0; j--) if (!kids[j].classList.contains('sep')) { a = kids[j]; break; }
+    for (let j = i + 1; j < kids.length; j++) if (!kids[j].classList.contains('sep')) { b = kids[j]; break; }
+    /**
+     * ⚠️⚠️ **两个条件** ——
+     *   ① 哪边空了 ⇒ 这个分隔没意义。
+     *   ② **左边紧邻的也是 sep** ⇒ 连续重复、只留第一个。
+     *
+     *   ⚠️ 用户指出的是 ② —— 源码里 `#bgColor` 和 `#btnAuto` 之间
+     *     本来就写了**两根** `<span class="sep">` ⇒ 渲染出双竖线。
+     *     而我原来的「哪边空就藏」逻辑**判不出来**（它两边都有内容。）
+     */
+    const dup = (i > 0) && kids[i - 1].classList.contains('sep') && !kids[i - 1].hidden;
+    const keep = vis(a) && vis(b) && !dup;
+    el.hidden = !keep;
+    if (!keep) hid++;
+  }
+  return hid;
+}
+function buildShaderPanel() {
+  const el = document.getElementById('shaderPanel');
+  if (!el || el.__built) return;
+  const body = el.querySelector('.lp-body') || el;
+  const moved = new Set();
+  for (const id of SHADER_MOVE_IDS) {
+    const ctl = document.getElementById(id);
+    if (!ctl) continue;
+    const block = ctl.closest('label') || ctl;
+    if (!block || moved.has(block)) continue;
+    if (block.closest('#shaderPanel')) continue;
+    moved.add(block);
+    body.appendChild(block);
+  }
+  el.__built = true;
+  /**
+   * ⚠️⚠️ 搬走控件后**工具栏会留一大片空白** ——
+   *   因为 `#hudWin` 的 CSS 是固定高度（`height: min(400px, 46vh)`。）
+   *   ⇒ 内容少了高度不变 ⇒ 空一大块（用户截图里很明显。）
+   *   ⇒ 按内容重新量一次高度、上限仍是视口的 46%。
+   */
+  try {
+    const hud = document.getElementById('hudWin');
+    const body = hud && hud.querySelector('.fw-body');
+    if (hud) {
+      /**
+       * ⚠️⚠️ **不能用 `body.scrollHeight`** ——
+       *   `.fw-body` 是 `overflow-y: auto`、搬走控件后它的 scrollHeight
+       *   并不等于「内容自然高度」⇒ 我第一版算出 386、而实际内容只到 ~200
+       *   ⇒ 工具栏底部仍留了约 200px 空白（截图里很明显。）
+       *
+       *   ⇒ 交给浏览器自己量：`height:auto` + `max-height`。
+       *      （原来是 CSS 的固定 `min(400px, 46vh)` ⇒ 内容少了也撑那么高。）
+       */
+      hud.style.height = 'auto';
+      hud.style.maxHeight = '46vh';
+      // 松开 resize 时也按内容走（不然用户一拖又固定住了。）
+      if (!hud.__autoH) {
+        hud.__autoH = true;
+        const grip = hud.querySelector('.fw-grip');
+        if (grip) grip.addEventListener('mouseup', () => { setTimeout(() => { hud.style.maxHeight = '46vh'; }, 0); });
+      }
+    }
+  } catch (e) {}
+  cleanOrphanSeps(document.getElementById('hud'));
+  console.debug('[shader] 通用着色器参数：搬了 ' + moved.size + ' 组控件。');
+}
+
+function toggleShaderPanel(force) {
+  const el = document.getElementById('shaderPanel');
+  const btn = document.getElementById('btnShader');
+  if (!el) return;
+  const on = force !== undefined ? !!force : el.classList.contains('hidden');
+  el.classList.toggle('hidden', !on);
+  if (btn) btn.classList.toggle('on', on);
+  if (!on) return;
+  buildShaderPanel();
+  /* ⚠️ 接线带重试（和「场景参数」那次同一个坑。）*/
+  (function wire(tries) {
+    tries = tries || 0;
+    if (typeof ensurePanelTitle !== 'function' || typeof makePanelDraggable !== 'function' || typeof initFloatWin !== 'function') {
+      if (tries < 20) setTimeout(() => wire(tries + 1), 50);
+      return;
+    }
+    try {
+      ensurePanelTitle(el);
+      makePanelDraggable(el);
+      initFloatWin(el);
+    } catch (e) { console.debug('[shader] 面板接线失败：' + e.message); }
+  })();
+}
+/**
+ * ⚠️⚠️⚠️ **必须在加载时就搬一次 · 不能等点开面板才搬** ——
+ *
+ *   我第一版只在 `toggleShaderPanel()` 里调 `buildShaderPanel()` ⇒
+ *   **默认状态下工具栏还是满的**（用户截图里一眼就能看到。）
+ *   只有点过一次「通用着色器」才会搬走。
+
+ *   ⇒ 用户的诉求本来就是「工具栏只留下这个 panel 的按钮」
+ *     ⇒ 那是**默认状态**该有的样子、不是点开之后。
+
+ * ⚠️ 而我的探针**先点了按钮再测** ⇒ 永远看不到这个问题。
+ *    ⇒ 教训：**测默认状态就别先做任何交互**。
+ */
+document.addEventListener('DOMContentLoaded', () => {
+  const btn = document.getElementById('btnShader');
+  if (btn) btn.addEventListener('click', () => toggleShaderPanel());
+  // ★ 加载时就搬、面板虽然还藏着、控件已经归位了。
+  buildShaderPanel();
+});
+// ⚠️ DOMContentLoaded 可能已经过了（脚本在 body 末尾。）⇒ 再兜一次。
+setTimeout(buildShaderPanel, 0);
+setTimeout(buildShaderPanel, 600);
+
+/* ============================================================
+ * ★ 显示模式切换（view / edit。）
+ *
+ *   ⚠️ **两处 UI 共用一个函数**（工具栏的分段按钮 + 场景浮窗里的。）
+ *      ⇒ 切换后要把**另一边**的高亮同步过来、否则两边显示不一致。
+ * ============================================================ */
+function syncDispSeg() {
+  try {
+    const cur = viewer.getDisplayMode().mode;
+    // ⚠️ 只选**带 data-disp 的**（.scbar 里还有「场景」按钮、别一起处理。）
+    document.querySelectorAll('#dispSeg > .seg > button').forEach((b) => {
+      b.classList.toggle('on', b.dataset.disp === cur);
+    });
+  } catch (e) {}
+}
+document.querySelectorAll('#dispSeg > .seg > button').forEach((b) => {
+  b.addEventListener('click', () => {
+    viewer.setDisplayMode(b.dataset.disp);
+    syncDispSeg();
+    if (scenePanelEl && !scenePanelEl.hidden) buildScenePanel();
+  });
+});
+syncDispSeg();
+
+/* ============================================================
+ * ⚠️⚠️ 已删控件留下的「有引用无声明」补丁
+ *
+ * 工具栏的「落地微调 / 基准X / 基准Z」三行已删（功能移进「场景」浮窗。）
+ * 但旧的 UI 绑定代码还在、里面引用了 groundOff / groundOffNum。
+ * ⇒ 它们**不存在** ⇒ `groundOff is not defined` ⇒ **整个脚本挂掉** 
+ *   （症状：场景面板空白 · 模型也加载不了。）
+ *
+ * ⇒ 给两个无害桩件：`addEventListener` 空函数 · `value/min/max` 有默认值。
+ *   这样那几行绑定是 no-op、不会抛错。
+ *
+ * ⚠️ 教训：**删 DOM 必须同时处理 JS 引用** ——
+ *   我试过用文本块删除、因为块里有嵌套 `}` 而错位了两次。
+ *   ⇒ **让引用对缺失免疫**比精确删除更稳。
+ * ============================================================ */
+const __noopInput = (def) => ({
+  value: def, min: '-0.5', max: '0.5',
+  addEventListener() {}, removeEventListener() {},
+  getBoundingClientRect() { return { left: 0, top: 0, width: 0, height: 0 }; },
+});
+var groundOff = document.getElementById('groundOff') || __noopInput('0');
+var groundOffNum = document.getElementById('groundOffNum') || __noopInput('0');
+/* ⚠️ 用 var 而不是 const —— 旧代码里可能还有别的地方在重新声明它们。 */
 import { createViewer } from './viewer.js';
+
+/* ---------- 模型部件面板：列出网格，逐个显示/隐藏 ---------- */
+const partsPanel = document.getElementById('partsPanel');
+
+/** 面板标题：和打开它的按钮文字保持一致 */
+const PANEL_TITLES = { scenePanel: '场景参数',
+  shaderPanel: '通用着色器参数', lilPanel: 'lilToon 参数', exportPanel: '导出 JSON', partsPanel: '部件' };
+// #upload（自定义模型）用的是 .u-title、不插 .lp-title、直接把它的标题当把手。
+
+/**
+ * 给面板装上标题栏（同时是拖拽把手）。
+ *
+ * ⚠️ 面板内容会被重建（lilPanel.innerHTML = ''），标题也要能重建 
+ *    所以这个函数是幂等的、每次构建完/每次 enableAllPanelDrag 都调一次。
+ */
+function ensurePanelTitle(el) {
+  if (!el) return null;
+  let bar = el.querySelector(':scope > .lp-title');
+  if (!bar) {
+    bar = document.createElement('div');
+    bar.className = 'lp-title';
+    const dot = document.createElement('span');
+    dot.className = 'lp-dot';
+    bar.appendChild(dot);
+    const tx = document.createElement('span');
+    tx.className = 'lp-title-text';
+    bar.appendChild(tx);
+    el.insertBefore(bar, el.firstChild);
+  }
+  const txt = PANEL_TITLES[el.id] || (el.id || '面板');
+  const tx = bar.querySelector('.lp-title-text');
+  if (tx && tx.textContent !== txt) tx.textContent = txt;
+  return bar;  /**
+   * ⚠️⚠️ **每个面板重建后都会走到这里**（`buildXxxPanel` 都先 `innerHTML=''`
+   *   再 `ensurePanelTitle(...)`。）⇒ 在这里补 [—] 按钮和缩放手柄 
+   *   一处覆盖全部面板。
+   *
+   *   ⚠️ 不靠 800ms 的扫描兜底 —— 实测它**没能补上**（部件面板打开后
+   *     手柄一直没回来。）⇒ 挂在重建路径上才是确定性的。
+   */
+  try {
+    if (typeof addMinBtn === 'function') addMinBtn(el);
+    if (typeof makePanelResizable === 'function') makePanelResizable(el);
+  } catch (err) { console.debug('[panel] 补按钮/手柄失败：' + err.message); }
+
+}
+const btnParts = document.getElementById('btnParts');
+
+/** 按当前模型重建部件列表 */
+
+/**
+ * 把 lilToon 面板按 h4 小标题分组，并让标题可点击折叠。
+ *
+ * 用后处理而不是改 buildLilPanel：buildLilPanel 里是顺序 appendChild，
+ * 直接改要动几十处；这里按 DOM 顺序重新打包，零侵入。
+ *
+ * 同时把「描边」相关的散块（颜色 / 不透明度 / 受光 / 贴图 / 开关 / Cull / 方向）
+ * 从面板末尾挪进「描边」组 —— 它们是在 LIL_CTRL 循环之后追加的，
+ * 之前显示在「背光」后面，归类是错的。
+ */
+/**
+ * ★ 分组定位（替代以前的「先平铺、再按正则/标记搬回去」）★
+ *
+ * ⚠️ 旧设计出过 4 次归位错误：自发光/MatCap 贴图跑进描边组 
+ *    阴影颜色/模板模式跑进背光组。 根因是 groupifyLilPanel 先建好分组容器 
+ *    之后创建的特殊控件 append 到面板本身、自然落在**最后一组**。
+ *
+ * 现在：groupifyLilPanel 把每个分组按名字存进 __lilGroupsByName。
+ *      建控件时用 lg('组名') 直接拿到那一组的 body、完全不需要搬。
+ *      临时切换用 __lgTarget（LP() 优先用它。）
+ *
+ * ⚠️ 这两个函数和两个变量必须在**顶层**、因为 groupifyLilPanel 也在顶层 
+ *    而它拿不到 afterLoad 里的 lilPanel、所以这里现查元素。
+ *    （之前用 let 声明在 afterLoad 里、顶层函数引用时直接 ReferenceError。）
+ */
+var __lilGroupsByName = {};
+var __lgTarget = null;
+/**
+ * ★ 模板模式下拉的「刷新器」注册表
+ *
+ * ⚠️ 为什么需要：下拉只在**建面板时**读一次 comp/pass 
+ *    而手动拖 Comp/Pass 滑杆**不会重建面板**（只调 lilApply。）
+ *    ⇒ 于是下拉永远停在旧值、拖到非标准组合也不会显示「（自定义…）」
+ *
+ *    现在 mkMode 把自己的刷新闭包注册进来、滑杆的 sync() 里统一调一遍。
+ *    （比重建面板轻得多、也不丢焦点。）
+ */
+var __ba3dModeSelects = [];
+/** 按分组名取 body、找不到就退回面板本身。 */
+function lg(name) {
+  var g = __lilGroupsByName[name];
+  if (g && g.bodyEl) return g.bodyEl;
+  return document.getElementById('lilPanel');
+}
+/** 当前 append 目标（__lgTarget 优先、否则面板本身。）*/
+function LP() { return __lgTarget || document.getElementById('lilPanel'); }
+
+function groupifyLilPanel() {
+  // ⚠️ 本函数在顶层、拿不到 afterLoad 里的 const lilPanel、必须现查
+  const lilPanel = document.getElementById('lilPanel');
+  if (!lilPanel) return;
+  const kids = Array.from(lilPanel.children);
+  const groups = [];
+  let cur = null;
+  // ⚠️ 第一个 h4 是面板标题（lilToon 参数 ...），不是可折叠分组。
+  //    它和它之后的内容（预设下拉 / 提示）固定在顶部、从第二个 h4 才开始分组。
+  // 现在面板里**没有**标题 h4 了（标题栏是 .lp-title、不是 h4），所以每个 h4 都是分组。
+  for (const el of kids) {
+    if (el.tagName === 'H4') { cur = { head: el, body: [] }; groups.push(cur); }
+    else if (cur) cur.body.push(el);
+  }
+  if (!groups.length) return;
+
+  // 保留第一个 h4 之前的内容（标题 / 预设下拉 / 首条提示）
+  const pre = [];
+  for (const el of kids) { if (el === groups[0].head) break; pre.push(el); }
+
+  const doc = document.createDocumentFragment();
+  for (const el of pre) doc.appendChild(el);
+  for (const g of groups) {
+    const body = document.createElement('div');
+    body.className = 'lpgroup-body hidden';   // 默认折叠
+    for (const el of g.body) body.appendChild(el);
+    const arrow = document.createElement('span');
+    arrow.className = 'lpgroup-arrow';
+    arrow.textContent = '\u25b8';   // 默认折叠
+    g.head.insertBefore(arrow, g.head.firstChild);
+    g.head.classList.add('lpgroup-head');
+    g.head.title = '点击折叠 / 展开';
+    g.head.onclick = () => {
+      const hidden = body.classList.toggle('hidden');
+      arrow.textContent = hidden ? '\u25b8' : '\u25be';
+    };
+    doc.appendChild(g.head);
+    doc.appendChild(body);
+    g.bodyEl = body;
+  }
+  lilPanel.appendChild(doc);   // ⚠️ 这里必须用局部变量、LP() 会把容器塞进某个组。
+
+  // 把描边散块从最后一组（背光）挪进「描边」组
+  const outG = groups.find((g) => /描边/.test(g.head.textContent || ''));
+  const lastG = groups[groups.length - 1];
+  if (outG) {
+    const re2 = /描边颜色|描边不透明|受光色|受光强度|跳过部件|描边贴图|宽度遮罩|外扩方向|受光生效|受光接收阴影|阴影遮罩预览|着色器里再乘|受光色乘|Cull 模式|方向强度|方向 UV|固定宽度生效|描边贴图UV|描边贴图滚动|描边贴图HSV|模板 Ref|模板 ReadMask|模板 WriteMask|模板 Comp|模板 Pass|模板 Fail|模板 ZFail/;
+    // ⚠️ 从**所有分组**里找、不能假设散块都在最后一组（踩过这个坑。）
+    const move = [];
+    for (const g of groups) {
+      if (g === outG) continue;
+      for (const el of Array.from(g.bodyEl.children)) { if (re2.test(el.textContent || '')) move.push(el); }
+    }
+    for (const el of move) outG.bodyEl.appendChild(el);
+    if (move.length) console.debug('[lilPanel] 已把 ' + move.length + ' 个描边控件归入「描边」组');
+
+  // MatCap 贴图那两行要归到「MatCap」组（不是描边组）
+  const capG = groups.find((g) => /^\s*MatCap\s*$/.test((g.head.textContent || '').replace('▸', '').replace('▾', '').trim()));
+  const lastG2 = groups[groups.length - 1];
+  if (capG) {
+    // ⚠️ 改成按 data-lil 标记找、不再靠文本正则（加一行控件就会失配。）
+    const mv2 = [];
+    for (const g of groups) {
+      if (g === capG) continue;
+      for (const el of Array.from(g.bodyEl.children)) {
+        if (el.dataset && el.dataset.lil === 'matcap') mv2.push(el);
+      }
+    }
+    for (const el of mv2) capG.bodyEl.appendChild(el);
+    if (mv2.length) console.debug('[lilPanel] 已把 ' + mv2.length + ' 个 MatCap 控件归入「MatCap」组');
+  }
+
+  // 三层阴影颜色 / 第三层阴影开关 归到「阴影分档」组
+  const shG = groups.find((g) => /^阴影分档$/.test((g.head.textContent || '').replace(/[▸▾]/g, '').trim()));
+  if (shG) {
+    const mv4 = [];
+    for (const g of groups) {
+      if (g === shG) continue;
+      for (const el of Array.from(g.bodyEl.children)) {
+        if (el.dataset && el.dataset.lil === 'shadow') mv4.push(el);
+      }
+    }
+    for (const el of mv4) shG.bodyEl.appendChild(el);
+    if (mv4.length) console.debug('[lilPanel] 已把 ' + mv4.length + ' 个阴影控件归入「阴影分档」组');
+  }
+
+  // Dissolve 控件归到「Dissolve」组
+  const disG = groups.find((g) => /^Dissolve$/.test((g.head.textContent || '').replace(/[▸▾]/g, '').trim()));
+  if (disG) {
+    const mv5 = [];
+    for (const g of groups) {
+      if (g === disG) continue;
+      for (const el of Array.from(g.bodyEl.children)) {
+        if (el.dataset && el.dataset.lil === 'dissolve') mv5.push(el);
+      }
+    }
+    for (const el of mv5) disG.bodyEl.appendChild(el);
+    if (mv5.length) console.debug('[lilPanel] 已把 ' + mv5.length + ' 个 Dissolve 控件归入「Dissolve」组');
+  }
+
+  // MatCap 2nd 归位
+  {
+    const m2g = groups.find((g) => /^MatCap 2nd$/.test((g.head.textContent || '').replace(/[▸▾]/g, '').trim()));
+    if (m2g) {
+      const mv7 = [];
+      for (const g of groups) {
+        if (g === m2g) continue;
+        for (const el of Array.from(g.bodyEl.children)) {
+          if (el.dataset && el.dataset.lil === 'matcap2nd') mv7.push(el);
+        }
+      }
+      for (const el of mv7) m2g.bodyEl.appendChild(el);
+      if (mv7.length) console.debug('[lilPanel] 已把 ' + mv7.length + ' 个「MatCap 2nd」控件归入对应组');
+    }
+  }
+
+  // 主色层 2nd / 3rd 归位
+  for (const [tag, grp] of [['main2nd', /^主色层 2nd$/], ['main3rd', /^主色层 3rd$/]]) {
+    const lg = groups.find((g) => grp.test((g.head.textContent || '').replace(/[▸▾]/g, '').trim()));
+    if (!lg) continue;
+    const mv6 = [];
+    for (const g of groups) {
+      if (g === lg) continue;
+      for (const el of Array.from(g.bodyEl.children)) {
+        if (el.dataset && el.dataset.lil === tag) mv6.push(el);
+      }
+    }
+    for (const el of mv6) lg.bodyEl.appendChild(el);
+    if (mv6.length) console.debug('[lilPanel] 已把 ' + mv6.length + ' 个「' + tag + '」控件归入对应组');
+  }
+
+  // 自发光贴图归到「自发光」组（同样全分组搜索）
+  const emiG = groups.find((g) => /^自发光$/.test((g.head.textContent || '').replace(/[▸▾]/g, '').trim()));
+  if (emiG) {
+    // 同上、按 data-lil 标记。
+    const mv3 = [];
+    for (const g of groups) {
+      if (g === emiG) continue;
+      for (const el of Array.from(g.bodyEl.children)) {
+        if (el.dataset && el.dataset.lil === 'emission') mv3.push(el);
+      }
+    }
+    for (const el of mv3) emiG.bodyEl.appendChild(el);
+    if (mv3.length) console.debug('[lilPanel] 已把 ' + mv3.length + ' 个自发光控件归入「自发光」组');
+  }
+  }
+  /**
+   * ★ 把分组按**名字**存起来、供后面的特殊控件直接定位。
+   * ⚠️ 以前是「先全部平铺到面板、再用正则/标记搬回去」，出过 4 次归位错误：
+   *    自发光贴图 / MatCap 贴图 跑进描边组、阴影颜色与模板模式跑进背光组。
+   *    现在改成**建控件时就指定组**、不再需要搬。
+   */
+  __lilGroupsByName = {};
+  for (const g of groups) {
+    const nm = (g.head.textContent || '').replace(/[▸▾]/g, '').trim();
+    if (nm) __lilGroupsByName[nm] = g;
+  }
+}
+
+// 分组样式（只注入一次）
+(function () {
+  if (document.getElementById('lpgroupCss')) return;
+  const st = document.createElement('style');
+  st.id = 'lpgroupCss';
+  st.textContent = '.lp .lpgroup-head{cursor:pointer;user-select:none;display:flex;align-items:center;gap:5px}' +
+    '.lp .lpgroup-head:hover{color:#cfd3dc}' +
+    '.lp .lpgroup-arrow{font-size:9px;opacity:.6}' +
+    '.lp .lpgroup-body.hidden{display:none}';
+  document.head.appendChild(st);
+})();
+
+function buildPartsPanel() {
+  partsPanel.innerHTML = '';
+  ensurePanelTitle(partsPanel);
+  let list = [];
+  try { list = viewer.listMeshes() || []; }
+  catch (e) { console.error('[parts] listMeshes 失败:', e); }
+  const h4 = document.createElement('h4');
+  h4.textContent = '模型部件（' + list.length + '）';
+  partsPanel.appendChild(h4);
+
+  // 批量操作
+  const bar = document.createElement('div');
+  bar.className = 'actions';
+  const mkBtn = (txt, fn) => { const b = document.createElement('button'); b.textContent = txt; b.onclick = fn; return b; };
+  bar.appendChild(mkBtn('全显', () => { viewer.setAllMeshesVisible(true); buildPartsPanel(); }));
+  bar.appendChild(mkBtn('全隐', () => { viewer.setAllMeshesVisible(false); buildPartsPanel(); }));
+  bar.appendChild(mkBtn('刷新', () => buildPartsPanel()));
+  partsPanel.appendChild(bar);
+
+  const hint = document.createElement('div');
+  hint.className = 'hint';
+  hint.textContent = '点名字可以「只看这个」（再点一次恢复全部）。改动只影响显示，不改模型数据。';
+  partsPanel.appendChild(hint);
+
+  if (!list.length) {
+    const e = document.createElement('div');
+    e.className = 'hint';
+    e.textContent = '还没有加载模型。';
+    partsPanel.appendChild(e);
+    return;
+  }
+
+  list.forEach((it) => {
+    const locks = viewer.getMeshLocks();
+    const locked = Object.prototype.hasOwnProperty.call(locks, it.path || it.name);
+    const row = document.createElement('div');
+    row.className = 'mrow';
+    const cb = document.createElement('input');
+    cb.type = 'checkbox';
+    cb.checked = it.visible;
+    cb.title = it.material + (it.isSkinned ? ' · 蒙皮' : '') + (it.hasOutline ? ' · 有描边' : '');
+    cb.onchange = () => {
+      viewer.setMeshVisible(it.path || it.name, cb.checked);
+      // 已锁定的部件：改动会更新锁定值、重建面板让锁图标显示最新状态。
+      if (locked) buildPartsPanel();
+    };
+    const nm = document.createElement('span');
+    nm.className = 'mname';
+    // 显示层级路径（Body/mouth 这种、便于写「跳过部件」正则）
+    nm.textContent = it.path || it.name;
+    // 材质名直接显示出来：Maca 这类模型的「嘴巴」是同一个网格里的另一个材质组，
+    // 只有看到材质名才能判断哪个网格包含它
+    const matLine = document.createElement('span');
+    matLine.className = 'mtri';
+    matLine.style.maxWidth = '92px';
+    matLine.style.overflow = 'hidden';
+    matLine.style.textOverflow = 'ellipsis';
+    matLine.style.whiteSpace = 'nowrap';
+    matLine.textContent = it.material || '';
+    matLine.title = '材质：' + (it.material || '-');
+    const full = '网格：' + it.name + '\n路径：' + (it.path || '-') + '\n材质：' + (it.material || '-') +
+      (it.isSkinned ? '\n蒙皮：是' : '') + (it.hasOutline ? '\n有描边' : '');
+    cb.title = full;
+    nm.title = full + '\n点击只看这个部件';
+    nm.style.cursor = 'pointer';
+    nm.onclick = () => {
+      const cur = viewer.listMeshes().filter((x) => x.visible).map((x) => x.path || x.name);
+      // ⚠️ 括号必须写清楚：&& 的优先级高于 || 
+      //   写成 "a && b || c" 会被解析成 "(a && b) || c" 
+      //   而 c = it.name 非空恒真 → 永远走"恢复全部"、点名字就永远没反应。
+      if (cur.length === 1 && cur[0] === (it.path || it.name)) viewer.isolateMeshes([]);
+      else viewer.isolateMeshes([it.path || it.name]);
+      buildPartsPanel();
+    };
+    const tri = document.createElement('span');
+    tri.className = 'mtri';
+    tri.textContent = it.triangles >= 1000 ? Math.round(it.triangles / 1000) + 'k' : String(it.triangles);
+    row.appendChild(cb);
+    row.appendChild(nm);
+    row.appendChild(matLine);
+    // 锁定按钮：锁上以后该部件的可见性不再被自动逻辑（hideParts / 可选部件 / 骨骼缩放）改动
+    const lk = document.createElement('button');
+    lk.type = 'button';
+    lk.textContent = locked ? '🔒' : '🔓';
+    lk.title = locked
+      ? '已锁定可见性（' + (it.visible ? '显示' : '隐藏') + '），点击解锁'
+      : '锁定当前可见性，之后不被自动隐藏逻辑改动';
+    lk.style.padding = '0 5px';
+    lk.style.fontSize = '11px';
+    lk.style.opacity = locked ? '1' : '0.45';
+    lk.onclick = () => {
+      // 锁 = 记住当前可见性；解锁 = 交给自动逻辑
+      viewer.setMeshLocked(it.path || it.name, locked ? null : it.visible);
+      buildPartsPanel();
+    };
+    row.appendChild(lk);
+    row.appendChild(tri);
+    partsPanel.appendChild(row);
+  });
+}
+
+if (btnParts && partsPanel) {
+  btnParts.onclick = () => {
+    const on = partsPanel.classList.toggle('hidden') === false;
+    btnParts.classList.toggle('on', on);
+    if (on) buildPartsPanel();
+  };
+}
+
+// —— 详细日志开关 ——
+//   window.__ba3dDebugUI 控制：阴影自检 / syncRenderUI 判定打印 / [lilPanel] 等；
+//   viewer.js 里的 console.debug 则受 DevTools 的 Verbose 级别控制（默认不显示）。
+//   这里从 localStorage 恢复、刷新后保持。
+try {
+  if (localStorage.getItem('ba3dDebug') === '1') window.__ba3dDebugUI = true;
+} catch (e) { /* 隐私模式下 localStorage 可能不可用 */ }
+
+/* ---------- 详细日志开关 ---------- */
+
+const chkDebug = document.getElementById('chkDebug');
+if (chkDebug) {
+  chkDebug.checked = !!window.__ba3dDebugUI;
+  chkDebug.onchange = () => {
+    window.__ba3dDebugUI = chkDebug.checked;
+    try { localStorage.setItem('ba3dDebug', chkDebug.checked ? '1' : '0'); } catch (e) {}
+    console.info('[debug] 详细日志已' + (chkDebug.checked ? '打开（阴影自检等需要刷新后才生效）' : '关闭'));
+  };
+}
 
 const container = document.getElementById('app');
 const loadingEl = document.getElementById('loading');
@@ -218,6 +1439,8 @@ const bootOpts = { modelUrl: './assets/sample.glb' };
 if (qs.get('model')) bootOpts.modelUrl = qs.get('model');
 if (qs.get('mouth')) bootOpts.mouthAtlasUrl = qs.get('mouth');
 if (qs.get('config')) bootOpts.configUrl = qs.get('config');
+/** ★ 记下来、lilToon 探测要用它当「第二条候选」（主JSON名.lilToon.json。）*/
+window.__ba3dConfigUrl = bootOpts.configUrl || null;
 
 /* ---------- 挂载（可重复调用：先销毁旧的再建新的） ---------- */
 let viewer = null;
@@ -229,7 +1452,29 @@ function progressHandler(p) {
 async function mount(opts) {
   if (viewer) { viewer.dispose(); viewer = null; }
   container.innerHTML = '';
-  viewer = createViewer(container, Object.assign({ autoRotate: false, onProgress: progressHandler }, opts));
+  /**
+ * ★ 主页面是「场景视图」⇒ **显式打开**网格和视角指示器。
+ *   （viewer 的默认值现在是关的、那是给嵌入看板用的。）
+ */
+/**
+ * ★ 主页面只**显式打开网格**。
+ *   ⚠️ 视角指示器**不再在这里打开** —— 它归「显示模式」预设管：
+ *       view ⇒ 只有网格 · edit ⇒ 辅助全开。
+ *     在这里再打开会和 view 预设冲突（实测初始状态视角器是 true。）
+ */
+const __sceneViewOpts = { showGrid: true };
+viewer = createViewer(container, Object.assign({ autoRotate: false, onProgress: progressHandler }, __sceneViewOpts, opts));
+
+  // —— 全局可调用（任意脚本 / 控制台都能用。）——
+  //   ba3d.exportConfig()     与默认值 diff 后的 model.json（对象）
+  //   ba3d.exportConfigJSON() 同上，带缩进的字符串
+  //   ba3d.setLilConfig({...}) 任意位置改 lilToon 参数
+  // 也暴露为 window.viewer —— 控制台里最常见的写法是 viewer.xxx()
+  // （ES module 里的变量默认不在 window 上、所以必须显式挂）
+  window.viewer = viewer;
+  window.ba3d = viewer;
+  window.ba3dExportConfig = () => viewer.exportConfig();
+  window.ba3dExportJSON = () => viewer.exportConfigJSON();
   const info = await viewer.load();
   afterLoad(info);
   return info;
@@ -255,7 +1500,7 @@ const animMenu = document.getElementById('animMenu');
 const lightMenu = document.getElementById('lightMenu');
 const bgMenu   = document.getElementById('bgMenu');
 const bgColor  = document.getElementById('bgColor');
-const pivotX   = document.getElementById('pivotX');
+const pivotX   = document.getElementById('pivotX');        // ⚠️ 工具栏那几行已删 ⇒ 这里可能是 null。
 const pivotZ   = document.getElementById('pivotZ');
 const pivotXNum = document.getElementById('pivotXNum');
 const pivotZNum = document.getElementById('pivotZNum');
@@ -270,32 +1515,104 @@ viewer.getLightingPresets().forEach((p) => {
 lightMenu.value = viewer.state.currentLighting;
 lightMenu.addEventListener('change', () => viewer.applyLighting(lightMenu.value));
 
-/* 渲染模式菜单（原始 PBR / 卡通 Cel） */
-const shadingMenu = document.getElementById('shadingMenu');
-viewer.getShadingModes().forEach((m) => {
-  const opt = document.createElement('option');
-  opt.value = m.key;
-  opt.textContent = m.label;
-  shadingMenu.appendChild(opt);
-});
-shadingMenu.value = viewer.getShading();
-shadingMenu.addEventListener('change', () => viewer.setShading(shadingMenu.value));
+/* 渲染 = 两个正交的轴：
+     render  材质模型（pbr / toon / unlit）
+     shader  着色器注入（none / cel / lilToon）—— 只在 toon 材质下生效 */
+const renderMenu = document.getElementById('renderMenu');
+const shaderMenu = document.getElementById('shaderMenu');
+function fillMenu(el, modes) {
+  el.innerHTML = '';
+  modes.forEach((m) => {
+    const opt = document.createElement('option');
+    opt.value = m.key;
+    opt.textContent = m.label;
+    el.appendChild(opt);
+  });
+}
+fillMenu(renderMenu, viewer.getRenderModes());
+fillMenu(shaderMenu, viewer.getShaderModes());
+
+/** 把界面同步到当前状态；着色器下拉在非 toon 材质时禁用 */
+function syncRenderUI() {
+  const st = viewer.getRenderState();
+  // 排查用：window.__ba3dDebugUI = true 后每次同步都会打印判定输入
+  //   （报"切了 lilToon 还是打不开参数面板"这类问题时打开它。）
+  if (window.__ba3dDebugUI) {
+    console.log('[syncRenderUI] getRenderState() =', JSON.stringify(st),
+      ' lilOn =', st.render === 'toon' && st.shader === 'lilToon');
+  }
+  renderMenu.value = st.render;
+  shaderMenu.value = st.shader;
+  shaderMenu.disabled = st.render !== 'toon';
+  shaderMenu.title = st.render === 'toon'
+    ? '往 toon 材质里注入什么着色器'
+    : '当前材质不是 toon，着色器不生效（选 toon 才可选）';
+
+  // lilToon 参数只在 shader='lilToon' 时可用。 与着色器下拉同一套逻辑
+  // ⚠️ 必须用 getElementById 现查，不能引用下面的 const btnLil 
+  //    本函数在 btnLil 声明之前就先被调用了一次，直接引用会踩 TDZ（ReferenceError）
+  const bl = document.getElementById('btnLil');
+  const bp = document.getElementById('lilPanel');
+  const lilOn = st.render === 'toon' && st.shader === 'lilToon';
+  if (bl) {
+    bl.disabled = !lilOn;
+    bl.title = lilOn ? 'lilToon 参数（免改 JSON）' : '需要先把「着色器」切到 lilToon 风格';
+
+    /* ⚠️ 「阴影浓淡 / 脸部阴影」是 **cel 的投射阴影软化**、lilToon 有自己的阴影体系
+       （三层分档 + _ShadowReceive + _ShadowMainStrength、在 lilToon 参数面板里调）
+       viewer 侧已经按 shaderMode 跳过注入、这里再把控件置灰 
+       否则调了没反应会以为坏了。 */
+    // ⚠️ 现查元素、不能用文件下方那些 const（它们在 868 行才定义、const 不提升。）
+    ['celShadow', 'celShadowNum', 'celFaceShadow', 'celFaceShadowNum']
+      .map((id) => document.getElementById(id)).forEach((el) => {
+      if (!el) return;
+      if (el.dataset.origTitle === undefined) el.dataset.origTitle = el.title || '';
+      el.disabled = lilOn;
+      el.title = lilOn
+        ? '只有「卡通」着色器生效、lilToon 有自己的阴影体系（在 lilToon 参数面板里调）'
+        : (el.dataset.origTitle || '');
+    });
+  }
+
+  // 切走着色器时把面板收起来，避免留着一个不生效的面板。
+  // ⚠️ 这里曾经是「打不开面板」的元凶、但真因是 afterLoad 重复注册监听器（已修。）
+  //    现在 btnLil 用 onclick、一次点击只跑一次、自动收回不再会误伤。
+  if (!lilOn && bp && !bp.classList.contains('hidden')) {
+    bp.classList.add('hidden');
+    if (bl) bl.classList.remove('on');
+  }
+
+  // FBX 模型不做描边、按钮置灰并说明原因。
+  //   （我们的反壳描边对 FBX 的坐标系/法线/缩放敏感、表现不正确。）
+  const bo = document.getElementById('btnOutline');
+  if (bo) {
+    const fbx = !!viewer.getOutline().fbxDisabled;
+    bo.disabled = fbx;
+    bo.title = fbx
+      ? 'FBX 模型暂不支持描边（反壳描边对 FBX 表现不正确 ）'
+      : '描边开关';
+    if (fbx && bo.classList.contains('on')) bo.classList.remove('on');
+  }
+}
+syncRenderUI();
+renderMenu.addEventListener('change', () => { viewer.setRender(renderMenu.value); syncRenderUI(); });
+shaderMenu.addEventListener('change', () => { viewer.setShader(shaderMenu.value); syncRenderUI(); });
 
 /* 旋转基准位置（水平偏移，角色站地面）。滑杆 + 数字输入双向同步 */
 function applyPivot(x, z) {
   const px = Number(x) || 0;
   const pz = Number(z) || 0;
   viewer.setPivot(px, pz);
-  pivotX.value = String(px);
-  pivotZ.value = String(pz);
-  pivotXNum.value = String(px);
-  pivotZNum.value = String(pz);
+  if (pivotX) pivotX.value = String(px);
+  if (pivotZ) pivotZ.value = String(pz);
+  if (pivotXNum) pivotXNum.value = String(px);
+  if (pivotZNum) pivotZNum.value = String(pz);
 }
-pivotX.addEventListener('input', () => applyPivot(pivotX.value, pivotZ.value));
-pivotZ.addEventListener('input', () => applyPivot(pivotX.value, pivotZ.value));
-pivotXNum.addEventListener('input', () => applyPivot(pivotXNum.value, pivotZNum.value));
-pivotZNum.addEventListener('input', () => applyPivot(pivotXNum.value, pivotZNum.value));
-document.getElementById('btnPivotReset').addEventListener('click', () => applyPivot(0, 0));
+if (pivotX) pivotX.addEventListener('input', () => applyPivot(pivotX.value, pivotZ.value));
+if (pivotZ) pivotZ.addEventListener('input', () => applyPivot(pivotX.value, pivotZ.value));
+if (pivotXNum) pivotXNum.addEventListener('input', () => applyPivot(pivotXNum.value, pivotZNum.value));
+if (pivotZNum) pivotZNum.addEventListener('input', () => applyPivot(pivotXNum.value, pivotZNum.value));
+{ const b = document.getElementById('btnPivotReset'); if (b) b.addEventListener('click', () => applyPivot(0, 0)); }
 
 /* 背景菜单：0 = 透明（默认），1..n = 预设色；另有取色器自定义 */
 const BG_NAMES = viewer.getBackgroundNames();
@@ -379,22 +1696,2825 @@ outlineWidthNum.addEventListener('input', () => applyOutlineWidth(outlineWidthNu
 // 数字框里手动输入时要能"从箭头慢慢加"：按上下箭头也能即时反映
 outlineWidthNum.addEventListener('change', () => applyOutlineWidth(outlineWidthNum.value));
 
+/* ---------- 光照亮度倍率（打光预设的整体明暗；PBR 与卡通都生效） ---------- */
+const lightScale = document.getElementById('lightScale');
+const lightScaleNum = document.getElementById('lightScaleNum');
+const LIGHT_MIN = Number(lightScale.min) || 0.1;
+const LIGHT_MAX = Number(lightScale.max) || 4;
+
+function applyLightScale(v) {
+  let n = Number(v);
+  if (!isFinite(n)) n = Number(lightScale.value) || 1;
+  n = Math.min(LIGHT_MAX, Math.max(LIGHT_MIN, n));
+  viewer.setLightingScale(n);
+  lightScale.value = String(n);
+  lightScaleNum.value = String(n);
+  return n;
+}
+
+lightScale.addEventListener('input', () => applyLightScale(lightScale.value));
+lightScaleNum.addEventListener('input', () => applyLightScale(lightScaleNum.value));
+lightScaleNum.addEventListener('change', () => applyLightScale(lightScaleNum.value));
+
+/* ============================================================
+ * ★ 场景设置面板（Unity 的 Scene 视图三件套。）
+ *
+ *   ① 辅助显示：地面网格 / 原点坐标轴 / 主光指示 / 视角指示器
+ *   ② 光照：预设 + 主光方位角·仰角·强度·颜色 + 环境光
+ *   ③ 相机：位置 / 目标 / 距离 / FOV + 六个轴对齐视角
+ *
+ * ⚠️ 用 `.lp` 面板 ⇒ 拖动 / 缩放 / 持久化都由现有浮窗底座接管。
+ * ============================================================ */
+const scenePanelEl = document.getElementById('scenePanel');
+
+/** 小工具：造一行控件（label + 若干元素。）*/
+function spRow(label) {
+  const d = document.createElement('div');
+  d.className = 'sp-row';
+  const s = document.createElement('span');
+  s.textContent = label;
+  d.appendChild(s);
+  scenePanelEl.appendChild(d);
+  return d;
+}
+function spGroup(t) {
+  const d = document.createElement('div');
+  d.className = 'sp-grp';
+  d.textContent = t;
+  scenePanelEl.appendChild(d);
+}
+/** 复选框：读写一个布尔。 */
+function spCheck(label, get, set) {
+  const d = spRow(label);
+  const i = document.createElement('input');
+  i.type = 'checkbox'; i.className = 'sp-chk'; i.checked = !!get();
+  i.addEventListener('change', () => set(i.checked));
+  d.appendChild(i);
+  return i;
+}
+/** 滑杆 + 数字框：读写一个数。（面板只做**输入**、不做实时回读 ⇒ 见 syncScenePanel。）*/
+function spSlider(label, min, max, step, get, set) {
+  const d = spRow(label);
+  const r = document.createElement('input');
+  r.type = 'range'; r.min = String(min); r.max = String(max); r.step = String(step);
+  const n = document.createElement('input');
+  n.type = 'number'; n.min = String(min); n.max = String(max); n.step = String(step);
+  const cur = Number(get());
+  r.value = String(isFinite(cur) ? cur : min);
+  n.value = r.value;
+  const apply = (v) => {
+    let x = Number(v);
+    if (!isFinite(x)) x = Number(r.value) || min;
+    x = Math.min(max, Math.max(min, x));
+    r.value = String(x); n.value = String(x);
+    set(x);
+  };
+  r.addEventListener('input', () => apply(r.value));
+  n.addEventListener('input', () => apply(n.value));
+  n.addEventListener('change', () => apply(n.value));
+  d.appendChild(r); d.appendChild(n);
+  return { range: r, num: n, apply };
+}
+/** 颜色选择器。 */
+function spColor(label, get, set) {
+  const d = spRow(label);
+  const c = document.createElement('input');
+  c.type = 'color';
+  try { c.value = String(get()); } catch (e) { c.value = '#ffffff'; }
+  c.addEventListener('input', () => set(c.value));
+  d.appendChild(c);
+  return c;
+}
+/** 一排按钮。 */
+function spButtons(label, items) {
+  const d = spRow(label);
+  const out = [];
+  for (const [t, fn] of items) {
+    const b = document.createElement('button');
+    b.type = 'button'; b.textContent = t;
+    b.addEventListener('click', fn);
+    d.appendChild(b); out.push(b);
+  }
+  return out;
+}
+
+/** 相机相关的控件要能「回读」，单独存起来给定时器刷新。 */
+let __spCameraSync = null;
+
+/** 重建整个面板（打开时 + 换光照预设时。）*/
+function buildScenePanel() {
+  if (!scenePanelEl) return;
+  /**
+   * ⚠️ **不能直接 `innerHTML = ''`** ——
+   *   标题栏（`.lp-title`、由 `ensurePanelTitle` 插成**第一个子节点**。）
+   *   也是子节点 ⇒ 会被一起删掉。
+   *   而拖动绑定挂在**元素本身**（还在。），但**把手没了** ⇒ 拖不动。
+   *
+   *   症状（用户实测）：**任何下拉选完 ⇒ 面板丢掉标题栏、再也拖不动**。
+   *   因为「预设」「模式」这些下拉的 change 里都会调 `buildScenePanel()`。
+   *
+   * ⇒ 先把标题栏摘下来、清空、再放回去。
+   */
+  const __title = scenePanelEl.querySelector(':scope > .lp-title');
+  scenePanelEl.innerHTML = '';
+  if (__title) scenePanelEl.appendChild(__title);
+  const sh = () => viewer.getSceneHelpers();
+  const setSh = (o) => viewer.setSceneHelpers(o);
+
+  /* ---- ① 辅助显示 ---- */
+  spGroup('辅助显示');
+
+  spCheck('地面网格', () => sh().showGrid, (v) => setSh({ showGrid: v }));
+  spCheck('原点坐标轴', () => sh().showAxes, (v) => setSh({ showAxes: v }));
+  spCheck('主光指示', () => sh().showLightHelper, (v) => setSh({ showLightHelper: v }));
+  spCheck('视角指示器', () => sh().showViewGizmo, (v) => setSh({ showViewGizmo: v }));
+  spSlider('网格大小', 2, 24, 1, () => sh().gridSize, (v) => setSh({ gridSize: v, gridDivisions: Math.max(4, Math.round(v * 2)) }));
+  spSlider('坐标轴长', 0.4, 4, 0.2, () => sh().axesLength, (v) => setSh({ axesLength: v }));
+
+  /* ---- ② 修正模型位置（原「基准 + 落地微调」合并。） ---- */
+  /* ⚠️ 「恢复默认」原来挂在「显示模式」组下、那组删了 ⇒ 挪到辅助显示组末尾。 */
+  spButtons('', [['辅助显示恢复默认', () => { viewer.resetHelpers(); buildScenePanel(); }]]);
+  spGroup('修正模型位置');
+  {
+    const d = spRow('模式');
+    const sel = document.createElement('select');
+    for (const [k, lab] of [['action', 'action（播放。）'], ['edit', 'edit（暂停 + 姿势。）']]) {
+      const o = document.createElement('option'); o.value = k; o.textContent = lab;
+      if ((viewer.getSceneMode().mode || 'action') === k) o.selected = true;
+      sel.appendChild(o);
+    }
+    sel.addEventListener('change', () => { viewer.setSceneMode(sel.value); buildScenePanel(); });
+    d.appendChild(sel);
+  }
+  spSlider('模型 X', -3, 3, 0.005, () => viewer.getModelOffset().x, (v) => viewer.setModelOffset({ x: v }));
+  spSlider('模型 Y', -3, 3, 0.005, () => viewer.getModelOffset().y, (v) => viewer.setModelOffset({ y: v }));
+  spSlider('模型 Z', -3, 3, 0.005, () => viewer.getModelOffset().z, (v) => viewer.setModelOffset({ z: v }));
+  spButtons('', [
+    ['位置归零', () => { viewer.setModelOffset({ x: 0, y: 0, z: 0 }); buildScenePanel(); }],
+    ['自动贴地', () => { viewer.snapToGround(); if (window.__spSceneSync) window.__spSceneSync(); }],
+  ]);
+  /* ⚠️ 原来这里有个「取景中心 X/Z」组 —— 已去掉。
+   *    它移的是**相机对准点**、模型和影子都不动 ⇒ 和「修正模型位置」重复且不直观。
+   *    用户的要求：「直观把模型移动到 000 · 不动旋转轴 · 动角色位置」
+   *    ⇒ `frameModel` 的旋转中心现在直接跟 `modelOffset` 走。
+   *    （`viewer.getPivot/setPivot` 还留着、但没人调了。 视为废弃。）
+   */  {
+    const p = viewer.findEditPose();
+    const tip = document.createElement('div');
+    tip.className = 'sp-row';
+    tip.innerHTML = '<span style="flex:1;color:inherit;opacity:.75">编辑姿势：' + (p ? p : '（本模型无 T-POSE / _Cam ⇒ 停在第 0 帧。）') + '</span>';
+    scenePanelEl.appendChild(tip);
+  }
+
+  /* ---- ② 光照 ---- */
+  spGroup('光照');
+{
+    const d = spRow('预设');
+    const sel = document.createElement('select');
+    const cur = viewer.getLightState().preset;
+    for (const [k, label] of [['', '（自定义）'], ['day', '白昼'], ['golden', '早晨 / 傍晚'], ['night', '黑夜']]) {
+      const o = document.createElement('option'); o.value = k; o.textContent = label;
+      if ((cur || '') === k) o.selected = true;
+      sel.appendChild(o);
+    }
+    sel.addEventListener('change', () => {
+      if (!sel.value) return;
+      viewer.applyLighting(sel.value);
+      buildScenePanel();          // 预设会改一堆值 ⇒ 重建面板。
+    });
+    d.appendChild(sel);
+  }
+  const LS = () => viewer.getLightState();
+  const SL = (o) => viewer.setLightState(o);
+  spSlider('主光方位角', 0, 360, 1, () => LS().azimuth, (v) => SL({ azimuth: v }));
+  spSlider('主光仰角', -89, 89, 1, () => LS().elevation, (v) => SL({ elevation: v }));
+  spSlider('主光强度', 0, 6, 0.05, () => LS().keyIntensity, (v) => SL({ keyIntensity: v }));
+  spColor('主光颜色', () => LS().keyColor, (v) => SL({ keyColor: v }));
+  spSlider('环境光强度', 0, 2, 0.02, () => LS().hemiIntensity, (v) => SL({ hemiIntensity: v }));
+  spColor('环境光·天', () => LS().hemiSky, (v) => SL({ hemiSky: v }));
+  spColor('环境光·地', () => LS().hemiGround, (v) => SL({ hemiGround: v }));
+  spSlider('边缘光强度', 0, 4, 0.05, () => LS().rimIntensity, (v) => SL({ rimIntensity: v }));
+  spSlider('补光强度', 0, 4, 0.05, () => LS().fillIntensity, (v) => SL({ fillIntensity: v }));
+  spSlider('曝光', 0.2, 2.5, 0.01, () => LS().exposure, (v) => SL({ exposure: v }));
+
+  /* ---- ③ 相机 ---- */
+  spGroup('相机');
+  const cams = {};
+  for (const [label, key, idx] of [['位置 X', 'position', 0], ['位置 Y', 'position', 1], ['位置 Z', 'position', 2],
+                                   ['目标 X', 'target', 0], ['目标 Y', 'target', 1], ['目标 Z', 'target', 2]]) {
+    cams[key + idx] = spSlider(label, -50, 50, 0.01,
+      () => viewer.getCameraState()[key][idx],
+      (v) => { const o = {}; o[key] = viewer.getCameraState()[key].slice(); o[key][idx] = v; viewer.setCameraState(o); });
+  }
+  const dCam = spSlider('距离', 0.2, 50, 0.01, () => viewer.getCameraState().distance, (v) => viewer.setCameraState({ distance: v }));
+  const fovS = spSlider('视场角 FOV', 5, 120, 1, () => viewer.getCameraState().fov, (v) => viewer.setCameraState({ fov: v }));
+  spButtons('快捷视角', [
+    ['正视', () => viewer.setViewPreset('front')],
+    ['后视', () => viewer.setViewPreset('back')],
+    ['左视', () => viewer.setViewPreset('left')],
+    ['右视', () => viewer.setViewPreset('right')],
+  ]);
+  spButtons('', [
+    ['俯视', () => viewer.setViewPreset('top')],
+    ['仰视', () => viewer.setViewPreset('bottom')],
+    ['对准原点', () => viewer.setCameraState({ target: [0, 1, 0] })],
+  ]);
+
+  /**
+   * ⚠️ 相机是**可以被鼠标拖动**的 ⇒ 面板上的数字会过期。
+   *   ⇒ 存一个同步函数、面板可见时定时回读（不是每帧、2Hz 就够。）
+   */
+  /**
+   * ⚠️ 自动贴地 / 外部改 modelOffset 之后、面板上的「模型 X/Y/Z」要跟上。
+   *   （`viewer.onGroundOffsetChange` 会调它。）
+   */
+  window.__spSceneSync = () => {
+    try {
+      const rows = [...scenePanelEl.querySelectorAll('.sp-row')];
+      const o = viewer.getModelOffset();
+      for (const [label, val] of [['模型 X', o.x], ['模型 Y', o.y], ['模型 Z', o.z]]) {
+        const r = rows.find((x) => x.firstChild && x.firstChild.textContent === label);
+        const rg = r && r.querySelector('input[type=range]');
+        const nm = r && r.querySelector('input[type=number]');
+        if (rg && document.activeElement !== rg) rg.value = String(val);
+        if (nm && document.activeElement !== nm) nm.value = String(val);
+      }
+    } catch (e) {}
+  };
+
+  __spCameraSync = () => {
+    const c = viewer.getCameraState();
+    for (const [label, key, idx] of [['', 'position', 0], ['', 'position', 1], ['', 'position', 2],
+                                     ['', 'target', 0], ['', 'target', 1], ['', 'target', 2]]) {
+      const s = cams[key + idx];
+      if (!s) continue;
+      // ⚠️ 正在编辑的那个框不要覆盖（否则输入到一半被刷掉。）
+      if (document.activeElement !== s.num && document.activeElement !== s.range) {
+        const v = String(c[key][idx]);
+        s.range.value = v; s.num.value = v;
+      }
+    }
+    if (document.activeElement !== dCam.num && document.activeElement !== dCam.range) {
+      dCam.range.value = String(c.distance); dCam.num.value = String(c.distance);
+    }
+    if (document.activeElement !== fovS.num && document.activeElement !== fovS.range) {
+      fovS.range.value = String(c.fov); fovS.num.value = String(c.fov);
+    }
+  };
+}
+
+/** 打开 / 关闭「场景」面板。 */
+function toggleScenePanel(force) {
+  if (!scenePanelEl) return false;
+  const on = force === undefined ? scenePanelEl.classList.contains('hidden') : !!force;
+  if (on) {
+    buildScenePanel();
+    scenePanelEl.classList.remove('hidden');
+    /**
+     * ⚠️ **不在这里**调 `ensurePanelTitle` / `makePanelDraggable` / `initFloatWin` ——
+     *   本段代码在文件里比它们的**定义更靠前** ⇒ 直接调会 `is not defined`。
+     *   （实测踩到。 但面板还是开了、只是没接上拖动、很隐蔽。）
+     *
+     * ⇒ 那三件事由 `enableAllPanelDrag()` 统一做 —— 它
+     *   `querySelectorAll('.lp')` **不看可见性**、所以隐藏的 #scenePanel 也接上了。
+     *   （启动时跑一次 + 500ms 再跑一次。）
+     */
+    if (__spCameraSync) __spCameraSync();
+    /**
+     * ⚠️ 标题栏必须**在内容建好之后**补 ——
+     *   `ensurePanelTitle` 对空面板会跳过、而本面板的内容是刚刚才 build 的。
+     * ⚠️ 而且 `ensurePanelTitle` / `makePanelDraggable` / `initFloatWin` 在本段代码
+     *   **后面**才定义 ⇒ 只能**延迟一帧**调（直接调会 `is not defined`。 踩过。）
+     */
+    /**
+   * ⚠️ 延迟接线要**带重试** —— 一次 `setTimeout(...,0)` 有时会赶上函数还没定义。
+   *   （实测日志里出现过 `makePanelDraggable is not defined`、虽然最终也能接上。）
+   *   ⇒ 最多试 20 次 × 50ms、成功后立刻停。
+   */
+    (function wireScenePanel(tries) {
+      tries = tries || 0;
+      if (typeof ensurePanelTitle !== 'function' || typeof makePanelDraggable !== 'function' || typeof initFloatWin !== 'function') {
+        if (tries < 20) setTimeout(() => wireScenePanel(tries + 1), 50);
+        return;
+      }
+      try {
+        ensurePanelTitle(scenePanelEl);
+        makePanelDraggable(scenePanelEl);
+        initFloatWin(scenePanelEl);
+      } catch (e) { console.debug('[scene] 面板接线失败：' + e.message); }
+    })();
+  } else scenePanelEl.classList.add('hidden');
+  const b = document.getElementById('btnScene');
+  if (b) b.classList.toggle('on', on);
+  return on;
+}
+{
+  const b = document.getElementById('btnScene');
+  if (b) b.addEventListener('click', () => toggleScenePanel());
+
+  // 面板可见时 2Hz 回读相机（鼠标转视角后面板数字能跟上。）
+  setInterval(() => {
+    if (scenePanelEl && !scenePanelEl.classList.contains('hidden') && __spCameraSync) __spCameraSync();
+  }, 500);
+}
+
+/* ---------- 落地微调 / 自动贴地 ⇒ 已移进「场景」浮窗的「修正模型位置」组。
+ * （工具栏那三行已删、逻辑由 viewer.setModelOffset / snapToGround 提供。）
+ * ------------------------------------------------------------ */
+{
+  // 把自动贴地的结果同步到场景面板（若面板开着。）
+  viewer.onGroundOffsetChange(() => {
+    if (typeof __spSceneSync === 'function') __spSceneSync();
+  });
+}
+/* ---------- ★ 日间 / 夜间主题 ----------
+ * ⚠️ 优先级：localStorage 里记着的 > 系统 prefers-color-scheme > 夜间。
+ * ⚠️ 键名不带点（check-panel.mjs 会把带点字符串当成「组.键」）
+ * ------------------------------------------------------------ */
+const THEME_KEY = 'ba3d-theme';
+function readTheme() {
+  try {
+    const v = localStorage.getItem(THEME_KEY);
+    if (v === 'light' || v === 'dark') return v;
+  } catch (e) {}
+  try {
+    return (window.matchMedia && window.matchMedia('(prefers-color-scheme: light)').matches) ? 'light' : 'dark';
+  } catch (e) { return 'dark'; }
+}
+function applyTheme(t) {
+  const light = t === 'light';
+  document.body.classList.toggle('light', light);
+  const b = document.getElementById('btnTheme');
+  if (b) { b.textContent = light ? '夜间' : '日间'; b.title = light ? '切到夜间配色' : '切到日间配色'; }
+  try { localStorage.setItem(THEME_KEY, light ? 'light' : 'dark'); } catch (e) {}
+  return t;
+}
+applyTheme(readTheme());
+{
+  const b = document.getElementById('btnTheme');
+  if (b) b.addEventListener('click', () => {
+    const next = document.body.classList.contains('light') ? 'dark' : 'light';
+    applyTheme(next);
+    console.debug('[theme] 已切到 ' + (next === 'light' ? '日间' : '夜间') + ' 配色。');
+  });
+}
+window.ba3dSetTheme = applyTheme;   // 控制台：ba3dSetTheme('light')
+
+/**
+ * ⚠️ 工具栏那三行（落地微调 / 基准X / 基准Z）**已删** ⇒
+ *   这里的 `groundOff` 等元素**不存在** ⇒ 不能裸用。
+ *   整块包进守卫、逻辑保留（万一以后把控件加回工具栏还能用。）
+ *   ⇒ 现在由「场景」浮窗的「修正模型位置」组负责。
+ */
+/* ---------- 落地微调 / 自动贴地 ⇒ 已移进「场景」浮窗的「修正模型位置」组。
+ *
+ * ⚠️ 工具栏那三行（落地微调 / 基准X / 基准Z）已删 ⇒ 这段 UI 绑定整块去掉。
+ *   现在走 viewer 的 API：`setModelOffset` / `snapToGround` / `setPivot`。
+ *
+ * ⚠️ 自动贴地改了 modelOffset.y 之后、要让场景面板的滑杆跟上。
+ * ------------------------------------------------------------ */
+{
+  viewer.onGroundOffsetChange(() => {
+    if (typeof window.__spSceneSync === 'function') window.__spSceneSync();
+  });
+}
+groundOff.addEventListener('input', () => applyGroundOff(groundOff.value));
+groundOffNum.addEventListener('input', () => applyGroundOff(groundOffNum.value));
+groundOffNum.addEventListener('change', () => applyGroundOff(groundOffNum.value));
+// 自动贴地之后让滑杆跟上（否则面板显示 0、实际已经补偿过。）
+viewer.onGroundOffsetChange((y) => {
+  groundOff.value = String(y);
+  groundOffNum.value = String(y);
+});
+
+{
+  const btn = document.getElementById('btnSnapGround');
+  if (btn) btn.addEventListener('click', () => {
+    const before = viewer.probeGround();
+    const after = viewer.snapToGround();
+    const y = viewer.getGroundOffset();
+    groundOff.value = String(y);
+    groundOffNum.value = String(y);
+    console.debug('[ground] 自动贴地：缝 ' + (before.gap === null ? '?' : before.gap.toFixed(4))
+      + ' → ' + (after.gap === null ? '?' : after.gap.toFixed(4))
+      + '（采样 ' + after.sampled + ' 点 / ' + after.meshes + ' 个网格、补偿 ' + y.toFixed(4) + '。）');
+  });
+}
+
+/* ---------- 卡通投射阴影浓淡（celShadowMin，仅卡通模式生效） ---------- */
+const celShadow = document.getElementById('celShadow');
+const celShadowNum = document.getElementById('celShadowNum');
+
+function applyCelShadow(v) {
+  let n = Number(v);
+  if (!isFinite(n)) n = Number(celShadow.value) || 0;
+  n = Math.min(0.95, Math.max(0, n));
+  viewer.setCel({ shadowMin: n });
+  celShadow.value = String(n);
+  celShadowNum.value = String(n);
+  return n;
+}
+celShadow.addEventListener('input', () => { applyCelShadow(celShadow.value); syncCelFaceShadowUI(); });
+celShadowNum.addEventListener('input', () => applyCelShadow(celShadowNum.value));
+celShadowNum.addEventListener('change', () => applyCelShadow(celShadowNum.value));
+
+/* ---------- 脸部阴影 —— 唯一的配置项就是这一档（celFaceShadowMin）
+   拖动即设 faceShadowMin；**拖到最右（≥0.95）= 没有面部阴影**（内部据此派生 faceNoShadow，
+   同时关掉 receiveShadow，所以 PBR 与卡通两个通路都覆盖）。
+   未动过本滑块时跟随全局「阴影浓淡」。 ---------- */
+const celFaceShadow = document.getElementById('celFaceShadow');
+const celFaceShadowNum = document.getElementById('celFaceShadowNum');
+
+/** 当前脸部浓度该显示多少：未独立时跟随全局 */
+function faceShadowDisplayValue() {
+  const c = viewer.getCel();
+  return (c.faceShadowMin === null || c.faceShadowMin === undefined) ? c.shadowMin : c.faceShadowMin;
+}
+function syncCelFaceShadowUI() {
+  // 这一档**就是**面部阴影的唯一开关：不影响影子浓度，拖到最右（≥0.95）等于"没有面部阴影"
+  const v = faceShadowDisplayValue();
+  celFaceShadow.value = String(v);
+  celFaceShadowNum.value = String(v);
+}
+function applyCelFaceShadow() {
+  let n = Number(celFaceShadow.value);
+  if (!isFinite(n)) n = faceShadowDisplayValue();
+  n = Math.min(0.95, Math.max(0, n));
+  viewer.setCel({ faceShadowMin: n });     // 一旦动过就变成独立值
+  celFaceShadow.value = String(n);
+  celFaceShadowNum.value = String(n);
+}
+celFaceShadow.addEventListener('input', () => { celFaceShadowNum.value = celFaceShadow.value; applyCelFaceShadow(); });
+celFaceShadowNum.addEventListener('input', () => { celFaceShadow.value = celFaceShadowNum.value; applyCelFaceShadow(); });
+celFaceShadowNum.addEventListener('change', () => { celFaceShadow.value = celFaceShadowNum.value; applyCelFaceShadow(); });
+syncCelFaceShadowUI();
+{ const sm = viewer.getCel().shadowMin; celShadow.value = String(sm); celShadowNum.value = String(sm); }
+
+/* ---------- 分档色 + 过渡带（阶段 1 ①：「N 段 + 每段各自颜色 + 过渡带宽度」）
+   默认**不勾选** ⇒ bandRamp = null ⇒ viewer 走老公式、渲染结果一个字节都不变。
+   （所以「cel 模式没变」这条回归保证仍然成立。） ---------- */
+const celRampOn = document.getElementById('celRampOn');
+const celRampEls = [0, 1, 2, 3].map((i) => document.getElementById('celRamp' + i));
+const celBandSoft = document.getElementById('celBandSoft');
+const hex2rgb01 = (h) => {
+  const v = String(h || '#ffffff');
+  return [
+    parseInt(v.slice(1, 3), 16) / 255,
+    parseInt(v.slice(3, 5), 16) / 255,
+    parseInt(v.slice(5, 7), 16) / 255,
+  ];
+};
+const rgb01hex = (c) => '#' + [0, 1, 2].map((i) =>
+  Math.round(Math.max(0, Math.min(1, Number(c && c[i]) || 0)) * 255).toString(16).padStart(2, '0')).join('');
+
+function applyCelRamp() {
+  const on = !!celRampOn.checked;
+  celRampEls.forEach((el) => { el.disabled = !on; });
+  celBandSoft.disabled = !on;
+  viewer.setCel({
+    bandRamp: on ? celRampEls.map((el) => hex2rgb01(el.value)) : null,
+    bandSoft: on ? (Number(celBandSoft.value) || 0) : 0,
+  });
+}
+celRampOn.addEventListener('change', applyCelRamp);
+celRampEls.forEach((el) => el.addEventListener('input', applyCelRamp));
+celBandSoft.addEventListener('input', applyCelRamp);
+/** 从配置同步到 UI（加载模型 / 导入 JSON 后调用） */
+function syncCelRampUI() {
+  const c = viewer.getCel();
+  const r = Array.isArray(c.bandRamp) && c.bandRamp.length >= 2 ? c.bandRamp : null;
+  celRampOn.checked = !!r;
+  if (r) celRampEls.forEach((el, i) => { el.value = rgb01hex(r[Math.min(i, r.length - 1)]); });
+  celBandSoft.value = String(Number(c.bandSoft) || 0);
+  celRampEls.forEach((el) => { el.disabled = !r; });
+  celBandSoft.disabled = !r;
+}
+syncCelRampUI();
+
+/* ---------- 光照夹取（lilToon 的 _LightMinLimit / _LightMaxLimit、默认关）
+   开关 + 两个值都从 viewer 读 · 改了立刻重编译。 ---------- */
+{
+  const lco = document.getElementById('lightClampOn');
+  const lmin = document.getElementById('lightMinLimit');
+  const lmax = document.getElementById('lightMaxLimit');
+  function applyLightClamp() {
+    const on = !!lco.checked;
+    lmin.disabled = !on;
+    lmax.disabled = !on;
+    viewer.setLightClamp({ on: on, min: Number(lmin.value), max: Number(lmax.value) });
+  }
+  lco.addEventListener('change', applyLightClamp);
+  lmin.addEventListener('input', applyLightClamp);
+  lmax.addEventListener('input', applyLightClamp);
+  /** 从配置同步（加载模型 / 导入 JSON 后） */
+  window.__ba3dSyncLightClamp = function () {
+    const c = viewer.getLightClamp();
+    lco.checked = !!c.on;
+    lmin.value = String(c.min);
+    lmax.value = String(c.max);
+    lmin.disabled = !c.on;
+    lmax.disabled = !c.on;
+  };
+  window.__ba3dSyncLightClamp();
+}
+
 const initOutline = viewer.getOutline().thickness;
 outlineWidth.value = String(initOutline);
 outlineWidthNum.value = String(initOutline);
 
+// 亮度初始化（配置里可能写了 lightingScale）
+{ const ls = viewer.getLightingScale(); lightScale.value = String(ls); lightScaleNum.value = String(ls); }
+
 /* ---------- 加载完成后的界面同步 ---------- */
 function afterLoad(info) {
+  /**
+   * ★★ 自动探测 lilToon 的独立配置（用户定的规则。）
+   *
+   *   ⚠️ 只在**主配置要求用 lilToon** 时才探
+   *     （`renderer.lilToon.use === true`。）
+   *   ⚠️ 顺序由 `viewer.probeLilConfig` 内部定：
+   *       模型名.lilToon.json  →  主JSON名.lilToon.json
+   *   ⚠️ 都找不到 ⇒ **保持出厂默认** + 控制台 warn（用户确认的兜底。）
+   *   ⚠️ 延后 300ms —— afterLoad 触发时配置刚套上、等它稳定。
+   *   ⚠️ 每次加载只探一次（`__ba3dLilProbed`、手动载入时重置。）
+   */
+  if (!window.__ba3dLilProbed) {
+    window.__ba3dLilProbed = true;
+    setTimeout(async () => {
+      try {
+        const useLil = !!((viewer.exportConfig().renderer || {}).lilToon || {}).use;
+        if (useLil) await viewer.probeLilConfig(window.__ba3dConfigUrl || null);
+        else console.debug('[lilToon] 主配置未启用 lilToon ⇒ 不探测独立配置。');
+      } catch (e) { console.warn('[lilToon] 自动探测失败：', e); }
+    }, 300);
+  }
+  // 阴影自检：默认**不打**（每次都打一张 console.table 太吵）
+  //   需要排查「脸上为什么没有影」时：控制台执行 window.__ba3dDebugUI = true 再刷新
+  //   最关键的是 shadowMapAllocated：null = 阴影贴图从未渲染过
+  setTimeout(() => {
+    if (!window.__ba3dDebugUI) return;
+    try {
+      const rep = viewer.shadowReport();
+      console.log('%c[阴影自检] 想看完整对象可再执行 viewer.shadowReport()', 'color:#c07a2a;font-weight:bold');
+      console.table(rep['面部/头发网格'] || []);
+      const { '面部/头发网格': _drop, ...rest } = rep;
+      console.log(rest);
+    } catch (e) { console.warn('[阴影自检] 失败', e); }
+    // 自检之后补一次 UI 同步 
+    //   自定义模型的加载路径里、render/shader 可能是异步确定的。
+    //   这里等状态稳定后再同步一次、保证「着色器=lilToon」时参数按钮可用。
+    try { syncRenderUI(); } catch (e) { console.warn('[ui] 延迟同步失败', e); }
+  }, 800);
+
   infoEl.textContent =
     `${info.meshes} meshes · ${Math.round(info.triangles / 1000)}k tris · ${info.animations} anims`;
 
+  /* ---------- lilToon 参数面板（免改 JSON；可导出配置）---------- */
+  const lilPanel = document.getElementById('lilPanel');
+  const btnLil = document.getElementById('btnLil');
+  
+  // [ 分组标题 | [路径, 标签, min, max, step] ]  —— 路径支持点号，如 rim.blend
+  // 当前选中的 lilToon 预设名（空 = 未套用）
+  //   buildLilPanel 会重建整个面板，连带重建 select，新下拉会回到第一项
+  //   所以必须把选中项存在外面，重建后恢复，否则看起来像选了没反应
+  let activeLilPreset = '';
+  const LIL_CTRL = [
+  /**
+   * —— 渲染状态（lilToon 的 _TransparentMode / _Cutoff / _Cull。）——
+   *
+   * ⚠️ 三个都默认 **-1 = 不改**、沿用模型自带的值 ⇒ 默认行为与以前完全一致。
+   * ⚠️ 这三个是**每材质**的（lilToon 里就在材质上。），面板切「材质」时会跟着变。
+   *
+   * 为什么重要：头发 / 睫毛 / 衣服常是 **Cutout**（alphaTest 裁剪。）
+   *   而模型自带的 alphaMode 有时是错的（假 BLEND。）⇒ 需要手动纠正。
+   */
+  ['渲染状态（每材质）', null],
+  ['transparentMode', '透明模式（-1不改 0不透明 1裁剪 2半透明）', -1, 6, 1],
+  ['cutoff', 'Alpha 阈值（_Cutoff、仅裁剪模式）', 0, 1, 0.01],
+  ['cull', '剔除（-1不改 0双面 1正面 2背面）', -1, 2, 1],
+  /**
+   * —— 主色 UV / 色调（lilToon 的 _MainTexHSVG / _MainTex_ScrollRotate。）——
+   *
+   * ⚠️ 这两项在 lilToon 里**作用范围完全不同**：
+   *   _MainTexHSVG          → 只作用在基础色上（lil_common_frag.hlsl:317。）
+   *   _MainTex_ScrollRotate → 改的是共享的 fd.uvMain（:263。）· 影响面大。
+   *   ⇒ 我们只做「主色贴图自己的 UV」（方案 A。）· 已记为已知差异。
+   *
+   * HSVG：(色相偏移, 饱和度倍率, 明度倍率, Gamma) · 默认 (0,1,1,1)
+   * ScrollRotate：(滚动X, 滚动Y, 旋转角, 旋转角速度) · 默认全 0
+   *
+   * ⚠️ 用下标访问数组：lilGet/lilSet 走 p.split('.') ⇒ mainTexHSVG.0 就是 [0]。
+   */
+  ['主色 UV / 色调', null],
+  ['mainTexHSVG.0', '色相偏移（HSVG.x）', -1, 1, 0.01],
+  ['mainTexHSVG.1', '饱和度倍率（HSVG.y）', 0, 3, 0.01],
+  ['mainTexHSVG.2', '明度倍率（HSVG.z）', 0, 3, 0.01],
+  ['mainTexHSVG.3', 'Gamma（HSVG.w）', 0.1, 4, 0.01],
+  ['mainTexScrollRotate.0', '滚动 X（ScrollRotate.x）', -1, 1, 0.005],
+  ['mainTexScrollRotate.1', '滚动 Y（ScrollRotate.y）', -1, 1, 0.005],
+  ['mainTexScrollRotate.2', '旋转角（ScrollRotate.z）', -6.2832, 6.2832, 0.01],
+  ['mainTexScrollRotate.3', '旋转角速度（ScrollRotate.w）', -3, 3, 0.01],
+    ['阴影分档', null],
+    ['shadowStrength', '浓度', 0, 2, 0.01],   // >1 会继续压暗（three 的环境光地板）
+    ['shadowBorder', '第一层边界', 0, 1, 0.01],
+    ['shadowBlur', '第一层过渡', 0, 1, 0.02],
+    ['shadow2ndBorder', '第二层边界', 0, 1, 0.01],
+    ['shadow2ndBlur', '第二层过渡', 0, 1, 0.02],
+    ['shadow3rdBorder', '第三层边界', 0, 1, 0.01],
+    // —— 阶段 1 超纲项（lilToon 源码 lil_common_frag.hlsl:872-876 / 1024 / lil_common_functions.hlsl:33）——
+    ['shadowBorderRange', '边界范围', 0, 1, 0.01],
+    ['shadowMainStrength', '阴影乘主色', 0, 1, 0.01],
+    ['shadowAmbient', '阴影环境光', 0, 1, 0.01],   // 阴影区保留多少环境光（three 专属补充、越小阴影越深）
+    ['shadowReceive', '一层接收阴影', 0, 1, 0.01],
+    ['shadow2ndReceive', '二层接收阴影', 0, 1, 0.01],
+    ['shadow3rdReceive', '三层接收阴影', 0, 1, 0.01],
+    ['Rim 边缘光', null],
+    ['rim.blend', '强度', 0, 1, 0.01],
+    ['rim.border', '边界', 0, 1, 0.01],
+    ['rim.blur', '过渡', 0, 1, 0.02],
+    ['rim.fresnelPower', '菲涅尔', 0.1, 8, 0.1],
+    ['rim.dirStrength', '受光方向', 0, 1, 0.01],
+    ['rim.shadowMask', '阴影遮罩', 0, 1, 0.01],   // _RimShadowMask
+    ['MatCap', null],
+    ['matcap.blend', '强度', 0, 1, 0.01],
+    ['matcap.shadowMask', '阴影遮罩', 0, 1, 0.01],   // _MatCapShadowMask
+    ['matcap.mainStrength', '乘主色(albedo)', 0, 1, 0.01],   // _MatCapMainStrength
+    ['matcap.backfaceMask', '背面剔除(0两面 1正面 2背面)', 0, 2, 1],   // _MatCapBackfaceMask
+    /**
+     * ★ lilCalcMatCapUV 的两个修正（lil_common_functions.hlsl:531-532）· 默认都是 1。
+     *   之前没做 ⇒ MatCap 的基底和 Unity 不一致（相机上下看时贴图会转）
+     */
+    ['matcap.zRotCancel', 'Z轴旋转抵消(默认1)', 0, 1, 1],   // _MatCapZRotCancel
+    ['matcap.perspective', '透视修正(默认1)', 0, 1, 1],      // _MatCapPerspective
+    ['MatCap 2nd', null],
+    // 对应 _MatCap2nd*（lil_common_frag.hlsl:1459、参数与 1st 同构。）
+    ['matcap2nd.blend', '强度', 0, 1, 0.01],
+    ['matcap2nd.blendMode', '混合（0正常 1加算 2屏幕 3乘算）', 0, 3, 1],
+    ['matcap2nd.enableLighting', '受光影响', 0, 1, 0.01],
+    ['matcap2nd.mainStrength', '乘主色(albedo)', 0, 1, 0.01],
+    ['matcap2nd.shadowMask', '阴影遮罩', 0, 1, 0.01],
+    ['matcap2nd.backfaceMask', '背面剔除(0两面 1正面 2背面)', 0, 2, 1],
+    ['matcap2nd.zRotCancel', 'Z轴旋转抵消(默认1)', 0, 1, 1],   // _MatCap2ndZRotCancel
+    ['matcap2nd.perspective', '透视修正(默认1)', 0, 1, 1],      // _MatCap2ndPerspective
+    ['自发光', null],
+    ['emission.use', '启用', 0, 1, 1],
+    ['emission.blend', '强度', 0, 1, 0.01],
+    ['自发光 2nd', null],
+    // 对应 _Emission2nd*（lil_common_frag.hlsl:1771-1827、和 1st 完全同构。）
+    ['emission2nd.use', '启用', 0, 1, 1],
+    ['emission2nd.blend', '强度', 0, 1, 0.01],
+    ['emission2nd.blendMode', '混合（0正常 1加算 2屏幕 3乘算）', 0, 3, 1],
+    ['法线 Normal', null],
+    // 对应 _BumpMap / _Bump2ndMap（lil_common_frag.hlsl:523 / :542。）
+    ['bump.use', '1st 启用', 0, 1, 1],
+    ['bump.scale', '1st 强度（_BumpScale）', -10, 10, 0.05],
+    ['bump2nd.use', '2nd 启用', 0, 1, 1],
+    ['bump2nd.scale', '2nd 强度（_Bump2ndScale）', -10, 10, 0.05],
+    ['bump2nd.uvMode', '2nd UV（0=uv0、1/2/3 需要 uv1~3 暂不支持）', 0, 3, 1],
+    // 各效果用多少法线扰动（0=几何法线、1=完整法线贴图。）
+    ['rim.normalStrength', 'Rim 用法线强度', 0, 1, 0.01],
+    ['matcap.normalStrength', 'MatCap 用法线强度', 0, 1, 0.01],
+    ['matcap2nd.normalStrength', 'MatCap2nd 用法线强度', 0, 1, 0.01],
+    ['backlight.normalStrength', '背光用法线强度', 0, 1, 0.01],
+    // 三层阴影各自用法线、已接着色器（lil_common_frag.hlsl:854-857。）
+    ['shadowNormalStrength', '阴影用法线强度', 0, 1, 0.01],
+    ['shadow2ndNormalStrength', '2nd 阴影用法线强度', 0, 1, 0.01],
+    ['shadow3rdNormalStrength', '3rd 阴影用法线强度', 0, 1, 0.01],
+    // MatCap 的三个进阶参数（lil_common_frag.hlsl:1395-1416。）
+    ['matcap.lod', 'MatCap LOD bias', -4, 4, 0.1],
+    ['matcap.customNormal', 'MatCap 自定法线', 0, 1, 1],
+    ['matcap.bumpScale', 'MatCap 法线强度', -10, 10, 0.05],
+    // ⚠️ 这个是 VR 专用、浏览器里调了不会有任何效果（lil_common_macro.hlsl:689。）
+    ['matcap.vrParallax', 'MatCap VR 视差（非VR无效）', 0, 1, 0.01],
+    ['matcap2nd.lod', 'MatCap2nd LOD bias', -4, 4, 0.1],
+    ['matcap2nd.customNormal', 'MatCap2nd 自定法线', 0, 1, 1],
+    ['matcap2nd.bumpScale', 'MatCap2nd 法线强度', -10, 10, 0.05],
+    ['matcap2nd.vrParallax', 'MatCap2nd VR 视差（非VR无效）', 0, 1, 0.01],
+    ['描边 Outline', null],
+    ['outline.enable', '启用', 0, 1, 1],
+    ['outline.width', '宽度', 0, 10, 0.01],
+    ['outline.fixWidth', '固定宽度', 0, 1, 0.05],
+    ['outline.vertexR2Width', '顶点色当宽度', 0, 2, 1],
+    ['outline.zBias', 'Z 偏移', 0, 10, 0.01],
+    ['outline.litScale', '受光对比', 0, 40, 0.5],
+    ['outline.litOffset', '受光阈值', -20, 0, 0.5],
+    ['outline.litShadowBlur', '阴影模糊', 0, 4, 0.05],
+    ['主色层 2nd', null],
+  /**
+   * _Main2ndTexAlphaMode（Int · 默认 0）
+   *   0 = 不改变   1 = 用这一层的 alpha **替换**   2 = 相乘
+   *   3 = 相加（截断）  4 = 相减（截断）
+   *
+   * ⚠️ lilToon 里整块在 `#if LIL_RENDER != 0` 里 ⇒ **只在 Cutout / Transparent 下生效**
+   *    （Opaque 时设了也没用 —— 和 lilToon 一致）
+   * ⚠️ 生效时会把这一层的 alpha 置 1 ⇒ 颜色混合按**满强度**算
+   *    ⇒ 想「用层的 alpha 控制整只角色的透明度」就用模式 1
+   */
+  ['main2nd.alphaMode', '层 Alpha 模式（0不改 1替换 2乘 3加 4减）', 0, 4, 1],    // 对应 _Main2nd*（lil_common_frag.hlsl:671、见 CONFIG.md）
+    ['main2nd.use', '启用', 0, 1, 1],
+  // UV 通道 —— ★ Decal（贴花）几乎总要用 1（uv1）· 所以提到最前面
+  ['main2nd.uvMode', 'UV 通道（0=uv0 · 1=uv1 ★贴花用这个 · 4=视角球面）', 0, 4, 1],
+  /**
+   * ★ Decal（贴花）—— lil_common_functions.hlsl:473 lilCalcDecalUV
+   *
+   * Decal 不是独立层 · 它是这一层的一个**模式**：开启后把贴图按「贴花」铺开
+   *   镜像复制到右半 → 缩放偏移 → 翻转 → 单侧隐藏 → 旋转 → 图集动画 → 边缘 AA
+   *
+   * ⚠️ 实际模型多半把 UV 设成 1（uv1）—— 贴花本来就是「换一套 UV 贴上去」
+   *    ⇒ 请把上面的「UV」行设成 1
+   * ⚠️ 单侧隐藏靠**切线 w 的符号**（vBa3dRightHand）分区
+   *    模型没有切线时恒为右 ⇒ 「只在左半显示」会整片消失（和 lilToon 初值一致）
+   */
+  ['main2nd.isDecal', '作为贴花 Decal（_Main2ndTexIsDecal）', 0, 1, 1],
+  ['main2nd.shouldCopy', '镜像复制到另一半（ShouldCopy）', 0, 1, 1],
+  ['main2nd.shouldFlipMirror', '右半翻转（ShouldFlipMirror）', 0, 1, 1],
+  ['main2nd.shouldFlipCopy', '左半翻转（ShouldFlipCopy）', 0, 1, 1],
+  ['main2nd.isLeftOnly', '只在左半显示（IsLeftOnly）', 0, 1, 1],
+  ['main2nd.isRightOnly', '只在右半显示（IsRightOnly）', 0, 1, 1],
+  ['main2nd.texAngle', '贴图旋转角（_Main2ndTexAngle）', -6.2832, 6.2832, 0.01],
+  ['main2nd.texST.0', 'ST 缩放 X', 0, 4, 0.01],
+  ['main2nd.texST.1', 'ST 缩放 Y', 0, 4, 0.01],
+  ['main2nd.texST.2', 'ST 偏移 X', -1, 1, 0.005],
+  ['main2nd.texST.3', 'ST 偏移 Y', -1, 1, 0.005],
+  ['main2nd.decalAnimation.0', '图集 列数（DecalAnimation.x）', 1, 16, 1],
+  ['main2nd.decalAnimation.1', '图集 行数（.y）', 1, 16, 1],
+  ['main2nd.decalAnimation.2', '固定帧（.z、动画速度=0 时用）', 0, 64, 1],
+  ['main2nd.decalAnimation.3', '帧率（.w、0=不动画）', 0, 60, 1],
+  ['main2nd.decalSubParam.0', '子参数 宽（SubParam.x）', 0, 2, 0.01],
+  ['main2nd.decalSubParam.1', '子参数 高（.y）', 0, 2, 0.01],
+  ['main2nd.decalSubParam.2', '向中心吸附（.z）', 0, 1, 0.01],
+  ['main2nd.decalDebug', '★Decal 调试（0正常 1跳过边缘AA 2输出UV 3强制alpha）', 0, 3, 1],
+    ['main2nd.enableLighting', '参与光照比例', 0, 1, 0.01],
+    ['main2nd.blendMode', '混合（0正常 1加算 2屏幕 3乘算）', 0, 3, 1],
+      ['main2nd.cull', '剔除（0两面 1只背面 2只正面）', 0, 2, 1],
+    ['main2nd.dissolveMode', '层溶解（0关 1贴图 2UV 3对象坐标）', 0, 3, 1],
+    ['main2nd.dissolveDir', '层溶解方向（1=dot 0=distance）', 0, 1, 1],
+    ['main2nd.dissolveThreshold', '层溶解阈值', 0, 2, 0.01],
+    ['main2nd.dissolveSoftness', '层溶解柔度', 0.001, 1, 0.001],
+    ['main2nd.dissolveNoiseStrength', '层溶解噪声强度', 0, 2, 0.01],
+    ['main2nd.distFadeNear', '距离淡出近点', -50, 500, 0.5],
+    ['main2nd.distFadeFar', '距离淡出远点', -50, 500, 0.5],
+    ['main2nd.distFadeStrength', '距离淡出强度（0关）', 0, 1, 0.01],
+    ['主色层 3rd', null],
+  /**
+   * _Main3rdTexAlphaMode（Int · 默认 0）
+   *   0 = 不改变   1 = 用这一层的 alpha **替换**   2 = 相乘
+   *   3 = 相加（截断）  4 = 相减（截断）
+   *
+   * ⚠️ lilToon 里整块在 `#if LIL_RENDER != 0` 里 ⇒ **只在 Cutout / Transparent 下生效**
+   *    （Opaque 时设了也没用 —— 和 lilToon 一致）
+   * ⚠️ 生效时会把这一层的 alpha 置 1 ⇒ 颜色混合按**满强度**算
+   *    ⇒ 想「用层的 alpha 控制整只角色的透明度」就用模式 1
+   */
+  ['main3rd.alphaMode', '层 Alpha 模式（0不改 1替换 2乘 3加 4减）', 0, 4, 1],    ['main3rd.use', '启用', 0, 1, 1],
+  // UV 通道 —— ★ Decal（贴花）几乎总要用 1（uv1）· 所以提到最前面
+  ['main3rd.uvMode', 'UV 通道（0=uv0 · 1=uv1 ★贴花用这个 · 4=视角球面）', 0, 4, 1],
+  /**
+   * ★ Decal（贴花）—— lil_common_functions.hlsl:473 lilCalcDecalUV
+   *
+   * Decal 不是独立层 · 它是这一层的一个**模式**：开启后把贴图按「贴花」铺开
+   *   镜像复制到右半 → 缩放偏移 → 翻转 → 单侧隐藏 → 旋转 → 图集动画 → 边缘 AA
+   *
+   * ⚠️ 实际模型多半把 UV 设成 1（uv1）—— 贴花本来就是「换一套 UV 贴上去」
+   *    ⇒ 请把上面的「UV」行设成 1
+   * ⚠️ 单侧隐藏靠**切线 w 的符号**（vBa3dRightHand）分区
+   *    模型没有切线时恒为右 ⇒ 「只在左半显示」会整片消失（和 lilToon 初值一致）
+   */
+  ['main3rd.isDecal', '作为贴花 Decal（_Main3rdTexIsDecal）', 0, 1, 1],
+  ['main3rd.shouldCopy', '镜像复制到另一半（ShouldCopy）', 0, 1, 1],
+  ['main3rd.shouldFlipMirror', '右半翻转（ShouldFlipMirror）', 0, 1, 1],
+  ['main3rd.shouldFlipCopy', '左半翻转（ShouldFlipCopy）', 0, 1, 1],
+  ['main3rd.isLeftOnly', '只在左半显示（IsLeftOnly）', 0, 1, 1],
+  ['main3rd.isRightOnly', '只在右半显示（IsRightOnly）', 0, 1, 1],
+  ['main3rd.texAngle', '贴图旋转角（_Main3rdTexAngle）', -6.2832, 6.2832, 0.01],
+  ['main3rd.texST.0', 'ST 缩放 X', 0, 4, 0.01],
+  ['main3rd.texST.1', 'ST 缩放 Y', 0, 4, 0.01],
+  ['main3rd.texST.2', 'ST 偏移 X', -1, 1, 0.005],
+  ['main3rd.texST.3', 'ST 偏移 Y', -1, 1, 0.005],
+  ['main3rd.decalAnimation.0', '图集 列数（DecalAnimation.x）', 1, 16, 1],
+  ['main3rd.decalAnimation.1', '图集 行数（.y）', 1, 16, 1],
+  ['main3rd.decalAnimation.2', '固定帧（.z、动画速度=0 时用）', 0, 64, 1],
+  ['main3rd.decalAnimation.3', '帧率（.w、0=不动画）', 0, 60, 1],
+  ['main3rd.decalSubParam.0', '子参数 宽（SubParam.x）', 0, 2, 0.01],
+  ['main3rd.decalSubParam.1', '子参数 高（.y）', 0, 2, 0.01],
+  ['main3rd.decalSubParam.2', '向中心吸附（.z）', 0, 1, 0.01],
+  ['main3rd.decalDebug', '★Decal 调试（0正常 1跳过边缘AA 2输出UV 3强制alpha）', 0, 3, 1],
+    ['main3rd.enableLighting', '参与光照比例', 0, 1, 0.01],
+    ['main3rd.blendMode', '混合（0正常 1加算 2屏幕 3乘算）', 0, 3, 1],
+      ['main3rd.cull', '剔除（0两面 1只背面 2只正面）', 0, 2, 1],
+    ['main3rd.dissolveMode', '层溶解（0关 1贴图 2UV 3对象坐标）', 0, 3, 1],
+    ['main3rd.dissolveDir', '层溶解方向（1=dot 0=distance）', 0, 1, 1],
+    ['main3rd.dissolveThreshold', '层溶解阈值', 0, 2, 0.01],
+    ['main3rd.dissolveSoftness', '层溶解柔度', 0.001, 1, 0.001],
+    ['main3rd.dissolveNoiseStrength', '层溶解噪声强度', 0, 2, 0.01],
+    ['main3rd.distFadeNear', '距离淡出近点', -50, 500, 0.5],
+    ['main3rd.distFadeFar', '距离淡出远点', -50, 500, 0.5],
+    ['main3rd.distFadeStrength', '距离淡出强度（0关）', 0, 1, 0.01],
+    ['Stencil 模型', null],
+    // 对应 _Stencil*（lts.shader:535-541、Unity 枚举、three 会做映射。）
+    ['stencil.use', '启用', 0, 1, 1],
+    ['stencil.ref', 'Ref（0~255）', 0, 255, 1],
+    ['stencil.readMask', 'ReadMask（0~255）', 0, 255, 1],
+    ['stencil.writeMask', 'WriteMask（0~255）', 0, 255, 1],
+    ['stencil.comp', 'Comp（1从不 2小于 3等于 4小于等 5大于 6不等 7大于等 8总是）', 0, 8, 1],
+    ['stencil.pass', 'Pass（0保持 1清零 2替换 3增 4减 5取反 6循环增 7循环减）', 0, 7, 1],
+    ['stencil.fail', 'Fail（同上）', 0, 7, 1],
+    ['stencil.zfail', 'ZFail（同上）', 0, 7, 1],
+    ['Stencil 描边', null],
+    // —— 描边自己的模板参数（_OutlineStencil*、lts.shader:566-572。）——
+    ['outline.stencilEnable', '启用', 0, 1, 1],
+    ['outline.stencilRef', 'Ref', 0, 255, 1],
+    ['outline.stencilReadMask', 'ReadMask', 0, 255, 1],
+    ['outline.stencilWriteMask', 'WriteMask', 0, 255, 1],
+    ['outline.stencilComp', 'Comp（1从不 2小于 3等于 4小于等 5大于 6不等 7大于等 8总是）', 0, 8, 1],
+    ['outline.stencilPass', 'Pass（0保持 1清零 2替换 3增 4减 5取反 6循环增 7循环减）', 0, 7, 1],
+    ['outline.stencilFail', 'Fail（同上）', 0, 7, 1],
+    ['outline.stencilZFail', 'ZFail（同上）', 0, 7, 1],
+    ['Dissolve', null],
+
+  /**
+   * —— 抖动 Dither（lil_common_frag.hlsl:524-546）——
+   *
+   * 把连续的 alpha **量化成屏幕空间的有序点阵**：
+   *   阈值 = ( 贴图值 * 255 + 1 ) / ( MaxValue + 2 )
+   *
+   * ⚠️ lilToon 里前面还有一句 lilDistanceFadeAlphaOnly（仅 Cutout 下）
+   *    但那需要**基础材质的 _DistanceFade** ⇒ 我们还没做（不在本轮。）
+   *    ⇒ 这里只做抖动那一步 · 单独用也成立
+   *
+   * ⚠️ 贴图默认 white ⇒ 全 1 ⇒ 阈值恒定（此时退化成整体 alpha 阈值）
+   *    想要真正的点阵效果需要一张**有序抖动矩阵**贴图（4×4 / 8×8）
+   *    该矩阵的像素值一般是 0/255、16/255、… 递增的。
+   */
+  ['抖动 Dither', null],
+  ['dither.use', '启用（_UseDither）', 0, 1, 1],
+  ['dither.maxValue', 'Max Value（_DitherMaxValue）', 1, 255, 1],
+  /**
+   * 反射 / 镜面高光 —— lil_common_frag.hlsl:1189 / :1348
+   *
+   * ⚠️ lilToon 里整块被 _UseReflection 把关、**默认 0**。
+   *    19 个官方预设里只有 3 个开：Inorganic-Glass / LiteGlass / Metal
+   *    ⇒ 这是**金属 / 玻璃类**材质的高光、皮肤/衣服/头发都不开。
+   *
+   * 高光形状（_SpecularToon = 1 时）：
+   *    nh    = saturate( dot( lerp(origN,N,法线强度), normalize(V+L) ) )
+   *    term  = pow( nh, 1/roughness )、roughness = (1-光滑度)²
+   *    col   = lilTooningScale( AA强度, term, 边界, 模糊 )
+   * 光滑度 = 1 时 roughness = 0 ⇒ pow(nh, +INF) ⇒ 退化成 step(1, nh)（硬边小点）
+   */
+  ['反射 / 高光', null],
+  ['reflection.use', '启用（_UseReflection、默认0 ⇒ 整块关）', 0, 1, 1],
+  ['reflection.smoothness', '光滑度（_Smoothness）', 0, 1, 0.01],
+  ['reflection.reflectance', '反射率（_Reflectance）', 0, 1, 0.01],
+  ['reflection.metallic', '金属度（_Metallic）', 0, 1, 0.01],
+  ['reflection.toon', '卡通化（_SpecularToon）', 0, 1, 1],
+  ['reflection.border', '边界（_SpecularBorder）', 0, 1, 0.01],
+  ['reflection.blur', '模糊（_SpecularBlur）', 0, 1, 0.01],
+  ['reflection.normalStrength', '法线强度（_SpecularNormalStrength）', 0, 1, 0.01],
+  ['reflection.aaStrength', 'AA强度（_AAStrength、0=硬边）', 0, 1, 0.01],
+  ['reflection.blendMode', '混合（0正常 1加算 2屏幕 3乘算）', 0, 3, 1],
+  ['reflection.apply', '应用高光（_ApplySpecular）', 0, 1, 1],
+    // 对应 _DissolveParams = (模式, 线性?, 阈值, 羽化)、_DissolvePos = (xyz, w)。
+    ['dissolve.mode', '模式（0关 1贴图 2UV 3对象）', 0, 3, 1],
+    ['dissolve.linear', '线性/平面（1=是 0=圆形/球形）', 0, 1, 1],
+    ['dissolve.threshold', '阈值', 0, 1, 0.01],
+    ['dissolve.softness', '羽化宽度', 0.001, 0.5, 0.001],
+    ['dissolve.noiseStrength', '噪声强度', 0, 1, 0.01],
+    ['背光 Backlight', null],
+    ['backlight.blend', '强度', 0, 1, 0.01],
+    ['backlight.directivity', '指向性', 0.1, 20, 0.1],
+  ];
+  
+  const lilGet = (o, p) => p.split('.').reduce((a, k) => (a == null ? a : a[k]), o);
+  const lilSet = (o, p, v) => {
+    const ks = p.split('.');
+    const last = ks.pop();
+    const t = ks.reduce((a, k) => (a[k] = a[k] || {}), o);
+    t[last] = v;
+  };
+  
+  /** 把界面上的值写回 viewer（每次改动都会重建材质 → 着色器重编译） */
+  function lilApply(path, val) {
+    const patch = {};
+    lilSet(patch, path, val);
+    lilS(patch);
+  }
+  
+  /**
+ * —— lilToon 的「按材质」支持 ——
+ *
+ * lilToon 的预设本来是每个材质槽各选一个（皮肤套 Skin-*、头发套 Hair-* ），
+ * 所以我们引入一个材质选择器：
+ *   选「全部（默认）」→ 读写的是一份全局 lilCfg
+ *   选某个材质      → 读写的是 lilCfgByMaterial[该材质名]（覆盖、面板显示合并后的值）
+ *
+ * 下面这几个薄封装负责自动带上「当前选中的材质」
+ * 这样面板里几十处调用不用逐个改逻辑，只把 viewer.xxx 换成 lilXxx 即可。
+ */
+/**
+ * 让浮层面板可以用**标题区（h4）**按住拖动。
+ *
+ * ⚠️ 监听挂在**面板本身**（事件委托），不挂在 h4 上 
+ *    因为 lilToon 面板每次打开 / 改预设都会 lilPanel.innerHTML = '' 重建 
+ *    挂在 h4 上重建后就失效了。
+ *
+ * 面板原本是 right:16px + top:16px 定位、拖动时切到 left/top。
+ */
+function makePanelDraggable(el, handleSel) {
+  if (!el || el.__dragBound) return;
+  el.__dragBound = true;
+  let sx = 0, sy = 0, ox = 0, oy = 0, dragging = false;
+  el.addEventListener('mousedown', (e) => {
+    // 把手：指定选择器 > .lp-title > h4
+    const t = e.target;
+    if (!t || !t.closest) return;
+    const hit = (handleSel && t.closest(handleSel))
+      || t.closest('.fw-title')
+      || t.closest('.lp-title')
+      || t.closest('.u-title')
+      || t.closest('h4');
+    if (!hit) return;
+    if (/^(INPUT|SELECT|BUTTON|TEXTAREA|OPTION)$/.test(e.target.tagName)) return;
+    const r = el.getBoundingClientRect();
+    el.style.left = r.left + 'px';
+    el.style.top = r.top + 'px';
+    el.style.right = 'auto';
+    el.style.bottom = 'auto';
+    el.style.maxHeight = 'calc(100vh - 8px)';
+    sx = e.clientX; sy = e.clientY; ox = r.left; oy = r.top;
+    dragging = true;
+    el.classList.add('dragging');
+    document.body.style.userSelect = 'none';
+    e.preventDefault();
+  });
+  const onMove = (e) => {
+    if (!dragging) return;
+    const w = el.offsetWidth, hh = el.offsetHeight;
+    let nx = ox + (e.clientX - sx);
+    let ny = oy + (e.clientY - sy);
+    nx = Math.max(4, Math.min(window.innerWidth - w - 4, nx));
+    ny = Math.max(4, Math.min(window.innerHeight - 32, ny));
+    el.style.left = nx + 'px';
+    el.style.top = ny + 'px';
+  };
+  const onUp = () => {
+    if (!dragging) return;
+    dragging = false;
+    el.classList.remove('dragging');
+    document.body.style.userSelect = '';
+  };
+  window.addEventListener('mousemove', onMove);
+  window.addEventListener('mouseup', onUp);
+}
+
+/**
+ * ★★ 浮窗底座 —— 拖动 / 缩放 / 层级 / 位置尺寸持久化
+ *
+ * 目标（用户要求 · 像 Unity）：
+ *   · 场景是一个浮窗 · 参数面板是另一个浮窗 · **互不嵌套**
+ *   · 两者都能拖动、都能缩放
+ *   · 位置尺寸刷新后还在（localStorage）
+ *
+ * ⚠️ 不重写已有的拖动 —— 那是 `makePanelDraggable`（带 .fw-title/.lp-title/.u-title/h4
+ *    四种把手 + 视口夹紧。）· 这里只**补齐**它没做的三件事：
+ *      ① 右下角缩放手柄
+ *      ② z-index 层级提升（点哪个哪个到最前）
+ *      ③ localStorage 持久化 + 载入时恢复
+ *
+ * ⚠️ 键名用 `el.id`、所以每个浮窗必须有 id。
+ *   （`#upload` 有。 · `.lp` 三个都有。 · `#sceneWin` 有。）
+ */
+/**
+ * ⚠️ 键名**故意不带点** —— `check-panel.mjs` 会把源码里带点的字符串
+ *    当成面板的「组.键」⇒ 带点的键名会被它误判成「组名.字段名」
+ *    然后报「整组静默失效」（实测踩到。）
+ */
+/**
+ * ★ 浮窗布局的持久化键
+ *
+ * ⚠️⚠️ **升到 v2** —— 这轮改了浮窗的默认行为（最小化停靠 / 默认只显示三个。）
+ *   而 `fwRestore` 会用**旧存档覆盖 CSS 默认值** ⇒
+ *   用户会看到「状态浮窗不在右下角」「面板位置很怪」之类。
+ *   ⇒ 升版本号 ⇒ 旧存档一次性失效 ⇒ 大家都回落到新的 CSS 默认。
+ *
+ * ⚠️ `#infoWin` 的 CSS 默认本来就是**右下角**（ide / 引擎的信息位。）：
+ *      #infoWin { right: 16px; bottom: 16px; width: 300px; ... }
+ *   ⇒ 只是被旧存档盖住了。
+ */
+const FW_KEY = 'ba3d-layout-v2';
+function fwLoadAll() {
+  try { return JSON.parse(localStorage.getItem(FW_KEY)) || {}; } catch (e) { return {}; }
+}
+function fwSave(el) {
+  if (!el || !el.id) return;
+  const r = el.getBoundingClientRect();
+  const all = fwLoadAll();
+  all[el.id] = {
+    left: Math.round(r.left), top: Math.round(r.top),
+    width: Math.round(r.width), height: Math.round(r.height),
+    // 折叠状态也一起存（如果这个窗口支持折叠。）
+    collapsed: !!el.dataset.fwCollapsed,
+  };
+  try { localStorage.setItem(FW_KEY, JSON.stringify(all)); } catch (e) { /* 隐私模式等 · 忽略 */ }
+}
+function fwClearAll() {
+  try { localStorage.removeItem(FW_KEY); } catch (e) {}
+}
+/** 把矩形夹回视口内（留 4px 边距、标题栏不能被拖出屏幕。）*/
+function fwClampBox(x, y, w, h) {
+  const vw = window.innerWidth, vh = window.innerHeight;
+  const W = Math.max(120, Math.min(w, vw - 8));
+  const Hh = Math.max(60, Math.min(h, vh - 8));
+  const nx = Math.max(0, Math.min(vw - W - 4, x));
+  const ny = Math.max(0, Math.min(vh - 26, y));   // 至少留 26px 标题栏
+  return { left: nx, top: ny, width: W, height: Hh };
+}
+/** 载入时恢复位置尺寸（没有记录就保持 CSS 里的默认。）*/
+function fwRestore(el) {
+  if (!el || !el.id || el.__fwRestored) return;
+  el.__fwRestored = true;
+  const b = fwLoadAll()[el.id];
+  if (!b) return;
+  const c = fwClampBox(b.left, b.top, b.width, b.height);
+  el.style.left = c.left + 'px';
+  el.style.top = c.top + 'px';
+  el.style.right = 'auto';
+  el.style.bottom = 'auto';
+  el.style.width = c.width + 'px';
+  el.style.height = c.height + 'px';
+  if (b.collapsed) el.dataset.fwCollapsed = '1', fwApplyCollapsed(el);
+}
+/** 折叠：只留标题栏（高度归零、用 flex 的 display 更稳。）*/
+function fwApplyCollapsed(el) {
+  const body = el.querySelector('.fw-body');
+  const on = !!el.dataset.fwCollapsed;
+  if (body) body.style.display = on ? 'none' : '';
+  if (on) { el.__fwH = el.getBoundingClientRect().height; el.style.height = '26px'; }
+  else if (el.__fwH) { el.style.height = el.__fwH + 'px'; el.__fwH = 0; }
+}
+/** 层级提升：点哪个窗口哪个到最前。 */
+function fwRaise(el) {
+  document.querySelectorAll('.fw, .lp, #upload').forEach((o) => o.classList.remove('raised'));
+  el.classList.add('raised');
+}
+/** 右下角缩放手柄（幂等。）*/
+function makePanelResizable(el) {
+  if (!el) return;
+  /**
+   * ★ 手柄可能已经在 HTML 里（场景窗口。），没有就补一个。
+   *
+   * ⚠️⚠️⚠️ **判据必须是「这个手柄绑过没」· 不能用 `el.__resizeBound`** ——
+   *   `partsPanel` / `lilPanel` 的内容是**重建**的（`innerHTML = ''`。）⇒
+   *   手柄（运行时 appendChild 进去的。）**被一起删掉** 
+   *   而 `el.__resizeBound` 还是 true ⇒ **永远不再补**。
+   *   ⇒ 用户看到的就是「部件 panel 不能调大小」（和「[—] 按钮消失」同一个病根。）
+   *
+   *   ⇒ 把手柄当判据、手柄没了就重建、重建后重新绑监听。
+   */
+  let grip = el.querySelector(':scope > .fw-grip') || el.querySelector(':scope > .fw-body > .fw-grip');
+  if (!grip) {
+    grip = document.createElement('div');
+    grip.className = 'fw-grip';
+    el.appendChild(grip);
+  }
+  if (grip.__resizeBound) return;      // ★ 这个手柄已经绑过了。
+  grip.__resizeBound = true;
+  let sx = 0, sy = 0, ow = 0, oh = 0, ox = 0, oy = 0, on = false;
+  grip.addEventListener('mousedown', (e) => {
+    const r = el.getBoundingClientRect();
+    // 先固化到 left/top（有的面板原来是 right/top 定位。）
+    el.style.left = r.left + 'px';
+    el.style.top = r.top + 'px';
+    el.style.right = 'auto';
+    el.style.bottom = 'auto';
+    el.style.width = r.width + 'px';
+    el.style.height = r.height + 'px';
+    sx = e.clientX; sy = e.clientY;
+    ow = r.width; oh = r.height; ox = r.left; oy = r.top;
+    on = true;
+    el.classList.add('resizing');
+    e.preventDefault(); e.stopPropagation();
+  });
+  window.addEventListener('mousemove', (e) => {
+    if (!on) return;
+    const c = fwClampBox(ox, oy, ow + (e.clientX - sx), oh + (e.clientY - sy));
+    el.style.width = c.width + 'px';
+    el.style.height = c.height + 'px';
+  });
+  window.addEventListener('mouseup', () => {
+    if (!on) return;
+    on = false;
+    el.classList.remove('resizing');
+    fwSave(el);
+  });
+  // 拖动结束也存一次（拖动由 makePanelDraggable 做。 这里只挂个 mouseup。）
+  el.addEventListener('mouseup', () => { setTimeout(() => fwSave(el), 0); });
+}
+/** 给一个窗口补齐：拖动 + 缩放 + 恢复 + 层级。 */
+function initFloatWin(el) {
+  if (!el || el.__fwInit) return;
+  el.__fwInit = true;
+  makePanelDraggable(el);
+  makePanelResizable(el);
+  fwRestore(el);
+  el.addEventListener('mousedown', () => fwRaise(el), true);
+}
+/** 给页面上所有 .lp 面板挂上拖拽（幂等、可重复调用）*/
+function enableAllPanelDrag() {
+  document.querySelectorAll('.lp').forEach((el) => {
+    ensurePanelTitle(el);
+    makePanelDraggable(el);
+    initFloatWin(el);          // ★ 缩放 + 持久化 + 层级提升
+  });
+  // 自定义模型面板（#upload）不是 .lp、它自己的 .u-title 就是把手。
+  const up = document.getElementById('upload');
+  if (up) { makePanelDraggable(up, '.u-title'); initFloatWin(up); }
+  // ★ 场景浮窗 + 所有 .fw（Unity 风格：场景是独立浮窗。）
+  document.querySelectorAll('.fw').forEach((el) => initFloatWin(el));
+}
+
+// 启动时挂上（放在定义之后、避免任何提升相关的疑义）
+enableAllPanelDrag();
+/**
+ * ⚠️ 启动时也要夹一次 —— 小屏上 #sceneWin 的默认 960×700 会超出视口。
+ *    （`fwRestore` 只在**有持久化记录**时才夹、首次访问没有记录。）
+ *    放在 requestAnimationFrame 里 ⇒ 等布局完成再量尺寸。
+ */
+requestAnimationFrame(() => {
+  document.querySelectorAll('.fw, .lp, #upload').forEach((el) => {
+    if (el.classList.contains('hidden') || !el.id) return;
+    const r = el.getBoundingClientRect();
+    if (r.width < 2 || r.height < 2) return;   // 还没布局 / 隐藏中。
+    const c = fwClampBox(r.left, r.top, r.width, r.height);
+    el.style.left = c.left + 'px';
+    el.style.top = c.top + 'px';
+    el.style.right = 'auto';
+    el.style.bottom = 'auto';
+    el.style.width = c.width + 'px';
+    el.style.height = c.height + 'px';
+  });
+});
+setTimeout(enableAllPanelDrag, 500);   // 有些面板是后建的
+/** 视口变化：把所有浮窗夹回可视区（也顺手存一次。）*/
+function fwReflowAll() {
+  document.querySelectorAll('.fw, .lp, #upload').forEach((el) => {
+    if (el.classList.contains('hidden') || !el.id) return;
+    const r = el.getBoundingClientRect();
+    const c = fwClampBox(r.left, r.top, r.width, r.height);
+    if (c.left !== Math.round(r.left) || c.top !== Math.round(r.top)) {
+      el.style.left = c.left + 'px';
+      el.style.top = c.top + 'px';
+      el.style.right = 'auto';
+    }
+  });
+}
+/** 重置布局：清掉持久化 + 重新载入（给控制台和按钮用。）*/
+function resetPanelLayout() { fwClearAll(); location.reload(); }
+window.ba3dResetLayout = resetPanelLayout;   // 控制台：ba3dResetLayout()
+
+window.addEventListener('resize', () => {   // 窗口变化时若面板跑到外面就拉回来
+  document.querySelectorAll('.lp').forEach((el) => {
+    const r = el.getBoundingClientRect();
+    if (r.left > window.innerWidth - 40 || r.top > window.innerHeight - 32) {
+      el.style.left = ''; el.style.top = ''; el.style.right = '16px';
+    }
+  });
+});
+
+function lilCurMat() {
+  // ⚠️ 必须回退到 window.__ba3dLilMat 
+  //    因为 buildLilPanel() 会先 lilPanel.innerHTML = '' 清空面板 
+  //    此时选择器元素还没重建、若只看 DOM 就会读成「全局」，面板显示错的值。
+  const el = document.getElementById('lilMatSel');
+  if (el && el.value) return el.value;
+  return window.__ba3dLilMat || '';
+}
+const lilG  = (m) => viewer.getLilConfig(m === undefined ? lilCurMat() : m);
+const lilS  = (p, m) => viewer.setLilConfig(p, m === undefined ? lilCurMat() : m);
+const lilOG = (m) => viewer.getLilOutline(m === undefined ? lilCurMat() : m);
+const lilOS = (p, m) => viewer.setLilOutline(p, m === undefined ? lilCurMat() : m);
+
+/** 套预设：目标是当前选中的材质（全局或某个材质）*/
+function lilApplyPreset(name) { return viewer.applyLilPreset(name, lilCurMat() || undefined); }
+
+/** 把材质选择器插到面板最上面（第一个 h4 之前、这样不会被折叠。）*/
+function buildLilMatSelector(lilPanel) {
+  const wrap = document.createElement('div');
+  wrap.className = 'row';
+  const sp = document.createElement('span');
+  sp.textContent = '材质';
+  sp.title = '选择要调整的目标：\n  「全部（默认）」= 改全局默认值\n  某个材质 = 只覆盖这个材质（合并显示）';
+  const sel = document.createElement('select');
+  sel.id = 'lilMatSel';
+  sel.style.flex = '1';
+  const o0 = document.createElement('option');
+  o0.value = ''; o0.textContent = '全部（默认）';
+  sel.appendChild(o0);
+  let mats = [];
+  try { mats = viewer.getLilMaterials() || []; } catch (e) { mats = []; }
+  const byMat = (() => { try { return viewer.getLilCfgByMaterial() || {}; } catch (e) { return {}; } })();
+  // 有覆盖的材质排前面、方便一眼看到改过哪些
+  mats.sort((a, b) => (!!byMat[b] - !!byMat[a]) || a.localeCompare(b));
+  for (const nm of mats) {
+    const op = document.createElement('option');
+    op.value = nm;
+    op.textContent = nm + (byMat[nm] ? '  ●' : '');
+    sel.appendChild(op);
+  }
+  // 保留上次选择（重建面板时会重新生成）
+  const keep = window.__ba3dLilMat || '';
+  if (keep && mats.includes(keep)) sel.value = keep;
+  sel.onchange = () => {
+    window.__ba3dLilMat = sel.value;
+    buildLilPanel();
+    // ⚠️ 这里**不能**再调 groupifyLilPanel()、buildLilPanel() 内部已经调过了。
+    //    （旧设计的残留、再调一次会把已归位的特殊控件重新搬一遍、下拉就坏了。）
+    // groupifyLilPanel();
+  };
+  const clr = document.createElement('button');
+  clr.type = 'button';
+  clr.textContent = '清除覆盖';
+  clr.style.flex = '0 0 auto';
+  clr.title = '把这个材质的覆盖删掉，回到全局默认值';
+  clr.onclick = () => {
+    const nm = lilCurMat();
+    if (!nm) { console.info('[lilToon] 当前选的是「全部」，没有覆盖可清除'); return; }
+    viewer.clearLilMaterialOverride(nm);
+    buildLilPanel();
+    // ⚠️ 这里**不能**再调 groupifyLilPanel()、buildLilPanel() 内部已经调过了。
+    //    （旧设计的残留、再调一次会把已归位的特殊控件重新搬一遍、下拉就坏了。）
+    // groupifyLilPanel();
+  };
+  wrap.appendChild(sp); wrap.appendChild(sel); wrap.appendChild(clr);
+  // ⚠️ 必须插到标题栏**之后**、否则会跑到标题栏上面去。
+  const __bar = lilPanel.querySelector(':scope > .lp-title');
+  if (__bar && __bar.nextSibling) lilPanel.insertBefore(wrap, __bar.nextSibling);
+  else LP().appendChild(wrap);
+  const hint = document.createElement('div');
+  hint.className = 'hint';
+  hint.textContent = '选「全部」改全局，选某个材质只覆盖它（带 ● 表示已有覆盖，面板显示的是合并后的值）';
+  lilPanel.insertBefore(hint, wrap.nextSibling);   // 提示跟在选择器后面。
+}
+
+
+function buildLilPanel() {
+  __lgTarget = null;   // ★ 每次重建都要重置、否则会沿用上次的组。
+  /**
+   * ⚠️ 重建面板时必须**清空刷新器注册表**、否则每次重建都往里追加。
+   *    （症状：重置预设 / 换材质 / 套预设之后、滑杆一动就把所有历史刷新器
+   *      都调一遍、它们指向**已经被 innerHTML='' 拆掉的旧 select** 
+   *      下拉的表现就乱了。）
+   *    和 __lgTarget 一样、属于「每次重建都要重置的模块级状态」
+   */
+  __ba3dModeSelects.length = 0;
+    /**
+     * ⚠️ **这一行原来会让整个面板变空** ——
+     *
+     *   症状：打开「lilToon 参数」面板 ⇒ 只有标题栏（`lp-title` + `fw-grip`）
+     *        后面的材质选择器 / 预设下拉 / 所有滑杆**全都没有**。
+     *        而且**控制台一条错误都没有**（调用方没打日志。）
+     *
+     *   定位过程：
+     *     · `ensurePanelTitle(lilPanel)`（2972 行。）跑过了 ⇒ title 在。
+     *     · 但之后**一条日志都没有** ⇒ 说明 2976 行之前就退出了。
+     *     · 中间只有这一行 ⇒ **就是它抛的**。
+     *
+     *   ⇒ 用 try/catch 兜住、面板不再整块消失。
+     *     而且能**把真实错误打出来**、便于定位。
+     *     （`cur` 是面板所有滑杆的初值、拿不到就退回空对象。
+     *       滑杆会用各自的默认值。 比整个面板没有好得多。）
+     */
+    let cur = {};
+    try {
+      cur = lilG() || {};
+    } catch (e) {
+      console.error('[buildLilPanel] lilG() 抛错、面板退回空初值（滑杆用各自默认）:', e && e.stack ? e.stack : e);
+      cur = {};
+    }
+    lilPanel.innerHTML = '';
+    ensurePanelTitle(lilPanel);   // 清空后把标题栏装回来（同时是拖拽把手）
+    // 标题已由 .lp-title 标题栏承担（见 ensurePanelTitle、与按钮文字一致。）
+    // 这里不再插入 h4、否则标题栏会被挤到它下面。
+
+    // ★ 材质选择器（必须放在第一个 h4 之后、其他分组之前、这样 groupify 不会折叠它。）
+    // ⚠️ 单独 try/catch：材质选择器出问题也不能让整个面板构建失败
+    try { buildLilMatSelector(lilPanel); }
+    catch (e) { console.error('[lilMatSel] 构建失败、面板会缺这一行:', e && e.stack ? e.stack : e); }
+
+    // —— lilToon 官方预设下拉 ——
+    const prow = document.createElement('div');
+    prow.className = 'row';
+    const plabel = document.createElement('span');
+    plabel.textContent = '预设';
+    const psel = document.createElement('select');
+    psel.id = 'lilPreset';
+    psel.style.flex = '1';
+    const p0 = document.createElement('option');
+    p0.value = '';
+    p0.textContent = '（不套用、保持当前）';
+    psel.appendChild(p0);
+    const pd = document.createElement('option');
+    pd.value = '__default__';
+    pd.textContent = '（重置为默认）';
+    psel.appendChild(pd);
+    viewer.getLilPresets().forEach((p) => {
+      const o = document.createElement('option');
+      o.value = p.key;
+      o.textContent = p.label;
+      psel.appendChild(o);
+    });
+    // ★ 必须在选项都加完之后再赋值（之前没有对应 option，赋值无效）
+    psel.value = activeLilPreset;
+    psel.addEventListener('change', () => {
+      activeLilPreset = psel.value;   // 记住选中项，重建时恢复
+      if (!psel.value) return;
+      lilApplyPreset(psel.value);
+      buildLilPanel();          // 预设改了一堆值、重建面板让滑杆同步。
+      // ⚠️ 这里**不能**再调 groupifyLilPanel()、buildLilPanel() 内部已经调过了。
+      //    （旧设计的残留、再调一次会把已归位的特殊控件重新搬一遍、下拉就坏了。）
+      // groupifyLilPanel();
+    });
+    prow.appendChild(plabel);
+    prow.appendChild(psel);
+    LP().appendChild(prow);
+    /* ══════════════════════════════════════════════════════════
+     * ★★ 导出 Unity 预设（用户要求：放在 lilToon 面板里、调完直接导。）
+     *    和 Unity 一个逻辑：预设的导入导出都在 lilToon 自己的选单里。
+     *
+     * ⚠️⚠️ 子着色器是必须给的 ——
+     *   主着色器 lilToon（lts）只有 FORWARD/FORWARD_ADD/SHADOW_CASTER/META
+     *   ⇒ 没有 OUTLINE pass ⇒ 材质用 lts 时 _UseOutline=1 也不渲染。
+     *   ⇒ 而 64 个变体里只有 1 个可见名（材质面板选不到其余）
+     *   ⇒ 「导出时给出正确的变体」是唯一能让那些效果在 Unity 生效的方式。
+     * ══════════════════════════════════════════════════════════ */
+    try {
+      const eopt = viewer.lilExportOptions();
+      const erow = document.createElement('div'); erow.className = 'row';
+      const elab = document.createElement('span'); elab.textContent = '导出';
+      elab.title = '导成 Unity 能直接加载的 lilToon 预设（.asset）\n只写我们已经实现的参数 · 其余保持 lilToon 默认';
+      erow.appendChild(elab);
+      const catSel = document.createElement('select');
+      catSel.id = 'lilExportCat';
+      catSel.title = '预设分类（Unity 预设面板里的七项）\n自动 = 按材质名猜：hair⇒头发 · skin⇒皮肤 · cloth⇒布料 · 其它⇒其他';
+      const c0 = document.createElement('option'); c0.value = ''; c0.textContent = '自动'; catSel.appendChild(c0);
+      eopt.categories.forEach((name, idx) => {
+        const o = document.createElement('option'); o.value = String(idx); o.textContent = name; catSel.appendChild(o);
+      });
+      catSel.value = window.__ba3dExportCat || '';
+      catSel.onchange = () => { window.__ba3dExportCat = catSel.value; updateHint(); };
+      erow.appendChild(catSel);
+      const shSel = document.createElement('select');
+      shSel.id = 'lilExportShader';
+      shSel.title = '目标子着色器（Unity 里材质用的变体）\n自动 = 按参数推导：描边 ⇒ *Outline · 裁剪/透明 ⇒ 对应变体\n⚠️ 主着色器没有描边 pass · 玻璃/毛发等变体材质面板也选不到 ⇒ 只能靠这里指定';
+      const s0 = document.createElement('option'); s0.value = ''; s0.textContent = '自动'; shSel.appendChild(s0);
+      for (const [mode, list] of Object.entries(eopt.shadersByMode)) {
+        const g = document.createElement('optgroup'); g.label = mode;
+        for (const s of list) {
+          const o = document.createElement('option'); o.value = s.name;
+          o.textContent = s.name.replace(/^Hidden\//, '');
+          g.appendChild(o);
+        }
+        shSel.appendChild(g);
+      }
+      shSel.value = window.__ba3dExportShader || '';
+      shSel.onchange = () => { window.__ba3dExportShader = shSel.value; updateHint(); };
+      erow.appendChild(shSel);
+      LP().appendChild(erow);
+      const hrow = document.createElement('div'); hrow.className = 'row'; hrow.id = 'lilExportHint';
+      hrow.style.cssText = 'font-size:11px;opacity:.72;line-height:1.5';
+      function updateHint() {
+        try {
+          const mat = (typeof lilCurMat === 'function' ? lilCurMat() : '') || undefined;
+          const manual = shSel.value || undefined;
+          const info = viewer.lilShaderInfo(mat, manual);
+          const cat = catSel.value === '' ? '自动（按材质名猜）' : eopt.categories[Number(catSel.value)];
+          hrow.textContent = '子着色器 → ' + (info ? info.name + '（' + info.why + '）' : '不改') + '　·　分类 → ' + cat;
+        } catch (e) { hrow.textContent = ''; }
+      }
+      updateHint();
+      LP().appendChild(hrow);
+      const dlTxt = (text, name) => {
+        const blob = new Blob([text], { type: 'text/plain;charset=utf-8' });
+        const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = name; a.click();
+        setTimeout(() => URL.revokeObjectURL(a.href), 3000);
+      };
+      const modelBase = () => {
+        try {
+          const u = String((viewer.exportConfig().model || {}).url || '').replace(/[?#].*$/, '');
+          return u.split('/').pop().replace(/\.[^.]*$/, '') || 'model';
+        } catch (e) { return 'model'; }
+      };
+      const optOf = () => ({
+        category: catSel.value === '' ? undefined : Number(catSel.value),
+        shader: shSel.value || undefined,
+      });
+      const brow = document.createElement('div'); brow.className = 'row';
+      const bOne = document.createElement('button'); bOne.type = 'button'; bOne.textContent = '导出当前材质';
+      bOne.title = '把当前选中的材质导成一个 .asset（文件名 = 模型名_材质名.asset）';
+      bOne.onclick = () => {
+        try {
+          const mat = (typeof lilCurMat === 'function' ? lilCurMat() : '') || undefined;
+          const base = modelBase();
+          const o = optOf();
+          const nm = mat ? base + '_' + String(mat).replace(/[\\/:*?"<>|]/g, '_') : base;
+          dlTxt(viewer.exportLilPreset({ ...o, name: mat || base, material: mat }), nm + '.asset');
+          console.info('[export] 已导出 ' + nm + '.asset');
+        } catch (e) { console.error('[export] 当前材质导出失败：', e); }
+      };
+      const bAll = document.createElement('button'); bAll.type = 'button'; bAll.textContent = '导出全部材质';
+      bAll.title = '每个材质各导一个 .asset（批量）\n分类按材质名自动猜（可先用左边的下拉强制指定）';
+      bAll.onclick = () => {
+        try {
+          const o = optOf();
+          const list = viewer.exportAllLilPresets({ ...o, baseName: modelBase() });
+          for (const x of list) dlTxt(x.text, x.filename);
+          console.info('[export] 已导出 ' + list.length + ' 个材质预设', list.map((x) => x.material + ' → ' + (x.shader || '—')));
+        } catch (e) { console.error('[export] 批量导出失败：', e); }
+      };
+      brow.appendChild(bOne); brow.appendChild(bAll);
+      LP().appendChild(brow);
+      console.debug('[lilPanel] 导出区已就位（分类 ' + eopt.categories.length + ' · 着色器组 ' + Object.keys(eopt.shadersByMode).length + ' · 材质 ' + eopt.materials.length + '）');
+    } catch (e) {
+      console.error('[export] lilToon 面板导出区构建失败（面板其余部分不受影响）:', e);
+    }
+    const phint = document.createElement('div');
+    phint.className = 'hint';
+    phint.textContent = '预设来自 lilToon 官方 Presets';
+    LP().appendChild(phint);
+  
+    const hint = document.createElement('div');
+    hint.className = 'hint';
+    hint.textContent = '需先把「着色器」切到 lilToon 风格。四项特性默认关闭（强度 0），调大即生效。';
+    LP().appendChild(hint);
+  
+    for (const [path, label, min, max, step] of LIL_CTRL) {
+      if (label === null) {
+        const h = document.createElement('h4');
+        h.textContent = path;
+        LP().appendChild(h);
+        continue;
+      }
+      const row = document.createElement('div');
+      row.className = 'row';
+      const name = document.createElement('span');
+      name.textContent = label;
+      row.appendChild(name);
+  
+      const v0 = lilGet(cur, path);
+      const range = document.createElement('input');
+      range.type = 'range';
+      range.min = min; range.max = max; range.step = step;
+      // ⚠️ 必须显式转数字：
+      //   outline.enable 是布尔 false，直接 range.value = false 会被赋成字符串 "false"，
+      //   对 <input type=range> 非法 → 浏览器退回默认值（上界 1）
+      //   → 表现是「显示启用但实际没启用，要拉 1→0→1 才生效」
+      range.value = (v0 === null || v0 === undefined) ? min
+        : (typeof v0 === 'boolean' ? (v0 ? 1 : 0) : Number(v0));
+      const num = document.createElement('input');
+      num.type = 'number';
+      num.min = min; num.max = max; num.step = step;
+      num.value = range.value;
+      const sync = (v) => {
+        const f = Math.max(Number(min), Math.min(Number(max), Number(v)));
+        range.value = f; num.value = f;
+        lilApply(path, f);
+        // ★ 让「模板模式」下拉跟上（拖 Comp/Pass 时它会变成「（自定义…）」）
+        for (const rf of __ba3dModeSelects) rf();
+      };
+      range.addEventListener('input', () => sync(range.value));
+      num.addEventListener('change', () => sync(num.value));
+      row.appendChild(range);
+      row.appendChild(num);
+      LP().appendChild(row);
+    }
+
+    /**
+     * ★ 在这里建分组容器、时机很关键：
+     *    必须在 LIL_CTRL 循环**之后**（那时才存在各个 h4。）
+     *    也必须在所有特殊控件**之前**（它们要按名字找组。）
+     *
+     * ⚠️ 踩过的坑：把这次调用删掉之后、分组容器一个都没建 
+     *    __lilGroupsByName 是空的、lg() 全部回退到面板本身、面板变平。
+     */
+    groupifyLilPanel();
+  
+    // 第三层阴影开关（颜色为 null 表示不用第三层）
+    __lgTarget = lg('阴影分档');
+    const r3 = document.createElement('div');
+    r3.className = 'row';
+    const c3 = document.createElement('input');
+    c3.type = 'checkbox';
+    c3.id = 'lil3rd';
+    c3.checked = !!cur.shadow3rdColor;
+    c3.addEventListener('change', () => lilS({ shadow3rdColor: c3.checked ? [0, 0, 0] : null }));
+    const l3 = document.createElement('span');
+    l3.textContent = '第三层阴影';
+    l3.style.flex = '1';
+    r3.appendChild(l3); r3.appendChild(c3);
+    r3.dataset.lil = 'shadow';
+    LP().appendChild(r3);
+
+    // —— 阴影颜色（三层、每层 RGB + alpha）——
+    __lgTarget = lg('阴影分档');
+    //   ⚠️ alpha 就是「这一层多强」（lilToon 的 _ShadowColor.a / _Shadow2ndColor.a / _Shadow3rdColor.a）
+    //      19 个官方预设里有 11 个的 shadow2ndColor alpha = 0（= 第二层关闭）
+    //      之前实现只取 RGB、那些预设全变成「纯黑满强度」，暗得离谱。
+    // ⚠️ 自己算 hex、不能用文件下方那个 hex()（const 不提升、TDZ 会报
+    //    "can't access lexical declaration 'hex' before initialization"）
+    const rgb2hex = (c) => '#' + [0, 1, 2].map((i) => {
+      const v = Math.max(0, Math.min(255, Math.round(Number(c[i]) * 255)));
+      return v.toString(16).padStart(2, '0');
+    }).join('');
+    const mkShadowColor = (label, key, hint) => {
+      const row = document.createElement('div');
+      row.className = 'row';
+      const sp = document.createElement('span');
+      sp.textContent = label;
+      const ci = document.createElement('input');
+      ci.type = 'color';
+      ci.style.flex = '0 0 auto';
+      const ai = document.createElement('input');
+      ai.type = 'range'; ai.min = 0; ai.max = 1; ai.step = 0.01; ai.style.flex = '1';
+      ai.title = '这一层多强：0 = 关闭该层，1 = 满强度';
+      const an = document.createElement('input');
+      an.type = 'number'; an.min = 0; an.max = 1; an.step = 0.01; an.style.width = '52px';
+      const cur = lilG()[key];
+      const isArr = Array.isArray(cur) && cur.length >= 3;
+      const a0 = (isArr && cur.length >= 4 && isFinite(Number(cur[3]))) ? Math.max(0, Math.min(1, Number(cur[3]))) : 1;
+      ci.value = isArr ? rgb2hex([cur[0], cur[1], cur[2]]) : '#ffffff';
+      ai.value = String(a0); an.value = String(a0);
+      const rgbNow = () => {
+        const v = ci.value;
+        return [parseInt(v.slice(1, 3), 16) / 255, parseInt(v.slice(3, 5), 16) / 255, parseInt(v.slice(5, 7), 16) / 255];
+      };
+      const apply = (a3) => { const c = rgbNow(); lilS({ [key]: [c[0], c[1], c[2], Math.max(0, Math.min(1, Number(a3)))] }); };
+      ci.oninput = () => apply(ai.value);
+      const setA = (v) => {
+        const f = Math.max(0, Math.min(1, Number(v)));
+        ai.value = String(f); an.value = String(f); apply(f);
+      };
+      ai.oninput = () => setA(ai.value);
+      an.onchange = () => setA(an.value);
+      row.appendChild(sp); row.appendChild(ci); row.appendChild(ai); row.appendChild(an);
+      row.dataset.lil = 'shadow';   // 供 groupify 归入「阴影分档」组
+      __lgTarget = lg('阴影分档');
+      LP().appendChild(row);
+      if (hint) {
+        const hh = document.createElement('div');
+        hh.className = 'hint';
+        hh.textContent = hint;
+        hh.dataset.lil = 'shadow';
+        LP().appendChild(hh);
+      }
+    };
+    mkShadowColor('阴影色', 'shadowColor');
+    mkShadowColor('第二层色', 'shadow2ndColor', '滑杆 = 第二层多强（0 = 关闭这一层、lilToon 的 _Shadow2ndColor.a）');
+    mkShadowColor('第三层色', 'shadow3rdColor', '滑杆 = 第三层多强（需先勾上「第三层阴影」）');
+
+    // —— 模板模式下拉（不存配置、从 comp/pass 推导、和 lilToon 编辑器一样。）——
+    (function () {
+      /**
+       * lilToon 的 4 个模式（lilInspector.cs:4389-4392、只看 Comp 与 Pass。）：
+       *   0 Normal         Comp=Always(8)   Pass=Keep(0)      不参与模板
+       *   1 Writer         Comp=Always(8)   Pass=Replace(2)   写标记
+       *   2 Reader         Comp=NotEqual(6) Pass=Keep(0)      **避开**标记区域
+       *   3 Reader(Invert) Comp=Equal(3)    Pass=Keep(0)      **只显示在**标记区域
+       * ⚠️ 2 和 3 的名字与直觉**相反**、所以标签里写清语义。
+       * （Reader(Fade) 需要 TwoPass 透明、我们没有两趟渲染、不做。）
+       */
+      const MODES = [
+        { ci: 8, pi: 0, label: '不参与模板（Comp=总是、Pass=保持）' },
+        { ci: 8, pi: 2, label: '写标记：把这里标记为 Ref 值（Pass=替换）' },
+        { ci: 6, pi: 0, label: '避开标记：只在没有标记的地方显示（Comp=不等于）' },
+        { ci: 3, pi: 0, label: '只显示在标记处：只在有标记的地方显示（Comp=等于）' },
+      ];
+      const mkMode = (groupKey, tag, hint, pre, label) => {
+      // ⚠️ 描边的字段是**平铺**的（stencilComp、不是 comp。），所以要带前缀。
+      // ⚠️ 要拼成**驼峰**、'stencil' + 'comp' 会得到 'stencilcomp'、字段其实叫 stencilComp。
+      //    拼错的后果是读不到 → NaN、而且写入的字段名也是错的 → 静默无效。
+      // ⚠️ **不能**用「首字母大写」的通用驼峰拼接 
+      //    zfail → stencilZfail、但配置字段其实叫 **stencilZFail**（F 也大写。）
+      //    所以用**显式映射表**、而且让 check-panel.mjs 去核对字段名真实存在。
+      const K = (n) => {
+        if (!pre) return n;
+        const MAP = { comp: 'Comp', pass: 'Pass', fail: 'Fail', zfail: 'ZFail' };
+        return pre + (MAP[n] || n.charAt(0).toUpperCase() + n.slice(1));
+      };
+        const row = document.createElement('div');
+        row.className = 'row';
+        const sp = document.createElement('span');
+        sp.textContent = label || '模板模式';
+        const sel = document.createElement('select');
+        sel.style.flex = '1';
+        MODES.forEach((m, i2) => {
+          const o = document.createElement('option');
+          o.value = String(i2);
+          o.textContent = m.label;
+          sel.appendChild(o);
+        });
+        // ★ 刷新闭包：建面板时调一次、之后滑杆变化也调它。
+        const customOpt = document.createElement('option');
+        customOpt.value = '-1';
+        const refresh = () => {
+          const cur = lilG()[groupKey] || {};
+          const ci = Math.round(Number(cur[K('comp')]));
+          const pi = Math.round(Number(cur[K('pass')]));
+          const hit = MODES.findIndex((m) => m.ci === ci && m.pi === pi);
+          if (hit >= 0) {
+            if (customOpt.parentNode) customOpt.remove();
+            sel.value = String(hit);
+          } else {
+            const f = (v) => (isFinite(v) ? v : '?');
+            customOpt.textContent = '（自定义：Comp=' + f(ci) + '、Pass=' + f(pi) + '）';
+            if (!customOpt.parentNode) sel.appendChild(customOpt);
+            sel.value = '-1';
+          }
+        };
+        refresh();
+        __ba3dModeSelects.push(refresh);
+        sel.onchange = () => {
+          const i2 = Number(sel.value);
+          if (i2 < 0) return;
+          const m = MODES[i2];
+          // ⚠️ 只改 Comp/Pass/Fail/ZFail、保留用户设的 Ref 与两个 Mask。
+          lilS({ [groupKey]: { [K('comp')]: m.ci, [K('pass')]: m.pi, [K('fail')]: 0, [K('zfail')]: 0 } });
+        };
+        row.appendChild(sp); row.appendChild(sel);
+        row.dataset.lil = tag;
+        // ★ 按 tag 定位到目标分组、不再靠事后搬。
+        if (tag === 'stencil') __lgTarget = lg('Stencil 模型');
+        if (tag === 'outlineStencil') __lgTarget = lg('Stencil 描边');
+        LP().appendChild(row);
+        if (hint) {
+          const hh = document.createElement('div');
+          hh.className = 'hint'; hh.textContent = hint; hh.dataset.lil = tag;
+          LP().appendChild(hh);
+        }
+      };
+      mkMode('stencil', 'stencil', '选好模式后、记得把「启用」调到 1、并把「Ref」设成你要的标记值（Writer 和 Reader 两边要一致。）');
+      // ⚠️ 标签要能区分、两个下拉现在都在「Stencil」组里。
+      mkMode('outline', 'outlineStencil', '描边的模板模式、需要先把本组的「启用」调到 1、并让「Ref」与本体一致（Writer 和 Reader 两边要一样。）', 'stencil');
+    })();
+
+    // —— 描边贴图的 UV 变换 / HSV（_OutlineTex_ST / _OutlineTex_ScrollRotate / _OutlineTexHSVG）——
+    __lgTarget = lg('描边 Outline');
+    //   ⚠️ 文案要能被 groupify 的描边正则匹配到、否则会掉进「背光」组。
+    (function () {
+      const oc = () => (lilG().outline || {});
+      const mkVec4 = (label, field, defs, titles, hint) => {
+        const row = document.createElement('div');
+        row.className = 'row';
+        const sp = document.createElement('span');
+        sp.textContent = label;
+        sp.style.flex = '0 0 92px';
+        row.appendChild(sp);
+        const cur = Array.isArray(oc()[field]) && oc()[field].length >= 4 ? oc()[field] : defs;
+        const ins = [];
+        titles.forEach((t, i) => {
+          const inp = document.createElement('input');
+          inp.type = 'number'; inp.step = 0.01; inp.value = String(Number(cur[i]));
+          inp.title = t;
+          inp.style.width = '46px';
+          inp.onchange = () => {
+            const v = ins.map((e2) => Number(e2.value) || 0);
+            lilS({ outline: { [field]: v } });
+          };
+          ins.push(inp);
+          row.appendChild(inp);
+        });
+        __lgTarget = lg('描边 Outline');
+        LP().appendChild(row);
+        if (hint) {
+          const hh = document.createElement('div');
+          hh.className = 'hint'; hh.textContent = hint;
+          LP().appendChild(hh);
+        }
+      };
+      mkVec4('描边贴图UV', 'texST', [1, 1, 0, 0],
+        ['tiling X（_OutlineTex_ST.x）', 'tiling Y', 'offset X', 'offset Y'],
+        '_OutlineTex_ST：uv * tiling + offset（默认 1,1,0,0、全默认时走 three 原生贴图路径。）');
+      mkVec4('描边贴图滚动', 'texScrollRotate', [0, 0, 0, 0],
+        ['scroll X（每秒）', 'scroll Y（每秒）', 'angle（弧度）', 'angleSpeed（弧度/秒）'],
+        '_OutlineTex_ScrollRotate：滚动 + 旋转（默认 0,0,0,0。），动画播放时会动起来。');
+      mkVec4('描边贴图HSV', 'texHSVG', [0, 1, 1, 1],
+        ['色相偏移（0~1）', '饱和度倍率', '明度倍率', 'gamma'],
+        '_OutlineTexHSVG：lilToneCorrection（默认 0,1,1,1、等于不调整。）');
+    })();
+
+    // —— 装饰层的「混合遮罩」贴图（_MatCapBlendMask / _MatCap2ndBlendMask / _EmissionBlendMask）——
+    //   ⚠️ lilToon 只有这三处有 BlendMask、Rim / Backlight 都没有（已核对源码。）
+    (function () {
+      const mkMask = (groupKey, tag, hint) => {
+        const row = document.createElement('div');
+        row.className = 'row';
+        const sp = document.createElement('span');
+        sp.textContent = '混合遮罩';
+        const btn = document.createElement('button');
+        btn.type = 'button'; btn.textContent = '选择文件'; btn.style.flex = '0 0 auto';
+        const clr = document.createElement('button');
+        clr.type = 'button'; clr.textContent = '清除'; clr.style.flex = '0 0 auto';
+        const nm = document.createElement('span');
+        nm.style.cssText = 'flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:#6b7385;font-size:10.5px';
+        const cur = (lilG()[groupKey] && lilG()[groupKey].blendMask) || '';
+        nm.textContent = cur ? String(cur).split('/').pop() : '（未设置 = 全区域生效）';
+        const fi = document.createElement('input');
+        fi.type = 'file'; fi.accept = 'image/*'; fi.style.display = 'none';
+        fi.onchange = () => {
+          const f = fi.files && fi.files[0];
+          if (!f) return;
+          lilS({ [groupKey]: { blendMask: URL.createObjectURL(f) } });
+          nm.textContent = f.name;
+        };
+        btn.onclick = () => fi.click();
+        clr.onclick = () => { lilS({ [groupKey]: { blendMask: null } }); nm.textContent = '（未设置 = 全区域生效）'; };
+        row.appendChild(sp); row.appendChild(btn); row.appendChild(clr); row.appendChild(nm); row.appendChild(fi);
+        row.dataset.lil = tag;
+        // ★ 按 tag 定位到目标分组、不再靠事后搬。
+        if (tag === 'matcap') __lgTarget = lg('MatCap');
+        if (tag === 'matcap2nd') __lgTarget = lg('MatCap 2nd');
+        if (tag === 'emission') __lgTarget = lg('自发光');
+        if (tag === 'emission2nd') __lgTarget = lg('自发光 2nd');
+        LP().appendChild(row);
+        if (hint) {
+          const hh = document.createElement('div');
+          hh.className = 'hint'; hh.textContent = hint; hh.dataset.lil = tag;
+          LP().appendChild(hh);
+        }
+      };
+      mkMask('matcap', 'matcap', '_MatCapBlendMask：取 **RGB**、黑白图控制生效区域、噪声图可做局部湿痕/斑驳。');
+      mkMask('matcap2nd', 'matcap2nd', '_MatCap2ndBlendMask：同上、取 RGB。');
+      mkMask('emission', 'emission', '_EmissionBlendMask：整体 RGBA 乘到自发光、rgb 调色、a 调强度。');
+      mkMask('emission2nd', 'emission2nd', '_Emission2ndBlendMask：同上、和 1st 各有一份。');
+    })();
+
+    // _DitherTex：贴图行必须这样构造（LIL_CTRL 里的 'tex' 标记是无效的 · 踩过）
+    (function () {
+      __lgTarget = lg('抖动 Dither');
+      const row = document.createElement('div');
+      row.className = 'row';
+      const sp = document.createElement('span');
+      sp.textContent = '抖动贴图';
+      const btn = document.createElement('button');
+      btn.type = 'button'; btn.textContent = '选择文件'; btn.style.flex = '0 0 auto';
+      const b4 = document.createElement('button');
+      b4.type = 'button'; b4.textContent = 'Bayer4'; b4.style.flex = '0 0 auto';
+      b4.title = '内置 4x4 有序抖动矩阵';
+      const b8 = document.createElement('button');
+      b8.type = 'button'; b8.textContent = 'Bayer8'; b8.style.flex = '0 0 auto';
+      b8.title = '内置 8x8 有序抖动矩阵';
+      const clr = document.createElement('button');
+      clr.type = 'button'; clr.textContent = '清除'; clr.style.flex = '0 0 auto';
+      const nm = document.createElement('span');
+      nm.style.cssText = 'flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:#6b7280;font-size:12px';
+      const UNSET = '(未设置 = 1x1 白 => .r=1 => 阈值 0.996 => 几乎全丢)';
+      const cur = (lilG().dither && lilG().dither.url) || '';
+      nm.textContent = cur ? String(cur).split('/').pop() : UNSET;
+      const fi = document.createElement('input');
+      fi.type = 'file'; fi.accept = 'image/*'; fi.style.display = 'none';
+      fi.onchange = () => {
+        const f = fi.files && fi.files[0];
+        if (!f) return;
+        lilS({ dither: { url: URL.createObjectURL(f) } });
+        nm.textContent = f.name;
+      };
+      btn.onclick = () => fi.click();
+      b4.onclick = () => { lilS({ dither: { url: 'assets/test/dither-bayer4.png' } }); nm.textContent = 'dither-bayer4.png'; };
+      b8.onclick = () => { lilS({ dither: { url: 'assets/test/dither-bayer8.png' } }); nm.textContent = 'dither-bayer8.png'; };
+      clr.onclick = () => { lilS({ dither: { url: null } }); nm.textContent = UNSET; };
+      row.appendChild(sp); row.appendChild(btn); row.appendChild(b4); row.appendChild(b8);
+      row.appendChild(clr); row.appendChild(nm); row.appendChild(fi);
+      row.dataset.lil = 'dither';
+      LP().appendChild(row);
+    })();
+
+    // —— 法线贴图的两张图（_BumpMap / _Bump2ndMap、字段是嵌套的。）——
+    (function () {
+      __lgTarget = lg('法线 Normal');
+      /**
+       * 和 MatCap/自发光那几行一样、带「选择文件 / 清除」的贴图行。
+       * ⚠️ 法线贴图要走 NoColorSpace（存的是向量、不是颜色。），resolveNormalTexture 负责。
+       */
+      const mkNrmRow = (key, field, label, hint) => {
+        const G = () => (lilG()[key] || {});
+        const row = document.createElement('div');
+        row.className = 'row';
+        const sp = document.createElement('span');
+        sp.textContent = label;
+        const btn = document.createElement('button');
+        btn.type = 'button'; btn.textContent = '选择文件'; btn.style.flex = '0 0 auto';
+        const clr = document.createElement('button');
+        clr.type = 'button'; clr.textContent = '清除'; clr.style.flex = '0 0 auto';
+        const nm = document.createElement('span');
+        nm.style.cssText = 'flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:11px;opacity:.8';
+        const cur = G()[field] || '';
+        nm.textContent = cur ? String(cur).split('/').pop() : '（未设置）';
+        const fi = document.createElement('input');
+        fi.type = 'file'; fi.accept = 'image/*'; fi.style.display = 'none';
+        fi.onchange = () => {
+          const f = fi.files && fi.files[0];
+          if (!f) return;
+          // ⚠️ 选图时顺手把 use 打开、否则选了没反应（用户会以为坏了。）
+          lilS({ [key]: { [field]: URL.createObjectURL(f), use: true } });
+          nm.textContent = f.name;
+        };
+        btn.onclick = () => fi.click();
+        clr.onclick = () => { lilS({ [key]: { [field]: null, use: false } }); nm.textContent = '（未设置）'; };
+        row.appendChild(sp); row.appendChild(btn); row.appendChild(clr); row.appendChild(nm);
+        row.dataset.lil = 'normal';
+        LP().appendChild(row);
+        const hh = document.createElement('div');
+        hh.className = 'hint'; hh.textContent = hint; hh.dataset.lil = 'normal';
+        LP().appendChild(hh);
+      };
+      {
+  const hn = document.createElement('div');
+  hn.className = 'hint';
+  hn.textContent = '⚠️ 两条「启用」滑杆是**总开关**（对应 _UseBumpMap / _UseBump2ndMap、lilToon 里默认就是关的），贴图选了但「启用」= 0 时完全不生效、选文件时会自动帮你打开、若贴图没反应，先看这两条是不是 1。';
+  hn.dataset.lil = 'normal';
+  LP().appendChild(hn);
+}
+mkNrmRow('bump', 'tex', '1st 法线贴图', '_BumpMap：切线空间法线、走 three 原生管线（必需是法线图、不是灰度图。）');
+      mkNrmRow('bump2nd', 'tex', '2nd 法线贴图', '_Bump2ndMap：和 1st 用 Whiteout blend 混合、叠加细节。');
+      mkNrmRow('bump2nd', 'scaleMask', '2nd 强度遮罩', '_Bump2ndScaleMask：采样 .r 乘到 2nd 的强度上、控制哪里用第二张。');
+      // MatCap 的自定义法线（_MatCapBumpMap、只影响 MatCap 的 UV 计算。）
+      mkNrmRow('matcap', 'bumpMap', 'MatCap 法线图', '_MatCapBumpMap：只在「MatCap 自定法线」=1 时生效、用它替换 MatCap 的法线。');
+      mkNrmRow('matcap2nd', 'bumpMap', 'MatCap2nd 法线图', '_MatCap2ndBumpMap：同上、两层各一张。');
+    })();
+
+    // —— 主色层的层溶解：边缘颜色 + 两张贴图（main2nd / main3rd 各一套。）——
+    (function () {
+      /**
+       * lilToon 的层溶解每层有：
+       *   _Main2ndDissolveColor   ← 边缘发光的颜色（加算。）
+       *   _Main2ndDissolveMask    ← 模式 1 用的遮罩（采样 .r。）
+       *   _Main2ndDissolveNoiseMask ← 噪声扰动。
+       * 位置/ST/旋转那些 vec4 参数不上面板、用默认值（0 / 1,1,0,0。）
+       */
+      /**
+       * ⚠️ rgb2h 在这个文件里是**每个 IIFE 各自定义的局部函数**、没有全局版本。
+       *    （踩过一次：mkLayerDis 直接用它 → ReferenceError: rgb2h is not defined 
+       *      面板整个空白、因为异常被 buildLilPanel 的 try/catch 吞了。）
+       */
+      const rgb2h = (c) => '#' + [0, 1, 2].map((i) => {
+        const v = Math.max(0, Math.min(255, Math.round(Number(c[i]) * 255)));
+        return v.toString(16).padStart(2, '0');
+      }).join('');
+      const mkLayerDis = (key, tag, label) => {
+        const G = () => (lilG()[key] || {});
+        if (tag === 'main2nd') __lgTarget = lg('主色层 2nd');
+        if (tag === 'main3rd') __lgTarget = lg('主色层 3rd');
+        /**
+         * ⚠️ 两种坐标模式、用错了会以为「没切开」
+         *
+         *   模式 2（UV）—— lilToon 传的是**网格 UV0**（fd.uv0。）
+         *     角色模型的 UV0 是**贴图图集**、各 UV 岛散落在 [0,1] 里 
+         *     所以 distance(uv, pos.xy) 切出来是**一堆散落的碎块**。
+         *     这个模式本来是给 UV 干净的物体用的、**Unity 里也一样**。
+         *
+         *   模式 3（对象坐标）—— 按模型包围盒归一化后的位置。
+         *     模型映到单位立方体、中心在原点 ⇒ 阈值 0~0.5 扫过大部分表面。
+         *     ⇒ **角色模型请用这个**。
+         *
+         *   另：图层颜色默认白、白色叠在本来就亮的模型上 ⇒ 切开只是「少提亮一点」
+         *       ⇒ 先把图层颜色设成明显色（比如红），边界立刻可见。
+         */
+        {
+          const hd = document.createElement('div');
+          hd.className = 'hint';
+          hd.textContent = '层溶解：模式 2 用的是网格 UV0、角色模型是贴图图集 ⇒ 会切出碎块（Unity 里同样如此），想在角色上切出整块请选模式 3「对象坐标」 另外图层颜色默认是白色 ⇒ 对比度低，先把颜色改成明显色更容易看清边界。';
+          hd.dataset.lil = tag;
+          LP().appendChild(hd);
+        }
+        // 边缘颜色
+        const rc = document.createElement('div');
+        rc.className = 'row';
+        const sc = document.createElement('span');
+        sc.textContent = label + '溶解边缘色';
+        const ci = document.createElement('input');
+        ci.type = 'color'; ci.style.flex = '1';
+        const c0 = G().dissolveColor || [1, 1, 1];
+        ci.value = rgb2h([c0[0], c0[1], c0[2], 1]);
+        ci.oninput = () => {
+          const v = ci.value;
+          const r = parseInt(v.slice(1, 3), 16) / 255, g2 = parseInt(v.slice(3, 5), 16) / 255, b2 = parseInt(v.slice(5, 7), 16) / 255;
+          lilS({ [key]: { dissolveColor: [r, g2, b2] } });
+        };
+        rc.appendChild(sc); rc.appendChild(ci);
+        rc.dataset.lil = tag;
+        LP().appendChild(rc);
+        const hc = document.createElement('div');
+        hc.className = 'hint';
+        hc.textContent = '_Main' + (tag === 'main3rd' ? '3rd' : '2nd') + 'DissolveColor：边缘是**加算成发光**的、不想要就设成黑色。';
+        hc.dataset.lil = tag;
+        LP().appendChild(hc);
+        // 两张贴图
+        for (const [field, name, hint] of [
+          ['dissolveMask', '溶解遮罩', '_DissolveMask：模式 1 用、采样 .r。'],
+          ['dissolveNoiseMask', '溶解噪声', '_DissolveNoiseMask：让边界不规则。'],
+        ]) {
+          const row = document.createElement('div');
+          row.className = 'row';
+          const sp = document.createElement('span');
+          sp.textContent = label + name;
+          const btn = document.createElement('button');
+          btn.type = 'button'; btn.textContent = '选择文件'; btn.style.flex = '0 0 auto';
+          const clr = document.createElement('button');
+          clr.type = 'button'; clr.textContent = '清除'; clr.style.flex = '0 0 auto';
+          const nm = document.createElement('span');
+          nm.style.cssText = 'flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:11px;opacity:.8';
+          const cur = G()[field] || '';
+          nm.textContent = cur ? String(cur).split('/').pop() : '（未设置）';
+          const fi = document.createElement('input');
+          fi.type = 'file'; fi.accept = 'image/*'; fi.style.display = 'none';
+          fi.onchange = () => {
+            const f = fi.files && fi.files[0];
+            if (!f) return;
+            /**
+             * ★ 给**层的主贴图**（tex）选文件时 · 顺带把该层「启用」打开
+             *
+             * 理由（实测踩到的）：用户的心智模型是「选了贴图 = 这层就在用了」·
+             * 而 lilToon 的 _UseMain2ndTex 是**单独一个开关** ⇒
+             * 不打开的话层生成器第一行就 return null ⇒ **后面所有参数都没反应** ·
+             * 但面板上贴图那行明明显示了文件名 ⇒ 看起来「设了却没效果」
+             * （用户原话：「我是用上传贴图当启用了」）
+             *
+             * ⚠️ 只对 `tex` 生效 · `blendMask` / `maskTex` / `noiseTex` 不动「启用」
+             *    （遮罩是辅助字段 · 不该顺带开层）
+             */
+            const patch = { [key]: { [field]: URL.createObjectURL(f) } };
+            if (field === 'tex') patch[key].use = true;
+            lilS(patch);
+            nm.textContent = f.name;
+            if (field === 'tex' && typeof console !== 'undefined') {
+              console.debug('[layer] ' + key + '：选了贴图 ⇒ 已自动把「启用」打开。');
+            }
+          };
+          btn.onclick = () => fi.click();
+          clr.onclick = () => { lilS({ [key]: { [field]: null } }); nm.textContent = '（未设置）'; };
+          row.appendChild(sp); row.appendChild(btn); row.appendChild(clr); row.appendChild(nm);
+          row.dataset.lil = tag;
+          LP().appendChild(row);
+          const hh = document.createElement('div');
+          hh.className = 'hint'; hh.textContent = hint; hh.dataset.lil = tag;
+          LP().appendChild(hh);
+        }
+      };
+      mkLayerDis('main2nd', 'main2nd', '2nd ');
+      mkLayerDis('main3rd', 'main3rd', '3rd ');
+    })();
+    // —— MatCap 的染色（_MatCapColor / _MatCap2ndColor、完整版才有的。）——
+    (function () {
+      const rgb2h = (c) => '#' + [0, 1, 2].map((i) => {
+        const v = Math.max(0, Math.min(255, Math.round(Number(c[i]) * 255)));
+        return v.toString(16).padStart(2, '0');
+      }).join('');
+      const mkTint = (key, tag, label) => {
+        const cur0 = () => (lilG()[key] || {});
+        const row = document.createElement('div');
+        row.className = 'row';
+        const sp = document.createElement('span');
+        sp.textContent = label || '染色';
+        const ci = document.createElement('input');
+        ci.type = 'color'; ci.style.flex = '0 0 auto';
+        const c0 = cur0().color || [1, 1, 1, 1];
+        ci.value = rgb2h(c0);
+        const ai = document.createElement('input');
+        ai.type = 'range'; ai.min = 0; ai.max = 1; ai.step = 0.01; ai.style.flex = '1';
+        ai.title = '染色强度（_MatCapColor.a。）';
+        const an = document.createElement('input');
+        an.type = 'number'; an.min = 0; an.max = 1; an.step = 0.01; an.style.width = '52px';
+        const a0 = (c0.length >= 4 && isFinite(Number(c0[3]))) ? Number(c0[3]) : 1;
+        ai.value = String(a0); an.value = String(a0);
+        const rgbNow = () => {
+          const v = ci.value;
+          return [parseInt(v.slice(1, 3), 16) / 255, parseInt(v.slice(3, 5), 16) / 255, parseInt(v.slice(5, 7), 16) / 255];
+        };
+        const put = (a4) => { const c = rgbNow(); lilS({ [key]: { color: [c[0], c[1], c[2], Math.max(0, Math.min(1, Number(a4)))] } }); };
+        ci.oninput = () => put(ai.value);
+        const setA = (v) => { const f = Math.max(0, Math.min(1, Number(v))); ai.value = String(f); an.value = String(f); put(f); };
+        ai.oninput = () => setA(ai.value);
+        an.onchange = () => setA(an.value);
+        row.appendChild(sp); row.appendChild(ci); row.appendChild(ai); row.appendChild(an);
+        row.dataset.lil = tag;
+        // ★ 按 tag 定位到目标分组、不再靠事后搬。
+        if (tag === 'matcap') __lgTarget = lg('MatCap');
+        if (tag === 'matcap2nd') __lgTarget = lg('MatCap 2nd');
+        if (tag === 'emission') __lgTarget = lg('自发光');
+        if (tag === 'emission2nd') __lgTarget = lg('自发光 2nd');
+        LP().appendChild(row);
+      };
+      mkTint('matcap', 'matcap');
+      mkTint('matcap2nd', 'matcap2nd');
+      mkTint('emission', 'emission', '颜色');
+      mkTint('emission2nd', 'emission2nd', '颜色');
+    })();
+
+    // —— 主色层 2nd / 3rd 的颜色与贴图 ——
+    //   ⚠️ 全部打 data-lil='main2nd' / 'main3rd'、由 groupify 搬进对应分组。
+    (function () {
+      const rgb2h = (c) => '#' + [0, 1, 2].map((i) => {
+        const v = Math.max(0, Math.min(255, Math.round(Number(c[i]) * 255)));
+        return v.toString(16).padStart(2, '0');
+      }).join('');
+      const mkLayer = (key, tag) => {
+        const cur0 = () => (lilG()[key] || {});
+        // 颜色 + alpha
+        const rc = document.createElement('div');
+        rc.className = 'row';
+        const lc = document.createElement('span');
+        lc.textContent = '颜色';
+        const ci = document.createElement('input');
+        ci.type = 'color'; ci.style.flex = '0 0 auto';
+        const c0 = cur0().color || [1, 1, 1, 1];
+        ci.value = rgb2h(c0);
+        const ai = document.createElement('input');
+        ai.type = 'range'; ai.min = 0; ai.max = 1; ai.step = 0.01; ai.style.flex = '1';
+        ai.title = '这一层的不透明度（_Color2nd.a。）';
+        const an = document.createElement('input');
+        an.type = 'number'; an.min = 0; an.max = 1; an.step = 0.01; an.style.width = '52px';
+        const a0 = (c0.length >= 4 && isFinite(Number(c0[3]))) ? Number(c0[3]) : 1;
+        ai.value = String(a0); an.value = String(a0);
+        const rgbNow = () => {
+          const v = ci.value;
+          return [parseInt(v.slice(1, 3), 16) / 255, parseInt(v.slice(3, 5), 16) / 255, parseInt(v.slice(5, 7), 16) / 255];
+        };
+        const put = (a4) => { const c = rgbNow(); lilS({ [key]: { color: [c[0], c[1], c[2], Math.max(0, Math.min(1, Number(a4)))] } }); };
+        ci.oninput = () => put(ai.value);
+        const setA = (v) => { const f = Math.max(0, Math.min(1, Number(v))); ai.value = String(f); an.value = String(f); put(f); };
+        ai.oninput = () => setA(ai.value);
+        an.onchange = () => setA(an.value);
+        rc.appendChild(lc); rc.appendChild(ci); rc.appendChild(ai); rc.appendChild(an);
+        rc.dataset.lil = tag;
+        // ★ 按 tag 定位到目标分组、不再靠事后搬。
+        if (tag === 'main2nd') __lgTarget = lg('主色层 2nd');
+        if (tag === 'main3rd') __lgTarget = lg('主色层 3rd');
+        LP().appendChild(rc);
+        // 贴图 / 遮罩
+        const mkTex = (label, field, hint) => {
+          const row = document.createElement('div');
+          row.className = 'row';
+          const sp = document.createElement('span');
+          sp.textContent = label;
+          const btn = document.createElement('button');
+          btn.type = 'button'; btn.textContent = '选择文件'; btn.style.flex = '0 0 auto';
+          const clr = document.createElement('button');
+          clr.type = 'button'; clr.textContent = '清除'; clr.style.flex = '0 0 auto';
+          const nm = document.createElement('span');
+          nm.style.cssText = 'flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:#6b7385;font-size:10.5px';
+          const cu = cur0()[field] || null;
+          nm.textContent = cu ? String(cu).split('/').pop() : '（未设置）';
+          const fi = document.createElement('input');
+          fi.type = 'file'; fi.accept = 'image/*'; fi.style.display = 'none';
+          fi.onchange = () => {
+            const f = fi.files && fi.files[0];
+            if (!f) return;
+            lilS({ [key]: { [field]: URL.createObjectURL(f) } });
+            nm.textContent = f.name;
+          };
+          btn.onclick = () => fi.click();
+          clr.onclick = () => { lilS({ [key]: { [field]: null } }); nm.textContent = '（未设置）'; };
+          row.appendChild(sp); row.appendChild(btn); row.appendChild(clr); row.appendChild(nm); row.appendChild(fi);
+          row.dataset.lil = tag;
+          LP().appendChild(row);
+          if (hint) {
+            const hh = document.createElement('div');
+            hh.className = 'hint'; hh.textContent = hint; hh.dataset.lil = tag;
+            LP().appendChild(hh);
+          }
+        };
+        mkTex('贴图', 'tex', '_Main' + (key === 'main2nd' ? '2nd' : '3rd') + 'Tex：这一层的基础色贴图');
+        mkTex('混合遮罩', 'blendMask', '_Main' + (key === 'main2nd' ? '2nd' : '3rd') + 'BlendMask：取 R 通道、控制这一层在哪些地方生效');
+        const hh = document.createElement('div');
+        hh.className = 'hint';
+        hh.textContent = '「参与光照比例」= 1 时这一层会被明暗分档影响（像皮肤的一部分。），'
+          + '= 0 时保持原色（像贴纸/自发光。），中间值按比例混合。\n'
+          + '「剔除」0=两面、1=只背面、2=只正面。只背面需要双面渲染、'
+          + '开了剔除会自动把材质设为双面（关掉时还原。）';
+        hh.dataset.lil = tag;
+        LP().appendChild(hh);
+      };
+      mkLayer('main2nd', 'main2nd');
+      mkLayer('main3rd', 'main3rd');
+    })();
+
+    // —— Dissolve 的其余控件（位置 / 颜色 / 两张贴图）——
+    __lgTarget = lg('Dissolve');
+    //   ⚠️ 全部打 data-lil='dissolve'、由 groupify 搬进「Dissolve」组。
+    (function () {
+      const dget = (k, d) => { const v = lilG().dissolve; return (v && v[k] !== undefined) ? v[k] : d; };
+      // 位置 4 个数字（mode 2 用 xy、mode 3 用 xyz、w 是 UV 旋转）
+      const rp = document.createElement('div');
+      rp.className = 'row';
+      const lp = document.createElement('span');
+      lp.textContent = '位置 / 方向';
+      lp.style.flex = '0 0 92px';
+      rp.appendChild(lp);
+      const pos = dget('pos', [0, 0, 0, 0]).slice(0, 4);
+      const posIns = [];
+      ['x', 'y', 'z', 'w'].forEach((ax, i) => {
+        const inp = document.createElement('input');
+        inp.type = 'number'; inp.step = 0.05; inp.value = String(pos[i]);
+        inp.title = (i === 3)
+          ? 'w = UV 旋转（仅模式 2。）'
+          : ax + '：线性模式时这 4 个数是**方向**（如 0,-1,0 = 竖直平面、从下往上切。）；圆形/球形模式时是**中心点**';
+        inp.style.width = '46px';
+        inp.onchange = () => {
+          const p = posIns.map((e2) => Number(e2.value) || 0);
+          lilS({ dissolve: { pos: p } });
+        };
+        posIns.push(inp);
+        rp.appendChild(inp);
+      });
+      rp.dataset.lil = 'dissolve';
+      LP().appendChild(rp);
+
+      // 边缘颜色
+      const rc = document.createElement('div');
+      rc.className = 'row';
+      const lc = document.createElement('span');
+      lc.textContent = '边缘颜色';
+      const ci = document.createElement('input');
+      ci.type = 'color';
+      const cur = dget('color', [1, 1, 1]);
+      const toHex = (c) => '#' + [0, 1, 2].map((i) => {
+        const v = Math.max(0, Math.min(255, Math.round(Number(c[i]) * 255)));
+        return v.toString(16).padStart(2, '0');
+      }).join('');
+      ci.value = toHex(cur);
+      ci.oninput = () => {
+        const v = ci.value;
+        lilS({ dissolve: { color: [
+          parseInt(v.slice(1, 3), 16) / 255,
+          parseInt(v.slice(3, 5), 16) / 255,
+          parseInt(v.slice(5, 7), 16) / 255] } });
+      };
+      rc.appendChild(lc); rc.appendChild(ci);
+      rc.dataset.lil = 'dissolve';
+      LP().appendChild(rc);
+
+      // 遮罩贴图 / 噪声贴图
+      const mkTex = (label, key, hint) => {
+        const row = document.createElement('div');
+        row.className = 'row';
+        const sp = document.createElement('span');
+        sp.textContent = label;
+        const btn = document.createElement('button');
+        btn.type = 'button'; btn.textContent = '选择文件'; btn.style.flex = '0 0 auto';
+        const clr = document.createElement('button');
+        clr.type = 'button'; clr.textContent = '清除'; clr.style.flex = '0 0 auto';
+        const nm = document.createElement('span');
+        nm.style.cssText = 'flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:#6b7385;font-size:10.5px';
+        const cu = dget(key, null);
+        nm.textContent = cu ? String(cu).split('/').pop() : '（未设置）';
+        const fi = document.createElement('input');
+        fi.type = 'file'; fi.accept = 'image/*'; fi.style.display = 'none';
+        fi.onchange = () => {
+          const f = fi.files && fi.files[0];
+          if (!f) return;
+          lilS({ dissolve: { [key]: URL.createObjectURL(f) } });
+          nm.textContent = f.name;
+        };
+        btn.onclick = () => fi.click();
+        clr.onclick = () => { lilS({ dissolve: { [key]: null } }); nm.textContent = '（未设置）'; };
+        row.appendChild(sp); row.appendChild(btn); row.appendChild(clr); row.appendChild(nm); row.appendChild(fi);
+        row.dataset.lil = 'dissolve';
+        LP().appendChild(row);
+        if (hint) {
+          const hh = document.createElement('div');
+          hh.className = 'hint'; hh.textContent = hint; hh.dataset.lil = 'dissolve';
+          LP().appendChild(hh);
+        }
+      };
+      {
+      const hh0 = document.createElement('div');
+      hh0.className = 'hint';
+      hh0.textContent = '用法：模式 3 + 线性 1 + 位置 (0,-1,0) = 竖直平面从下往上切；'
+        + '线性 0 + 位置 (0,0,0) = 从模型中心球形扩散。'
+        + '边缘颜色默认纯白会发光、不想要白边就设成黑色。';
+      hh0.dataset.lil = 'dissolve';
+      LP().appendChild(hh0);
+    }
+    // MatCap 2nd 的贴图（1st 的贴图行在下面、已有。）
+    (function () {
+      __lgTarget = lg('MatCap 2nd');   // ★ 这个 IIFE 嵌在 Dissolve 的 IIFE 里、必须显式切组。
+      const row = document.createElement('div');
+      row.className = 'row';
+      const sp = document.createElement('span');
+      sp.textContent = 'MatCap 2nd 贴图';
+      const btn = document.createElement('button');
+      btn.type = 'button'; btn.textContent = '选择文件'; btn.style.flex = '0 0 auto';
+      const clr = document.createElement('button');
+      clr.type = 'button'; clr.textContent = '清除'; clr.style.flex = '0 0 auto';
+      const nm = document.createElement('span');
+      nm.style.cssText = 'flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:#6b7385;font-size:10.5px';
+      const cu = (lilG().matcap2nd && lilG().matcap2nd.url) || '';
+      nm.textContent = cu ? String(cu).split('/').pop() : '（未设置）';
+      const fi = document.createElement('input');
+      fi.type = 'file'; fi.accept = 'image/*'; fi.style.display = 'none';
+      fi.onchange = () => {
+        const f = fi.files && fi.files[0];
+        if (!f) return;
+        lilS({ matcap2nd: { url: URL.createObjectURL(f), blend: 1 } });
+        nm.textContent = f.name;
+      };
+      btn.onclick = () => fi.click();
+      clr.onclick = () => { lilS({ matcap2nd: { url: null } }); nm.textContent = '（未设置）'; };
+      row.appendChild(sp); row.appendChild(btn); row.appendChild(clr); row.appendChild(nm); row.appendChild(fi);
+      row.dataset.lil = 'matcap2nd';
+      LP().appendChild(row);
+      const hh = document.createElement('div');
+      hh.className = 'hint';
+      hh.textContent = '_MatCap2ndTex：第二个 MatCap 槽位、叠在 1st **之上**（顺序 Backlight → MatCap → MatCap2nd → Rim。）';
+      hh.dataset.lil = 'matcap2nd';
+      LP().appendChild(hh);
+    })();
+    __lgTarget = lg('Dissolve');   // ★ 还原、后面的 mkTex 还是 Dissolve 的。
+
+    mkTex('遮罩贴图', 'maskTex', '_DissolveMask：模式 1（贴图阈值）用的遮罩、采样 .r（线性、不走 sRGB）');
+      mkTex('噪声贴图', 'noiseTex', '_DissolveNoiseMask：噪声扰动（lilCalcDissolveWithNoise、让边界不规则）');
+      const hh2 = document.createElement('div');
+      hh2.className = 'hint';
+      hh2.textContent = 'Dissolve 需要材质有 alphaTest 才会丢弃像素、开启后会自动设上（关闭时还原）';
+      hh2.dataset.lil = 'dissolve';
+      LP().appendChild(hh2);
+    })();
+
+    // —— 描边：固定宽度模式开关 ——
+    __lgTarget = lg('描边 Outline');
+    //   lilToon 原版用 saturate 截断距离、常规距离下 fixWidth 完全无效。
+    //   这里给一个开关、勾上就换成「屏幕粗细恒定」的算法。
+    const rFM = document.createElement('div');
+    rFM.className = 'row';
+    const cFM = document.createElement('input');
+    cFM.type = 'checkbox';
+    cFM.id = 'lilFixMode';
+    cFM.checked = lilOG().fixWidthMode === 'screen';
+    cFM.addEventListener('change', () => {
+      lilOS({ fixWidthMode: cFM.checked ? 'screen' : 'lilToon' });
+    });
+    const lFM = document.createElement('label');
+    lFM.htmlFor = 'lilFixMode';
+    lFM.textContent = '固定宽度生效（去掉 saturate）';
+    lFM.style.flex = '1';
+    lFM.title = 'lilToon 原版用 saturate 把距离截断在 1.0，常规相机距离下「固定宽度」参数无效。勾上则改为真正的屏幕粗细恒定。';
+    rFM.appendChild(cFM);
+    rFM.appendChild(lFM);
+    LP().appendChild(rFM);
+
+    // —— 描边颜色（可更换）——
+    __lgTarget = lg('描边 Outline');
+    //   主色对应 _OutlineColor（含 alpha），受光色对应 _OutlineLitColor。
+    const hex = (arr) => '#' + arr.slice(0, 3).map((v) => {
+      const c = Math.max(0, Math.min(255, Math.round(Number(v) * 255)));
+      return c.toString(16).padStart(2, '0');
+    }).join('');
+    const rC = document.createElement('div');
+    rC.className = 'row';
+    const lC = document.createElement('span');
+    lC.textContent = '描边颜色';
+    const iC = document.createElement('input');
+    iC.type = 'color';
+    iC.id = 'lilOutlineColor';
+    iC.style.flex = '1';
+    iC.style.height = '22px';
+    iC.value = hex(lilOG().color || [0.6, 0.56, 0.73, 1]);
+    iC.addEventListener('input', () => {
+      const v = iC.value;
+      const cur = lilOG().color || [0.6, 0.56, 0.73, 1];
+      lilOS({ color: [parseInt(v.slice(1, 3), 16) / 255, parseInt(v.slice(3, 5), 16) / 255, parseInt(v.slice(5, 7), 16) / 255, cur[3]] });
+    });
+    rC.appendChild(lC); rC.appendChild(iC);
+    LP().appendChild(rC);
+
+    // 透明度（_OutlineColor.a）
+    const rA = document.createElement('div');
+    rA.className = 'row';
+    const lA = document.createElement('span');
+    lA.textContent = '描边不透明';
+    const iA = document.createElement('input');
+    iA.type = 'range'; iA.min = 0; iA.max = 1; iA.step = 0.01;
+    iA.style.flex = '1';
+    iA.value = String((lilOG().color || [0, 0, 0, 1])[3]);
+    const nA = document.createElement('input');
+    nA.type = 'number'; nA.min = 0; nA.max = 1; nA.step = 0.01;
+    nA.style.width = '52px';
+    nA.value = iA.value;
+    iA.addEventListener('input', () => {
+      nA.value = iA.value;
+      const c = lilOG().color || [0.6, 0.56, 0.73, 1];
+      lilOS({ color: [c[0], c[1], c[2], Number(iA.value)] });
+    });
+    nA.addEventListener('change', () => { iA.value = nA.value; iA.dispatchEvent(new Event('input')); });
+    rA.appendChild(lA); rA.appendChild(iA); rA.appendChild(nA);
+    LP().appendChild(rA);
+
+    // 受光色（_OutlineLitColor、alpha 为 0 时不受光。）
+    const rL = document.createElement('div');
+    rL.className = 'row';
+    const lL = document.createElement('span');
+    lL.textContent = '受光色';
+    const iL = document.createElement('input');
+    iL.type = 'color';
+    iL.id = 'lilOutlineLitColor';
+    iL.style.flex = '1';
+    iL.style.height = '22px';
+    iL.value = hex(lilOG().litColor || [1, 0.2, 0, 0]);
+    iL.addEventListener('input', () => {
+      const v = iL.value;
+      const cur = lilOG().litColor || [1, 0.2, 0, 0];
+      lilOS({ litColor: [parseInt(v.slice(1, 3), 16) / 255, parseInt(v.slice(3, 5), 16) / 255, parseInt(v.slice(5, 7), 16) / 255, cur[3]] });
+    });
+    rL.appendChild(lL); rL.appendChild(iL);
+
+    // 受光强度 = _OutlineLitColor.a、默认 0 表示不受光。
+    const rLA = document.createElement('div');
+    rLA.className = 'row';
+    const lLA = document.createElement('span');
+    lLA.textContent = '受光强度';
+    const iLA = document.createElement('input');
+    iLA.type = 'range'; iLA.min = 0; iLA.max = 1; iLA.step = 0.01;
+    iLA.style.flex = '1';
+    iLA.value = String((lilOG().litColor || [0, 0, 0, 0])[3]);
+    const nLA = document.createElement('input');
+    nLA.type = 'number'; nLA.min = 0; nLA.max = 1; nLA.step = 0.01;
+    nLA.style.width = '52px';
+    nLA.value = iLA.value;
+    const applyLA = (v) => {
+      const c = lilOG().litColor || [1, 0.2, 0, 0];
+      lilOS({ litColor: [c[0], c[1], c[2], Number(v)] });
+    };
+    iLA.addEventListener('input', () => { nLA.value = iLA.value; applyLA(iLA.value); });
+    nLA.addEventListener('change', () => { iLA.value = nLA.value; applyLA(nLA.value); });
+    rLA.appendChild(lLA); rLA.appendChild(iLA); rLA.appendChild(nLA);
+    LP().appendChild(rLA);
+    {
+      const hLA = document.createElement('div');
+      hLA.className = 'hint';
+      hLA.textContent = '受光强度 = _OutlineLitColor.a。默认 0 表示描边不受光（就是纯描边色）。调大后描边会被主光照亮，对比由「受光对比/受光阈值」控制。';
+      LP().appendChild(hLA);
+    }
+    LP().appendChild(rL);
+
+    // 不做描边的部件（正则、对应 lilToon 的 _OutlineDeleteMesh）
+    const rS = document.createElement('div');
+    rS.className = 'row';
+    const lS = document.createElement('span');
+    lS.textContent = '跳过部件';
+    const iS = document.createElement('input');
+    iS.type = 'text';
+    iS.id = 'lilOutlineSkip';
+    iS.placeholder = '正则，如 mouth|eye';
+    iS.value = lilOG().skipPattern || '';
+    iS.addEventListener('change', () => {
+      lilOS({ skipPattern: iS.value.trim() });
+    });
+    rS.appendChild(lS); rS.appendChild(iS);
+    LP().appendChild(rS);
+    {
+      const hintS = document.createElement('div');
+      hintS.className = 'hint';
+      hintS.textContent = '匹配网格名或材质名（不区分大小写），命中的部件不生成描边。默认 mouth（嘴巴不描边）。';
+      LP().appendChild(hintS);
+    }
+
+    // —— 描边贴图（_OutlineTex / _OutlineWidthMask）——
+    __lgTarget = lg('描边 Outline');
+    //   lilToon 里这两个都是 2D 贴图、这里用本地文件选择。
+    const mkTexRow = (label, key, hint) => {
+      const row = document.createElement('div');
+      row.className = 'row';
+      const sp = document.createElement('span');
+      sp.textContent = label;
+      const btn = document.createElement('button');
+      btn.type = 'button';
+      btn.textContent = '选择文件';
+      btn.style.flex = '0 0 auto';
+      const nameEl = document.createElement('span');
+      nameEl.style.cssText = 'flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:#6b7385;font-size:10.5px';
+      const cur = lilOG()[key];
+      nameEl.textContent = cur ? String(cur).split('/').pop() : '（未设置）';
+      const fi = document.createElement('input');
+      fi.type = 'file';
+      fi.accept = 'image/*';
+      fi.style.display = 'none';
+      fi.onchange = () => {
+        const f = fi.files && fi.files[0];
+        if (!f) return;
+        const url = URL.createObjectURL(f);
+        lilOS({ [key]: url });
+        nameEl.textContent = f.name;
+      };
+      btn.onclick = () => fi.click();
+      // 清除按钮（回到无贴图）
+      const clr = document.createElement('button');
+      clr.type = 'button';
+      clr.textContent = '清除';
+      clr.style.flex = '0 0 auto';
+      clr.onclick = () => { lilOS({ [key]: null }); nameEl.textContent = '（未设置）'; };
+      row.appendChild(sp); row.appendChild(btn); row.appendChild(clr); row.appendChild(nameEl);
+      row.appendChild(fi);
+      LP().appendChild(row);
+      if (hint) { const hh = document.createElement('div'); hh.className = 'hint'; hh.textContent = hint; LP().appendChild(hh); }
+    };
+    mkTexRow('描边贴图', 'tex', '_OutlineTex：用纹理给描边上色。留空则用纯描边色。');
+    mkTexRow('宽度遮罩', 'widthMask', '_OutlineWidthMask：取 R 通道。黑色处没有描边、白色处满宽 —— 嘴巴这类局部去描边就靠它。');
+    mkTexRow('外扩方向', 'vectorTex', '_OutlineVectorTex：用贴图覆盖描边的外扩方向（手绘描边）。贴图按切线空间法线解算；three 没有 tangent 属性时用法线近似，与 Unity 会有差异。');
+    // —— MatCap 贴图（配置字段是嵌套的 matcap.url、不能用 mkTexRow。）——
+    __lgTarget = lg('MatCap');
+    //    每个材质可以放不同的球面贴图（见 resolveMatCapTexture、按 URL 缓存。）
+    (function () {
+      const row = document.createElement('div');
+      row.className = 'row';
+      const sp = document.createElement('span');
+      sp.textContent = 'MatCap 贴图';
+      const btn = document.createElement('button');
+      btn.type = 'button'; btn.textContent = '选择文件'; btn.style.flex = '0 0 auto';
+      const clr = document.createElement('button');
+      clr.type = 'button'; clr.textContent = '清除'; clr.style.flex = '0 0 auto';
+      const nameEl = document.createElement('span');
+      nameEl.style.cssText = 'flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:#6b7385;font-size:10.5px';
+      const curUrl = (lilG().matcap && lilG().matcap.url) || '';
+      nameEl.textContent = curUrl ? String(curUrl).split('/').pop() : '（未设置）';
+      const fi = document.createElement('input');
+      fi.type = 'file'; fi.accept = 'image/*'; fi.style.display = 'none';
+      fi.onchange = () => {
+        const f = fi.files && fi.files[0];
+        if (!f) return;
+        lilS({ matcap: { url: URL.createObjectURL(f) } });
+        nameEl.textContent = f.name;
+      };
+      btn.onclick = () => fi.click();
+      clr.onclick = () => { lilS({ matcap: { url: null } }); nameEl.textContent = '（未设置）'; };
+      row.appendChild(sp); row.appendChild(btn); row.appendChild(clr); row.appendChild(nameEl); row.appendChild(fi);
+      row.dataset.lil = 'matcap';
+      LP().appendChild(row);
+      const hh = document.createElement('div');
+      hh.className = 'hint';
+      hh.textContent = 'MatCap 贴图按材质独立、强度在「MatCap」组里调。';
+      hh.dataset.lil = 'matcap';
+      LP().appendChild(hh);
+    })();
+
+      // —— 自发光贴图（_EmissionMap、字段是嵌套的 emission.tex。）——
+      __lgTarget = lg('自发光');
+      (function () {
+        const row = document.createElement('div');
+        row.className = 'row';
+        const sp = document.createElement('span');
+        sp.textContent = '自发光贴图';
+        const btn = document.createElement('button');
+        btn.type = 'button'; btn.textContent = '选择文件'; btn.style.flex = '0 0 auto';
+        const clr = document.createElement('button');
+        clr.type = 'button'; clr.textContent = '清除'; clr.style.flex = '0 0 auto';
+        const nameEl = document.createElement('span');
+        nameEl.style.cssText = 'flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:#6b7385;font-size:10.5px';
+        const curUrl = (lilG().emission && lilG().emission.tex) || '';
+        nameEl.textContent = curUrl ? String(curUrl).split('/').pop() : '（未设置）';
+        const fi = document.createElement('input');
+        fi.type = 'file'; fi.accept = 'image/*'; fi.style.display = 'none';
+        fi.onchange = () => {
+          const f = fi.files && fi.files[0];
+          if (!f) return;
+          lilS({ emission: { tex: URL.createObjectURL(f) } });
+          nameEl.textContent = f.name;
+        };
+        btn.onclick = () => fi.click();
+        clr.onclick = () => { lilS({ emission: { tex: null } }); nameEl.textContent = '（未设置）'; };
+        row.appendChild(sp); row.appendChild(btn); row.appendChild(clr); row.appendChild(nameEl); row.appendChild(fi);
+        row.dataset.lil = 'emission';
+        LP().appendChild(row);
+        const hh = document.createElement('div');
+        hh.className = 'hint';
+        hh.textContent = '_EmissionMap：自发光颜色会乘以这张贴图、按材质独立、和 MatCap 一样按 URL 缓存。';
+        hh.dataset.lil = 'emission';
+        LP().appendChild(hh);
+      })();
+
+    // —— 自发光 2nd 贴图（_Emission2ndMap、和 1st 各自一份。）——
+    __lgTarget = lg('自发光 2nd');   // ★ 归到 2nd 组、之前漏了 ⇒ 跑进 1st 里。
+      (function () {
+        const row = document.createElement('div');
+        row.className = 'row';
+        const sp = document.createElement('span');
+        sp.textContent = '自发光 2nd 贴图';
+        const btn = document.createElement('button');
+        btn.type = 'button'; btn.textContent = '选择文件'; btn.style.flex = '0 0 auto';
+        const clr = document.createElement('button');
+        clr.type = 'button'; clr.textContent = '清除'; clr.style.flex = '0 0 auto';
+        const nameEl = document.createElement('span');
+        nameEl.style.cssText = 'flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:#6b7385;font-size:10.5px';
+        const curUrl = (lilG().emission2nd && lilG().emission2nd.tex) || '';
+        nameEl.textContent = curUrl ? String(curUrl).split('/').pop() : '（未设置）';
+        const fi = document.createElement('input');
+        fi.type = 'file'; fi.accept = 'image/*'; fi.style.display = 'none';
+        fi.onchange = () => {
+          const f = fi.files && fi.files[0];
+          if (!f) return;
+          lilS({ emission2nd: { tex: URL.createObjectURL(f) } });
+          nameEl.textContent = f.name;
+        };
+        btn.onclick = () => fi.click();
+        clr.onclick = () => { lilS({ emission2nd: { tex: null } }); nameEl.textContent = '（未设置）'; };
+        row.appendChild(sp); row.appendChild(btn); row.appendChild(clr); row.appendChild(nameEl); row.appendChild(fi);
+        row.dataset.lil = 'emission2nd';
+        LP().appendChild(row);
+        const hh = document.createElement('div');
+        hh.className = 'hint';
+        hh.textContent = '_Emission2ndMap：自发光颜色会乘以这张贴图、按材质独立、和 MatCap 一样按 URL 缓存。';
+        hh.dataset.lil = 'emission2nd';
+        LP().appendChild(hh);
+      })();
+
+
+    // —— 开关类（复选框）——
+    __lgTarget = lg('描边 Outline');
+    const mkChk = (label, get, set, title) => {
+      const row = document.createElement('div');
+      row.className = 'row';
+      const cb = document.createElement('input');
+      cb.type = 'checkbox';
+      cb.checked = !!get();
+      cb.onchange = () => set(cb.checked);
+      const lb = document.createElement('label');
+      lb.textContent = label;
+      lb.style.flex = '1';
+      if (title) lb.title = title;
+      row.appendChild(cb); row.appendChild(lb);
+      LP().appendChild(row);
+    };
+    mkChk('受光生效', () => lilOG().litEnable !== false,
+      (v) => lilOS({ litEnable: v }),
+      '_OutlineEnableLighting：关掉则描边完全不参与光照（即使受光强度大于 0）。');
+    mkChk('受光接收阴影', () => !!lilOG().litShadowReceive,
+      (v) => lilOS({ litShadowReceive: v }),
+      '_OutlineLitShadowReceive：描边受光时是否被主光的阴影遮挡。需先调大「受光强度」。');
+    mkChk('阴影遮罩预览（诊断）', () => !!lilOG().litShadowDebug,
+      (v) => lilOS({ litShadowDebug: v }),
+      '把 getShadowMask() 直接画成描边颜色：白=受光、黑=阴影。用来确认阴影管线是否真的接上了。');
+    mkChk('着色器里再乘一次描边色', () => !!lilOG().shaderColorMult,
+      (v) => lilOS({ shaderColorMult: v }),
+      '默认关闭 = 描边色只乘一次（正确）。打开 = 着色器里再乘一次，受光色会被描边色染暗，用于对照旧行为。');
+    mkChk('受光色乘描边贴图', () => !!lilOG().litApplyTex,
+      (v) => lilOS({ litApplyTex: v }),
+      '_OutlineLitApplyTex：受光色是否再乘描边贴图。需先设置描边贴图。');
+
+
+    // —— 外扩方向强度 / UV 通道（_OutlineVectorScale / _OutlineVectorUVMode）——
+    __lgTarget = lg('描边 Outline');
+    {
+      const row = document.createElement('div');
+      row.className = 'row';
+      const sp = document.createElement('span');
+      sp.textContent = '方向强度';
+      const rg = document.createElement('input');
+      rg.type = 'range'; rg.min = -10; rg.max = 10; rg.step = 0.1; rg.style.flex = '1';
+      const nm2 = document.createElement('input');
+      nm2.type = 'number'; nm2.min = -10; nm2.max = 10; nm2.step = 0.1; nm2.style.width = '52px';
+      const cur = lilOG().vectorScale;
+      rg.value = String(cur === undefined ? 1 : cur);
+      nm2.value = rg.value;
+      const ap = (v) => lilOS({ vectorScale: Number(v) });
+      rg.oninput = () => { nm2.value = rg.value; ap(rg.value); };
+      nm2.onchange = () => { rg.value = nm2.value; ap(nm2.value); };
+      row.appendChild(sp); row.appendChild(rg); row.appendChild(nm2);
+      LP().appendChild(row);
+
+      const row2 = document.createElement('div');
+      row2.className = 'row';
+      const sp2 = document.createElement('span');
+      sp2.textContent = '方向 UV';
+      const sel2 = document.createElement('select');
+      sel2.style.flex = '1';
+      ['UV0', 'UV1', 'UV2', 'UV3'].forEach((t, idx) => {
+        const o2 = document.createElement('option'); o2.value = String(idx); o2.textContent = t; sel2.appendChild(o2);
+      });
+      const c2 = lilOG().vectorUVMode;
+      sel2.value = String(c2 === undefined ? 0 : c2);
+      sel2.onchange = () => lilOS({ vectorUVMode: Number(sel2.value) });
+      row2.appendChild(sp2); row2.appendChild(sel2);
+      LP().appendChild(row2);
+    }
+
+    // —— Cull 模式（_OutlineCull）——
+    {
+      const row = document.createElement('div');
+      row.className = 'row';
+      const sp = document.createElement('span');
+      sp.textContent = 'Cull 模式';
+      const sel = document.createElement('select');
+      sel.style.flex = '1';
+      [['back', '只画背面（默认，正常反壳描边）'], ['front', '只画正面（描边在模型内侧）']].forEach(([v, t]) => {
+        const o2 = document.createElement('option');
+        o2.value = v; o2.textContent = t;
+        sel.appendChild(o2);
+      });
+      sel.value = lilOG().cull || 'back';
+      sel.onchange = () => lilOS({ cull: sel.value });
+      row.appendChild(sp); row.appendChild(sel);
+      LP().appendChild(row);
+    }
+  }
+  
+  
+  /* ---------- 导出配置面板（独立浮层、与 lilToon 无关，任意场景都能用）---------- */
+  const exportPanel = document.getElementById('exportPanel');
+  const btnExport = document.getElementById('btnExport');
+  
+  function buildExportPanel() {
+    exportPanel.innerHTML = '';
+    ensurePanelTitle(exportPanel);   // 清空后把标题栏装回来（同时是拖拽把手）
+    const h = document.createElement('h4');
+    h.textContent = '导出配置 JSON';
+    exportPanel.appendChild(h);
+  
+    const hint = document.createElement('div');
+    hint.className = 'hint';
+    hint.textContent = '「导出 Unity 预设」出 .asset（Unity 的 lilToon 预设面板可直接加载）。主配置只写与出厂默认不同的项（lilToon 只留一个 use 开关）。下载会出两个文件：模型名.json ＋（用了 lilToon 时）模型名.lilToon.json。';
+    exportPanel.appendChild(hint);
+  
+    const ta = document.createElement('textarea');
+    ta.id = 'exportText';
+    ta.spellcheck = false;
+    ta.readOnly = true;
+    exportPanel.appendChild(ta);
+  
+    const acts = document.createElement('div');
+    acts.className = 'actions';
+    const bExp = document.createElement('button');
+    bExp.textContent = '生成 JSON';
+    bExp.className = 'primary';
+    const bCopy = document.createElement('button');
+    bCopy.textContent = '复制';
+    const bDl = document.createElement('button');
+    bDl.textContent = '下载（2 个文件）';
+    /**
+     * ★★ **导出 Unity 预设**（`.asset`。 用户的需求：和 Unity 互通。）
+     *
+     *   ⚠️ 产物只含**我们实现的那部分**字段 ——
+     *     拖进 Unity 后其余属性保持 lilToon 默认。
+     *     （按钮 title 里写清楚、不让人误会。）
+     */
+    bDl.title = '主配置 模型名.json ＋ lilToon 参数 模型名.lilToon.json（后者只在用了 lilToon 时下）';
+  
+    const gen = () => { ta.value = viewer.exportConfigJSON(); return ta.value; };
+    bExp.addEventListener('click', gen);
+    bCopy.addEventListener('click', async () => {
+      const txt = ta.value || gen();
+      try { await navigator.clipboard.writeText(txt); bCopy.textContent = '已复制'; }
+      catch { ta.select(); document.execCommand('copy'); bCopy.textContent = '已复制'; }
+      setTimeout(() => (bCopy.textContent = '复制'), 1200);
+    });
+    /**
+     * ★★ 导出**两个文件**（用户的需求。）
+     *
+     *   模型名.json         主配置（lilToon 只留 `lilToon: { use }`。）
+     *   模型名.lilToon.json lilToon 参数（**只在用了 lilToon 时**才下。）
+     *
+     *   ⚠️ 模型名从 `model.url` 推：`./assets/sample.glb` → `sample`
+     *     ⇒ 和自动导入的探测规则**同一个来源** ⇒ 两边一定对得上。
+     */
+    /**
+     * ⚠️ MIME 按扩展名给 —— `.asset` 是 **Unity 的 YAML 文本**、不是 JSON。
+     *   （给成 json 会让浏览器按 JSON 处理 / 扩展名被改。）
+     */
+    const dl = (text, name) => {
+      const type = /\.asset$/i.test(name) ? 'text/plain;charset=utf-8' : 'application/json';
+      const blob = new Blob([text], { type });
+      const a = document.createElement('a');
+      a.href = URL.createObjectURL(blob);
+      a.download = name;
+      a.click();
+      setTimeout(() => URL.revokeObjectURL(a.href), 3000);
+    };
+    /** 从 model.url 推「模型名」（不带目录 / 扩展名。）*/
+    const modelBase = () => {
+      try {
+        const u = String((viewer.exportConfig().model || {}).url || '').replace(/[?#].*$/, '');
+        const f = u.split('/').pop().replace(/\.[^.]*$/, '');
+        return f || 'model';
+      } catch (e) { return 'model'; }
+    };
+    bDl.addEventListener('click', () => {
+      const txt = ta.value || gen();
+      const base = modelBase();
+      dl(txt, base + '.json');
+      // ⚠️ 只有「用了 lilToon」才下第二个（用户说的「如果用了再找」）
+      let useLil = false;
+      try { useLil = !!(viewer.exportConfig().renderer || {}).lilToon?.use; } catch (e) {}
+      if (useLil) {
+        try { dl(viewer.exportLilConfigJSON(), base + '.lilToon.json'); }
+        catch (e) { console.warn('[export] lilToon JSON 生成失败：', e); }
+      } else {
+        console.debug('[export] 没用 lilToon ⇒ 只下主配置。');
+      }
+    });
+    acts.appendChild(bExp); acts.appendChild(bCopy); acts.appendChild(bDl);
+
+    exportPanel.appendChild(acts);
+  
+    gen();   // 打开即生成，省一次点击
+  }
+  
+  if (btnExport && exportPanel) {
+    // ⚠️ 必须用 onclick、不能用 addEventListener。
+    //    本函数（afterLoad）每次加载模型都会执行一遍 
+    //    而 btnExport 是 HUD 上的**常驻按钮**、用 addEventListener 会累积监听器。
+    //    加载过 N 次模型后、点一次按钮处理器就跑 N 次 
+    //    表现：lilToon 面板 toggle 偶数次又变回隐藏（日志说已打开、实际没开。）
+    //          保存 PNG 一次存多张。（同一个根因。）
+    btnExport.onclick = () => {
+      // 三个浮层互斥，避免叠在一起（都在 top:16px ）
+      btnLil.classList.remove('on');   // 清掉 lilToon 按钮的高亮。
+      lilPanel.classList.add('hidden');
+      const on = exportPanel.classList.toggle('hidden') === false;
+      btnExport.classList.toggle('on', on);
+      if (on) buildExportPanel();
+    };
+
+    /* 保存 PNG —— 命名里带上 render/shader 与时间戳，方便前后对比。 */
+    const btnShot = document.getElementById('btnShot');
+    if (btnShot) {
+      // ⚠️ 用 onclick 而不是 addEventListener —— 后者若被执行多次会注册多个监听器 
+  //    表现就是「点一次保存出好几张 PNG」 onclick 是幂等的、只会保留最后一个。
+  btnShot.onclick = () => {
+        try {
+          const name = viewer.saveScreenshot();
+          console.info('[screenshot] 已保存 ' + name);
+        } catch (e) {
+          console.error('[screenshot] 失败：', e);
+        }
+      };
+
+  /* 顶点色预览：把顶点色直接当颜色渲染、用来确认 lilToon 遮罩的分区 */
+  const btnVC = document.getElementById('btnVC');
+  if (btnVC) {
+    let vcOn = false;
+    btnVC.onclick = () => {
+      vcOn = !vcOn;
+      viewer.showVertexColors(vcOn);
+      btnVC.classList.toggle('on', vcOn);
+      if (vcOn) {
+        const info = viewer.vertexColorInfo();
+        const white = info.filter(x => x.是否全白).length;
+        console.info('[vcView] ' + info.length + ' 个网格、其中 ' + white + ' 个顶点色全白（遮罩恒为 1 ）');
+        console.table(info);
+      }
+
+
+    };
+  }
+    }
+  }
+  
+  if (btnLil && lilPanel) {
+    // ⚠️ 必须用 onclick、不能用 addEventListener。
+    //    本函数（afterLoad）每次加载模型都会执行一遍 
+    //    而 btnLil 是 HUD 上的**常驻按钮**、用 addEventListener 会累积监听器。
+    //    加载过 N 次模型后、点一次按钮处理器就跑 N 次 
+    //    表现：lilToon 面板 toggle 偶数次又变回隐藏（日志说已打开、实际没开。）
+    //          保存 PNG 一次存多张。（同一个根因。）
+    btnLil.onclick = () => {
+      // 点开之前先同步一次、避免按钮状态与真实状态不一致时打不开。
+      syncRenderUI();
+      if (btnLil.disabled) return;
+      const on = lilPanel.classList.toggle('hidden') === false;
+      btnLil.classList.toggle('on', on);
+      if (on) {
+        // ⚠️ 必须包 try/catch 
+        //   里面的任何异常都会让面板保持空白（按钮却已经亮了 ）
+        //   表现就是"点了没反应 / 打不开"，极难从现象看出是异常。
+        try {
+          buildLilPanel();   // 每次打开都按当前值重建，避免显示过期值
+          // groupifyLilPanel();   // ★ 已删除、特殊控件现在直接 append 到目标组。
+          if (window.__ba3dDebugUI) console.debug('[lilPanel] 已打开，控件 ' + lilPanel.querySelectorAll('input,select').length + ' 个');
+        } catch (e) {
+          console.error('[lilPanel] buildLilPanel 抛异常、面板会是空白：', e);
+          const box = document.createElement('div');
+          box.className = 'hint';
+          box.style.color = '#c0392b';
+          box.textContent = '面板构建失败：' + (e && e.message ? e.message : e);
+          lilPanel.innerHTML = '';
+          ensurePanelTitle(lilPanel);   // 清空后把标题栏装回来（同时是拖拽把手）
+          LP().appendChild(box);
+        }
+      }
+    };
+  }
+  
   // 配置可能改了基准/渲染/打光/描边/背景 → 把界面同步过来
   const pv = viewer.getPivot();
-  pivotX.value = String(pv.x); pivotXNum.value = String(pv.x);
-  pivotZ.value = String(pv.z); pivotZNum.value = String(pv.z);
-  shadingMenu.value = viewer.getShading();
+  if (pivotX) pivotX.value = String(pv.x); if (pivotXNum) pivotXNum.value = String(pv.x);
+  if (pivotZ) pivotZ.value = String(pv.z); if (pivotZNum) pivotZNum.value = String(pv.z);
+  syncRenderUI();
   lightMenu.value = viewer.state.currentLighting;
   btnOutline.classList.toggle('on', viewer.getOutline().on);
+  // 配置可能改了光照亮度 → 同步滑块
+  { const ls = viewer.getLightingScale(); lightScale.value = String(ls); lightScaleNum.value = String(ls); }
+  { const sm = viewer.getCel().shadowMin; celShadow.value = String(sm); celShadowNum.value = String(sm); }
+  syncCelFaceShadowUI();
+  // 分档色 / 过渡带（阶段 1 ①）也要跟着配置走、否则导入 JSON 后控件和实际不一致。
+  syncCelRampUI();
+  if (window.__ba3dSyncLightClamp) window.__ba3dSyncLightClamp();
   outlineWidth.value = String(viewer.getOutline().thickness);
   outlineWidthNum.value = String(viewer.getOutline().thickness);
   bgMenu.value = viewer.getBackground().transparent ? '0' : bgMenu.value;
@@ -437,14 +4557,43 @@ function showLoadingError(err) {
 const uploadEl = document.getElementById('upload');
 const btnUpload = document.getElementById('btnUpload');
 const uploadMsgEl = document.getElementById('uploadMsg');
-const picked = { model: null, mouth: null, config: null };
+const picked = { model: null, mouth: null, config: null, lilConfig: null };
 let objectUrls = [];   // 自己创建的 blob URL，换模型时要释放
+
+/* 贴图（FBX 需要）：收集文件名 → File。
+   FBX 里存的是路径（常常是导出者机器上的绝对路径），所以**按文件名匹配**最可靠 ——
+   用户在文件框里多选、或直接选整个贴图文件夹都行。 */
+const textureFiles = new Map();   // name -> File
+function addTextureFiles(list) {
+  for (const f of list) textureFiles.set(f.name, f);
+  const n = textureFiles.size;
+  const el = document.getElementById('nameTex');
+  if (el) el.textContent = n ? ('已选 ' + n + ' 张贴图') : '未选择（按 FBX 里存的路径自动找）';
+}
+const texInput = document.getElementById('fileTex');
+const texDirInput = document.getElementById('fileTexDir');
+if (texInput) texInput.addEventListener('change', () => addTextureFiles(texInput.files));
+if (texDirInput) texDirInput.addEventListener('change', () => addTextureFiles(texDirInput.files));
 
 const FILE_UI = {
   model:  { input: 'fileModel',  name: 'nameModel',  empty: '未选择' },
   mouth:  { input: 'fileMouth',  name: 'nameMouth',  empty: '未选择（用默认图集）' },
   config: { input: 'fileConfig', name: 'nameConfig', empty: '未选择（用默认设置）' },
+  /**
+   * ★ lilToon 参数**单独选**（用户的需求：手动导入分开选择。）
+   *   ⚠️ 不选也行 —— 走「自动探测」那条路（见 afterLoad。）
+   */
+  lilConfig: { input: 'fileLilConfig', name: 'nameLilConfig', empty: '未选择（按主配置自动探测 / 用出厂默认）' },
 };
+/**
+ * ⚠️ 统一在这里绑 change（而不是散在各处。）——
+ *   新加一个文件输入只要往 FILE_UI 里加一行 + 加个 <input> 就行。
+ */
+for (const [key, ui] of Object.entries(FILE_UI)) {
+  const inp = document.getElementById(ui.input);
+  if (!inp) { console.warn('[upload] 找不到输入框 ' + ui.input + '（key=' + key + '。）'); continue; }
+  inp.addEventListener('change', () => setPicked(key, inp.files && inp.files[0]));
+}
 
 function setMsg(text, isErr) {
   uploadMsgEl.textContent = text || '';
@@ -483,7 +4632,13 @@ Object.keys(FILE_UI).forEach((key) => {
     setMsg('');
   });
 });
-document.getElementById('btnClearFiles').addEventListener('click', clearPicked);
+document.getElementById('btnClearFiles').addEventListener('click', () => {
+  clearPicked();
+  textureFiles.clear();
+  if (texInput) texInput.value = '';
+  if (texDirInput) texDirInput.value = '';
+  addTextureFiles([]);          // 刷新提示文字
+});
 document.getElementById('btnDoLoad').addEventListener('click', doLoadPicked);
 
 btnUpload.addEventListener('click', () => {
@@ -502,6 +4657,20 @@ async function doLoadPicked() {
 
   const opts = { modelUrl: URL.createObjectURL(picked.model) };
   objectUrls.push(opts.modelUrl);
+
+  // 把原始文件名带上：blob: URL 没有后缀，查看器据此（或嗅探文件头）判定格式
+  opts.modelName = picked.model.name;
+
+  // 贴图：文件名 → blob URL。FBX 里存的路径不可用，按文件名兜住。
+  if (textureFiles.size) {
+    const map = {};
+    for (const [name, f] of textureFiles) {
+      const u = URL.createObjectURL(f);
+      objectUrls.push(u);
+      map[name] = u;
+    }
+    opts.textureMap = map;
+  }
 
   if (picked.mouth) {
     opts.mouthAtlasUrl = URL.createObjectURL(picked.mouth);
@@ -527,7 +4696,48 @@ async function doLoadPicked() {
   showLoading('模型加载中…');
   try {
     await mount(opts);
-    setMsg('已加载：' + picked.model.name);
+    /**
+   * ★★ lilToon 参数：**手动选的优先**、没选就走自动探测（用户定的规则。）
+   *   ① 手上选了 `.lilToon.json` ⇒ 直接套。
+   *   ② 没选 ⇒ `viewer.probeLilConfig(主配置的 URL)`
+   *        · 探测顺序：模型名.lilToon.json → 主JSON名.lilToon.json
+   *        · 都没有 ⇒ **出厂默认** + 控制台提示「未找到配置」
+   */
+  try {
+    if (picked.lilConfig) {
+      /**
+       * ★★ **按扩展名分流**（用户的需求：和 Unity 互通。）
+       *
+       *   `.json`           ⇒ 我们自己的 lilToon 配置（原路。）
+       *   `.asset` / `.mat` ⇒ **Unity 的 lilToon 预设 / 材质**。
+       *
+       *   ⚠️ 同一个输入框收三种文件、**不给用户增加「该点哪个」的负担**。
+       *     扩展名是客观事实、比让用户选类型可靠。
+       */
+      const __nm = String(picked.lilConfig.name || '');
+      const __txt = await picked.lilConfig.text();
+      if (/\.(asset|mat)$/i.test(__nm)) {
+        const __r = viewer.importLilPreset(__txt);
+        if (__r.ok) {
+          console.info('[lilToon] 已套用 Unity 预设「' + (__r.name || __nm) + '」：源 ' + __r.total
+            + ' 条 ⇒ 套用 ' + __r.applied + ' 项 · 未识别 ' + __r.skipped.length + ' 个属性名（我们没实现。）');
+          setMsg('已套用 Unity 预设「' + (__r.name || __nm) + '」：套用 ' + __r.applied + ' 项'
+            + (__r.skipped.length ? '，其余 ' + __r.skipped.length + ' 个属性我们没实现（保持默认。）' : ''));
+        } else {
+          setMsg('Unity 预设导入失败：' + __r.reason, true);
+          console.warn('[lilToon] 预设导入失败：', __r);
+        }
+      } else {
+        const lo = JSON.parse(__txt);
+        viewer.applyLilConfigJSON(lo);
+        console.info('[lilToon] 已套用手动选择的 ' + __nm);
+      }
+    } else if ((viewer.exportConfig().renderer || {}).lilToon?.use) {
+      await viewer.probeLilConfig(null);
+    }
+  } catch (e) { console.warn('[lilToon] 参数套用失败：', e); }
+  window.__ba3dLilProbed = false;   // ★ 手动载入 ⇒ 允许再探一次。
+  setMsg('已加载：' + picked.model.name);
   } catch (err) {
     console.error('自定义模型加载失败：', err);
     setMsg('加载失败：' + (err && err.message ? err.message : err), true);
@@ -540,5 +4750,7 @@ async function doLoadPicked() {
 /* ---------- 首次加载的收尾 ---------- */
 setPicked('model', null);
 </script>
+<!-- ★ 最小化后的浮窗停靠区（左下角 · 纵向叠放。） -->
+<div id="dock"></div>
 </body>
 </html>

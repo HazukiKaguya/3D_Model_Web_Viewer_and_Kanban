@@ -1,0 +1,698 @@
+[
+ {
+  "n": "Cloth-Anime",
+  "l": "衣服 · 动画",
+  "shadowStrength": 0.8,
+  "shadowColor": [
+   0.75,
+   0.8,
+   0.95,
+   1
+  ],
+  "shadowBorder": 0.2,
+  "shadowBlur": 0.005,
+  "shadow2ndColor": [
+   0.62,
+   0.68,
+   0.93,
+   0
+  ],
+  "shadow2ndBorder": 0.15,
+  "shadow2ndBlur": 0.1,
+  "rim": {
+   "blend": 1,
+   "color": [
+    0.5,
+    0.46249998,
+    0.42499983,
+    1
+   ],
+   "border": 0.75,
+   "blur": 0.05,
+   "fresnelPower": 1,
+   "enableLighting": 1
+  },
+  "outline": {
+   "enable": false,
+   "width": 0.15,
+   "fixWidth": 1,
+   "color": [
+    0.45,
+    0.5499999,
+    0.65,
+    1
+   ],
+   "vertexR2Width": 0,
+   "litEnable": 1,
+   "cull": "front"
+  }
+ },
+ {
+  "n": "Cloth-Illust",
+  "l": "衣服 · 插画",
+  "shadowStrength": 0.65,
+  "shadowColor": [
+   0.71814525,
+   0.63127446,
+   0.7735849,
+   1
+  ],
+  "shadowBorder": 0.5,
+  "shadowBlur": 0.1,
+  "shadow2ndColor": [
+   0.5126699,
+   0.47098595,
+   0.6792453,
+   1
+  ],
+  "shadow2ndBorder": 0.15,
+  "shadow2ndBlur": 0.1,
+  "rim": {
+   "blend": 1,
+   "color": [
+    0.6603774,
+    0.5053094,
+    0.47659308,
+    1
+   ],
+   "border": 0.5,
+   "blur": 0.65,
+   "fresnelPower": 3.5,
+   "enableLighting": 1
+  },
+  "outline": {
+   "enable": false,
+   "width": 0.08,
+   "fixWidth": 0.5,
+   "color": [
+    0.41568625,
+    0.3803921,
+    0.5294118,
+    1
+   ],
+   "vertexR2Width": 0,
+   "zBias": 0,
+   "litEnable": 1,
+   "litColor": [
+    1,
+    0.28235295,
+    0,
+    0.2509804
+   ],
+   "litScale": 10,
+   "litOffset": -8
+  }
+ },
+ {
+  "n": "Cloth-Outline",
+  "l": "衣服 · 描边",
+  "shadowStrength": 1,
+  "shadowColor": [
+   0.7,
+   0.75,
+   0.85,
+   1
+  ],
+  "shadowBorder": 0.2,
+  "shadowBlur": 0.1,
+  "shadow2ndColor": [
+   0.5499999,
+   0.62,
+   0.75,
+   1
+  ],
+  "shadow2ndBorder": 0.25,
+  "shadow2ndBlur": 0.1,
+  "rim": {
+   "blend": 1,
+   "color": [
+    0.5,
+    0.46249998,
+    0.42499983,
+    1
+   ],
+   "border": 0.65,
+   "blur": 0.5,
+   "fresnelPower": 1,
+   "enableLighting": 1
+  },
+  "outline": {
+   "enable": false,
+   "width": 0.1,
+   "fixWidth": 1,
+   "color": [
+    0.6,
+    0.7,
+    0.8,
+    1
+   ],
+   "vertexR2Width": 0,
+   "litEnable": 1,
+   "cull": "front"
+  }
+ },
+ {
+  "n": "Cloth-Standard",
+  "l": "衣服 · 标准",
+  "shadowStrength": 1,
+  "shadowColor": [
+   0.7,
+   0.75,
+   0.85,
+   1
+  ],
+  "shadowBorder": 0.2,
+  "shadowBlur": 0.1,
+  "shadow2ndColor": [
+   0.5499999,
+   0.62,
+   0.75,
+   1
+  ],
+  "shadow2ndBorder": 0.25,
+  "shadow2ndBlur": 0.1,
+  "rim": {
+   "blend": 1,
+   "color": [
+    0.5,
+    0.46249998,
+    0.42499983,
+    1
+   ],
+   "border": 0.65,
+   "blur": 0.5,
+   "fresnelPower": 1,
+   "enableLighting": 1
+  },
+  "outline": {
+   "enable": false
+  }
+ },
+ {
+  "n": "Hair-Anime",
+  "l": "头发 · 动画",
+  "shadowStrength": 0.8,
+  "shadowColor": [
+   0.6,
+   0.65,
+   0.75,
+   1
+  ],
+  "shadowBorder": 0.1,
+  "shadowBlur": 0.005,
+  "shadow2ndColor": [
+   0.7,
+   0.75,
+   0.85,
+   0
+  ],
+  "shadow2ndBorder": 0.45,
+  "shadow2ndBlur": 0.1,
+  "rim": {
+   "blend": 1,
+   "color": [
+    0.5,
+    0.46249998,
+    0.42499983,
+    1
+   ],
+   "border": 0.65,
+   "blur": 0.05,
+   "fresnelPower": 1,
+   "enableLighting": 1
+  },
+  "outline": {
+   "enable": false,
+   "width": 0.15,
+   "fixWidth": 1,
+   "color": [
+    0.7,
+    0.7,
+    0.7,
+    1
+   ],
+   "vertexR2Width": 0,
+   "litEnable": 1,
+   "cull": "front"
+  }
+ },
+ {
+  "n": "Hair-Illust",
+  "l": "头发 · 插画",
+  "shadowStrength": 0.5,
+  "shadowColor": [
+   0.71814525,
+   0.63127446,
+   0.7735849,
+   1
+  ],
+  "shadowBorder": 0.75,
+  "shadowBlur": 0.02,
+  "shadow2ndColor": [
+   0.5126699,
+   0.47098595,
+   0.6792453,
+   1
+  ],
+  "shadow2ndBorder": 0.4,
+  "shadow2ndBlur": 0.05,
+  "rim": {
+   "blend": 1,
+   "color": [
+    0.27634388,
+    0.37768736,
+    0.509434,
+    1
+   ],
+   "border": 0.25,
+   "blur": 0.05,
+   "fresnelPower": 3,
+   "enableLighting": 1
+  },
+  "outline": {
+   "enable": false,
+   "width": 0.08,
+   "fixWidth": 0.5,
+   "color": [
+    0.41568625,
+    0.3803921,
+    0.5294118,
+    1
+   ],
+   "vertexR2Width": 0,
+   "zBias": 0,
+   "litEnable": 1,
+   "litColor": [
+    1,
+    0.2805821,
+    0,
+    0.2509804
+   ],
+   "litScale": 10,
+   "litOffset": -8
+  }
+ },
+ {
+  "n": "Hair-Outline",
+  "l": "头发 · 描边",
+  "shadowStrength": 0.65,
+  "shadowColor": [
+   0.6,
+   0.65,
+   0.75,
+   1
+  ],
+  "shadowBorder": 0.1,
+  "shadowBlur": 0.15,
+  "shadow2ndColor": [
+   0.7,
+   0.75,
+   0.85,
+   1
+  ],
+  "shadow2ndBorder": 0.45,
+  "shadow2ndBlur": 0.1,
+  "outline": {
+   "enable": false,
+   "width": 0.1,
+   "fixWidth": 1,
+   "color": [
+    0.8,
+    0.8,
+    0.8,
+    1
+   ],
+   "vertexR2Width": 0,
+   "litEnable": 1,
+   "cull": "front"
+  }
+ },
+ {
+  "n": "Hair-OutlineRimLight",
+  "l": "头发 · 描边+Rim",
+  "shadowStrength": 0.65,
+  "shadowColor": [
+   0.6,
+   0.65,
+   0.75,
+   1
+  ],
+  "shadowBorder": 0.1,
+  "shadowBlur": 0.15,
+  "shadow2ndColor": [
+   0.7,
+   0.75,
+   0.85,
+   1
+  ],
+  "shadow2ndBorder": 0.45,
+  "shadow2ndBlur": 0.1,
+  "rim": {
+   "blend": 1,
+   "color": [
+    0.5,
+    0.46249998,
+    0.42499983,
+    1
+   ],
+   "border": 0.8,
+   "blur": 0.05,
+   "fresnelPower": 1,
+   "enableLighting": 1
+  },
+  "outline": {
+   "enable": false,
+   "width": 0.1,
+   "fixWidth": 1,
+   "color": [
+    0.8,
+    0.8,
+    0.8,
+    1
+   ],
+   "vertexR2Width": 0,
+   "litEnable": 1,
+   "cull": "front"
+  }
+ },
+ {
+  "n": "Hair-Standard",
+  "l": "头发 · 标准",
+  "shadowStrength": 0.65,
+  "shadowColor": [
+   0.6,
+   0.65,
+   0.75,
+   1
+  ],
+  "shadowBorder": 0.1,
+  "shadowBlur": 0.15,
+  "shadow2ndColor": [
+   0.7,
+   0.75,
+   0.85,
+   1
+  ],
+  "shadow2ndBorder": 0.45,
+  "shadow2ndBlur": 0.1,
+  "outline": {
+   "enable": false
+  }
+ },
+ {
+  "n": "Inorganic-Glass",
+  "l": "无机 · 玻璃",
+  "shadowStrength": 1,
+  "shadowColor": [
+   0.7,
+   0.75,
+   0.85,
+   1
+  ],
+  "shadowBorder": 0.5,
+  "shadowBlur": 0.1,
+  "shadow2ndColor": [
+   0,
+   0,
+   0,
+   0
+  ],
+  "shadow2ndBorder": 0.5,
+  "shadow2ndBlur": 0.3,
+  "outline": {
+   "enable": false
+  }
+ },
+ {
+  "n": "Inorganic-LiteGlass",
+  "l": "无机 · 轻玻璃",
+  "shadowStrength": 1,
+  "shadowColor": [
+   0.7,
+   0.75,
+   0.85,
+   1
+  ],
+  "shadowBorder": 0.5,
+  "shadowBlur": 0.1,
+  "shadow2ndColor": [
+   0,
+   0,
+   0,
+   0
+  ],
+  "shadow2ndBorder": 0.5,
+  "shadow2ndBlur": 0.3,
+  "outline": {
+   "enable": false
+  }
+ },
+ {
+  "n": "Inorganic-Metal (MatCap)",
+  "l": "无机 · Metal (MatCap)",
+  "shadowStrength": 1,
+  "shadowColor": [
+   0.7,
+   0.75,
+   0.85,
+   1
+  ],
+  "shadowBorder": 0.1,
+  "shadowBlur": 0.1,
+  "shadow2ndColor": [
+   0,
+   0,
+   0,
+   0
+  ],
+  "shadow2ndBorder": 0.5,
+  "shadow2ndBlur": 0.3,
+  "matcap": {
+   "blend": 1,
+   "blendMode": 3
+  },
+  "outline": {
+   "enable": false
+  }
+ },
+ {
+  "n": "Inorganic-Metal",
+  "l": "无机 · 金属",
+  "shadowStrength": 0.5,
+  "shadowColor": [
+   0,
+   0,
+   0,
+   1
+  ],
+  "shadowBorder": 0.5,
+  "shadowBlur": 0.25,
+  "shadow2ndColor": [
+   0.73,
+   0.3899998,
+   0.3699998,
+   0
+  ],
+  "shadow2ndBorder": 0.5,
+  "shadow2ndBlur": 0.3,
+  "outline": {
+   "enable": false
+  }
+ },
+ {
+  "n": "Nature-Fur",
+  "l": "自然 · 毛皮",
+  "shadowStrength": 1,
+  "shadowColor": [
+   0.82,
+   0.76,
+   0.85,
+   1
+  ],
+  "shadowBorder": 0.5,
+  "shadowBlur": 0.1,
+  "shadow2ndColor": [
+   0.68,
+   0.65999997,
+   0.78999996,
+   1
+  ],
+  "shadow2ndBorder": 0.15,
+  "shadow2ndBlur": 0.1,
+  "outline": {
+   "enable": false
+  }
+ },
+ {
+  "n": "Skin-Anime",
+  "l": "皮肤 · 动画",
+  "shadowStrength": 1,
+  "shadowColor": [
+   0.925,
+   0.7,
+   0.74,
+   1
+  ],
+  "shadowBorder": 0.1,
+  "shadowBlur": 0.005,
+  "shadow2ndColor": [
+   1,
+   0.7,
+   0.75,
+   0
+  ],
+  "shadow2ndBorder": 0.15,
+  "shadow2ndBlur": 0.05,
+  "outline": {
+   "enable": false,
+   "width": 0.15,
+   "fixWidth": 1,
+   "color": [
+    0.9,
+    0.6,
+    0.6,
+    1
+   ],
+   "vertexR2Width": 0,
+   "litEnable": 1,
+   "cull": "front"
+  }
+ },
+ {
+  "n": "Skin-Flat",
+  "l": "皮肤 · 平坦",
+  "shadowStrength": 1,
+  "shadowColor": [
+   0.7,
+   0.75,
+   0.85,
+   1
+  ],
+  "shadowBorder": 0.1,
+  "shadowBlur": 0.1,
+  "shadow2ndColor": [
+   0,
+   0,
+   0,
+   0
+  ],
+  "shadow2ndBorder": 0.5,
+  "shadow2ndBlur": 0.3,
+  "outline": {
+   "enable": false
+  }
+ },
+ {
+  "n": "Skin-Illust",
+  "l": "皮肤 · 插画",
+  "shadowStrength": 0.75,
+  "shadowColor": [
+   0.93333334,
+   0.7413907,
+   0.70980394,
+   1
+  ],
+  "shadowBorder": 0.25,
+  "shadowBlur": 0.2,
+  "shadow2ndColor": [
+   1,
+   0.95711833,
+   0.95283014,
+   0
+  ],
+  "shadow2ndBorder": 0,
+  "shadow2ndBlur": 0,
+  "outline": {
+   "enable": false,
+   "width": 0.08,
+   "fixWidth": 0.5,
+   "color": [
+    0.6039216,
+    0.38039207,
+    0.40855336,
+    1
+   ],
+   "vertexR2Width": 2,
+   "zBias": 0,
+   "litEnable": 1,
+   "litColor": [
+    1,
+    0.19999906,
+    0,
+    0.5019608
+   ],
+   "litScale": 10,
+   "litOffset": -8
+  }
+ },
+ {
+  "n": "Skin-Outline",
+  "l": "皮肤 · 描边",
+  "shadowStrength": 0.5,
+  "shadowColor": [
+   1,
+   0.7,
+   0.75,
+   1
+  ],
+  "shadowBorder": 0.1,
+  "shadowBlur": 0.1,
+  "shadow2ndColor": [
+   1,
+   0.7,
+   0.75,
+   0
+  ],
+  "shadow2ndBorder": 0.15,
+  "shadow2ndBlur": 0.05,
+  "outline": {
+   "enable": false,
+   "width": 0.1,
+   "fixWidth": 1,
+   "color": [
+    0.95,
+    0.7,
+    0.7,
+    1
+   ],
+   "vertexR2Width": 0,
+   "litEnable": 1,
+   "cull": "front"
+  }
+ },
+ {
+  "n": "Skin-OutlineShadow",
+  "l": "皮肤 · 描边+阴影",
+  "shadowStrength": 0.5,
+  "shadowColor": [
+   1,
+   0.7,
+   0.75,
+   1
+  ],
+  "shadowBorder": 0.1,
+  "shadowBlur": 0.1,
+  "shadow2ndColor": [
+   1,
+   0.7,
+   0.75,
+   0
+  ],
+  "shadow2ndBorder": 0.15,
+  "shadow2ndBlur": 0.05,
+  "outline": {
+   "enable": false,
+   "width": 0.1,
+   "fixWidth": 1,
+   "color": [
+    0.95,
+    0.7,
+    0.7,
+    1
+   ],
+   "vertexR2Width": 0,
+   "litEnable": 1,
+   "cull": "front"
+  }
+ }
+]

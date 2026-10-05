@@ -155,7 +155,21 @@ var LinearTransfer = "linear";
 var SRGBTransfer = "srgb";
 var Rec709Primaries = "rec709";
 var P3Primaries = "p3";
+var ZeroStencilOp = 0;
 var KeepStencilOp = 7680;
+var ReplaceStencilOp = 7681;
+var IncrementStencilOp = 7682;
+var DecrementStencilOp = 7683;
+var IncrementWrapStencilOp = 34055;
+var DecrementWrapStencilOp = 34056;
+var InvertStencilOp = 5386;
+var NeverStencilFunc = 512;
+var LessStencilFunc = 513;
+var EqualStencilFunc = 514;
+var LessEqualStencilFunc = 515;
+var GreaterStencilFunc = 516;
+var NotEqualStencilFunc = 517;
+var GreaterEqualStencilFunc = 518;
 var AlwaysStencilFunc = 519;
 var NeverCompare = 512;
 var LessCompare = 513;
@@ -223,8 +237,8 @@ function generateUUID() {
   const uuid = _lut[d0 & 255] + _lut[d0 >> 8 & 255] + _lut[d0 >> 16 & 255] + _lut[d0 >> 24 & 255] + "-" + _lut[d1 & 255] + _lut[d1 >> 8 & 255] + "-" + _lut[d1 >> 16 & 15 | 64] + _lut[d1 >> 24 & 255] + "-" + _lut[d2 & 63 | 128] + _lut[d2 >> 8 & 255] + "-" + _lut[d2 >> 16 & 255] + _lut[d2 >> 24 & 255] + _lut[d3 & 255] + _lut[d3 >> 8 & 255] + _lut[d3 >> 16 & 255] + _lut[d3 >> 24 & 255];
   return uuid.toLowerCase();
 }
-function clamp(value, min, max) {
-  return Math.max(min, Math.min(max, value));
+function clamp(value, min, max2) {
+  return Math.max(min, Math.min(max2, value));
 }
 function euclideanModulo(n, m) {
   return (n % m + m) % m;
@@ -248,16 +262,16 @@ function damp(x, y, lambda, dt) {
 function pingpong(x, length = 1) {
   return length - Math.abs(euclideanModulo(x, length * 2) - length);
 }
-function smoothstep(x, min, max) {
+function smoothstep(x, min, max2) {
   if (x <= min) return 0;
-  if (x >= max) return 1;
-  x = (x - min) / (max - min);
+  if (x >= max2) return 1;
+  x = (x - min) / (max2 - min);
   return x * x * (3 - 2 * x);
 }
-function smootherstep(x, min, max) {
+function smootherstep(x, min, max2) {
   if (x <= min) return 0;
-  if (x >= max) return 1;
-  x = (x - min) / (max - min);
+  if (x >= max2) return 1;
+  x = (x - min) / (max2 - min);
   return x * x * x * (x * (x * 6 - 15) + 10);
 }
 function randInt(low, high) {
@@ -528,9 +542,9 @@ var Vector2 = class _Vector2 {
     this.y = Math.max(this.y, v.y);
     return this;
   }
-  clamp(min, max) {
-    this.x = Math.max(min.x, Math.min(max.x, this.x));
-    this.y = Math.max(min.y, Math.min(max.y, this.y));
+  clamp(min, max2) {
+    this.x = Math.max(min.x, Math.min(max2.x, this.x));
+    this.y = Math.max(min.y, Math.min(max2.y, this.y));
     return this;
   }
   clampScalar(minVal, maxVal) {
@@ -538,9 +552,9 @@ var Vector2 = class _Vector2 {
     this.y = Math.max(minVal, Math.min(maxVal, this.y));
     return this;
   }
-  clampLength(min, max) {
+  clampLength(min, max2) {
     const length = this.length();
-    return this.divideScalar(length || 1).multiplyScalar(Math.max(min, Math.min(max, length)));
+    return this.divideScalar(length || 1).multiplyScalar(Math.max(min, Math.min(max2, length)));
   }
   floor() {
     this.x = Math.floor(this.x);
@@ -1618,11 +1632,11 @@ var Vector4 = class _Vector4 {
     this.w = Math.max(this.w, v.w);
     return this;
   }
-  clamp(min, max) {
-    this.x = Math.max(min.x, Math.min(max.x, this.x));
-    this.y = Math.max(min.y, Math.min(max.y, this.y));
-    this.z = Math.max(min.z, Math.min(max.z, this.z));
-    this.w = Math.max(min.w, Math.min(max.w, this.w));
+  clamp(min, max2) {
+    this.x = Math.max(min.x, Math.min(max2.x, this.x));
+    this.y = Math.max(min.y, Math.min(max2.y, this.y));
+    this.z = Math.max(min.z, Math.min(max2.z, this.z));
+    this.w = Math.max(min.w, Math.min(max2.w, this.w));
     return this;
   }
   clampScalar(minVal, maxVal) {
@@ -1632,9 +1646,9 @@ var Vector4 = class _Vector4 {
     this.w = Math.max(minVal, Math.min(maxVal, this.w));
     return this;
   }
-  clampLength(min, max) {
+  clampLength(min, max2) {
     const length = this.length();
-    return this.divideScalar(length || 1).multiplyScalar(Math.max(min, Math.min(max, length)));
+    return this.divideScalar(length || 1).multiplyScalar(Math.max(min, Math.min(max2, length)));
   }
   floor() {
     this.x = Math.floor(this.x);
@@ -2437,10 +2451,10 @@ var Vector3 = class _Vector3 {
     this.z = Math.max(this.z, v.z);
     return this;
   }
-  clamp(min, max) {
-    this.x = Math.max(min.x, Math.min(max.x, this.x));
-    this.y = Math.max(min.y, Math.min(max.y, this.y));
-    this.z = Math.max(min.z, Math.min(max.z, this.z));
+  clamp(min, max2) {
+    this.x = Math.max(min.x, Math.min(max2.x, this.x));
+    this.y = Math.max(min.y, Math.min(max2.y, this.y));
+    this.z = Math.max(min.z, Math.min(max2.z, this.z));
     return this;
   }
   clampScalar(minVal, maxVal) {
@@ -2449,9 +2463,9 @@ var Vector3 = class _Vector3 {
     this.z = Math.max(minVal, Math.min(maxVal, this.z));
     return this;
   }
-  clampLength(min, max) {
+  clampLength(min, max2) {
     const length = this.length();
-    return this.divideScalar(length || 1).multiplyScalar(Math.max(min, Math.min(max, length)));
+    return this.divideScalar(length || 1).multiplyScalar(Math.max(min, Math.min(max2, length)));
   }
   floor() {
     this.x = Math.floor(this.x);
@@ -2652,14 +2666,14 @@ var Vector3 = class _Vector3 {
 var _vector$c = /* @__PURE__ */ new Vector3();
 var _quaternion$4 = /* @__PURE__ */ new Quaternion();
 var Box3 = class {
-  constructor(min = new Vector3(Infinity, Infinity, Infinity), max = new Vector3(-Infinity, -Infinity, -Infinity)) {
+  constructor(min = new Vector3(Infinity, Infinity, Infinity), max2 = new Vector3(-Infinity, -Infinity, -Infinity)) {
     this.isBox3 = true;
     this.min = min;
-    this.max = max;
+    this.max = max2;
   }
-  set(min, max) {
+  set(min, max2) {
     this.min.copy(min);
-    this.max.copy(max);
+    this.max.copy(max2);
     return this;
   }
   setFromArray(array) {
@@ -2788,29 +2802,29 @@ var Box3 = class {
     return _vector$b.distanceToSquared(sphere.center) <= sphere.radius * sphere.radius;
   }
   intersectsPlane(plane) {
-    let min, max;
+    let min, max2;
     if (plane.normal.x > 0) {
       min = plane.normal.x * this.min.x;
-      max = plane.normal.x * this.max.x;
+      max2 = plane.normal.x * this.max.x;
     } else {
       min = plane.normal.x * this.max.x;
-      max = plane.normal.x * this.min.x;
+      max2 = plane.normal.x * this.min.x;
     }
     if (plane.normal.y > 0) {
       min += plane.normal.y * this.min.y;
-      max += plane.normal.y * this.max.y;
+      max2 += plane.normal.y * this.max.y;
     } else {
       min += plane.normal.y * this.max.y;
-      max += plane.normal.y * this.min.y;
+      max2 += plane.normal.y * this.min.y;
     }
     if (plane.normal.z > 0) {
       min += plane.normal.z * this.min.z;
-      max += plane.normal.z * this.max.z;
+      max2 += plane.normal.z * this.max.z;
     } else {
       min += plane.normal.z * this.max.z;
-      max += plane.normal.z * this.min.z;
+      max2 += plane.normal.z * this.min.z;
     }
-    return min <= -plane.constant && max >= -plane.constant;
+    return min <= -plane.constant && max2 >= -plane.constant;
   }
   intersectsTriangle(triangle) {
     if (this.isEmpty()) {
@@ -3270,29 +3284,29 @@ var Ray = class {
     _edge2.subVectors(c, a);
     _normal$1.crossVectors(_edge1, _edge2);
     let DdN = this.direction.dot(_normal$1);
-    let sign;
+    let sign2;
     if (DdN > 0) {
       if (backfaceCulling) return null;
-      sign = 1;
+      sign2 = 1;
     } else if (DdN < 0) {
-      sign = -1;
+      sign2 = -1;
       DdN = -DdN;
     } else {
       return null;
     }
     _diff.subVectors(this.origin, a);
-    const DdQxE2 = sign * this.direction.dot(_edge2.crossVectors(_diff, _edge2));
+    const DdQxE2 = sign2 * this.direction.dot(_edge2.crossVectors(_diff, _edge2));
     if (DdQxE2 < 0) {
       return null;
     }
-    const DdE1xQ = sign * this.direction.dot(_edge1.cross(_diff));
+    const DdE1xQ = sign2 * this.direction.dot(_edge1.cross(_diff));
     if (DdE1xQ < 0) {
       return null;
     }
     if (DdQxE2 + DdE1xQ > DdN) {
       return null;
     }
-    const QdN = -sign * _diff.dot(_normal$1);
+    const QdN = -sign2 * _diff.dot(_normal$1);
     if (QdN < 0) {
       return null;
     }
@@ -5359,17 +5373,17 @@ var Color = class {
   getHSL(target, colorSpace = ColorManagement.workingColorSpace) {
     ColorManagement.fromWorkingColorSpace(_color.copy(this), colorSpace);
     const r = _color.r, g = _color.g, b = _color.b;
-    const max = Math.max(r, g, b);
+    const max2 = Math.max(r, g, b);
     const min = Math.min(r, g, b);
     let hue, saturation;
-    const lightness = (min + max) / 2;
-    if (min === max) {
+    const lightness = (min + max2) / 2;
+    if (min === max2) {
       hue = 0;
       saturation = 0;
     } else {
-      const delta = max - min;
-      saturation = lightness <= 0.5 ? delta / (max + min) : delta / (2 - max - min);
-      switch (max) {
+      const delta = max2 - min;
+      saturation = lightness <= 0.5 ? delta / (max2 + min) : delta / (2 - max2 - min);
+      switch (max2) {
         case r:
           hue = (g - b) / delta + (g < b ? 6 : 0);
           break;
@@ -6738,7 +6752,7 @@ var Mesh = class extends Object3D {
     }
     return target;
   }
-  raycast(raycaster, intersects) {
+  raycast(raycaster, intersects2) {
     const geometry = this.geometry;
     const material = this.material;
     const matrixWorld = this.matrixWorld;
@@ -6756,9 +6770,9 @@ var Mesh = class extends Object3D {
     if (geometry.boundingBox !== null) {
       if (_ray$3.intersectsBox(geometry.boundingBox) === false) return;
     }
-    this._computeIntersections(raycaster, intersects, _ray$3);
+    this._computeIntersections(raycaster, intersects2, _ray$3);
   }
-  _computeIntersections(raycaster, intersects, rayLocalSpace) {
+  _computeIntersections(raycaster, intersects2, rayLocalSpace) {
     let intersection;
     const geometry = this.geometry;
     const material = this.material;
@@ -6784,7 +6798,7 @@ var Mesh = class extends Object3D {
             if (intersection) {
               intersection.faceIndex = Math.floor(j / 3);
               intersection.face.materialIndex = group.materialIndex;
-              intersects.push(intersection);
+              intersects2.push(intersection);
             }
           }
         }
@@ -6798,7 +6812,7 @@ var Mesh = class extends Object3D {
           intersection = checkGeometryIntersection(this, material, raycaster, rayLocalSpace, uv, uv1, normal, a, b, c);
           if (intersection) {
             intersection.faceIndex = Math.floor(i / 3);
-            intersects.push(intersection);
+            intersects2.push(intersection);
           }
         }
       }
@@ -6817,7 +6831,7 @@ var Mesh = class extends Object3D {
             if (intersection) {
               intersection.faceIndex = Math.floor(j / 3);
               intersection.face.materialIndex = group.materialIndex;
-              intersects.push(intersection);
+              intersects2.push(intersection);
             }
           }
         }
@@ -6831,7 +6845,7 @@ var Mesh = class extends Object3D {
           intersection = checkGeometryIntersection(this, material, raycaster, rayLocalSpace, uv, uv1, normal, a, b, c);
           if (intersection) {
             intersection.faceIndex = Math.floor(i / 3);
-            intersects.push(intersection);
+            intersects2.push(intersection);
           }
         }
       }
@@ -9855,8 +9869,8 @@ function _createPlanes(lodMax) {
     sigmas.push(sigma);
     const texelSize = 1 / (sizeLod - 2);
     const min = -texelSize;
-    const max = 1 + texelSize;
-    const uv1 = [min, min, max, min, max, max, min, min, max, max, min, max];
+    const max2 = 1 + texelSize;
+    const uv1 = [min, min, max2, min, max2, max2, min, min, max2, max2, min, max2];
     const cubeFaces = 6;
     const vertices = 6;
     const positionSize = 3;
@@ -16744,7 +16758,7 @@ var WebGLRenderer = class {
       background.setClearAlpha.apply(background, arguments);
     };
     this.clear = function(color = true, depth2 = true, stencil2 = true) {
-      let bits = 0;
+      let bits2 = 0;
       if (color) {
         let isIntegerFormat = false;
         if (_currentRenderTarget !== null) {
@@ -16773,15 +16787,15 @@ var WebGLRenderer = class {
             _gl.clearBufferiv(_gl.COLOR, 0, intClearColor);
           }
         } else {
-          bits |= _gl.COLOR_BUFFER_BIT;
+          bits2 |= _gl.COLOR_BUFFER_BIT;
         }
       }
-      if (depth2) bits |= _gl.DEPTH_BUFFER_BIT;
+      if (depth2) bits2 |= _gl.DEPTH_BUFFER_BIT;
       if (stencil2) {
-        bits |= _gl.STENCIL_BUFFER_BIT;
+        bits2 |= _gl.STENCIL_BUFFER_BIT;
         this.state.buffers.stencil.setMask(4294967295);
       }
-      _gl.clear(bits);
+      _gl.clear(bits2);
     };
     this.clearColor = function() {
       this.clear(true, false, false);
@@ -18151,7 +18165,7 @@ var SkinnedMesh = class extends Mesh {
     if (source.boundingSphere !== null) this.boundingSphere = source.boundingSphere.clone();
     return this;
   }
-  raycast(raycaster, intersects) {
+  raycast(raycaster, intersects2) {
     const material = this.material;
     const matrixWorld = this.matrixWorld;
     if (material === void 0) return;
@@ -18164,7 +18178,7 @@ var SkinnedMesh = class extends Mesh {
     if (this.boundingBox !== null) {
       if (_ray$2.intersectsBox(this.boundingBox) === false) return;
     }
-    this._computeIntersections(raycaster, intersects, _ray$2);
+    this._computeIntersections(raycaster, intersects2, _ray$2);
   }
   getVertexPosition(index, target) {
     super.getVertexPosition(index, target);
@@ -18470,7 +18484,7 @@ var InstancedMesh = class extends Mesh {
   getMatrixAt(index, matrix) {
     matrix.fromArray(this.instanceMatrix.array, index * 16);
   }
-  raycast(raycaster, intersects) {
+  raycast(raycaster, intersects2) {
     const matrixWorld = this.matrixWorld;
     const raycastTimes = this.count;
     _mesh$1.geometry = this.geometry;
@@ -18489,7 +18503,7 @@ var InstancedMesh = class extends Mesh {
         const intersect = _instanceIntersects[i];
         intersect.instanceId = instanceId;
         intersect.object = this;
-        intersects.push(intersect);
+        intersects2.push(intersect);
       }
       _instanceIntersects.length = 0;
     }
@@ -18570,7 +18584,7 @@ var Line = class extends Object3D {
     }
     return this;
   }
-  raycast(raycaster, intersects) {
+  raycast(raycaster, intersects2) {
     const geometry = this.geometry;
     const matrixWorld = this.matrixWorld;
     const threshold = raycaster.params.Line.threshold;
@@ -18605,7 +18619,7 @@ var Line = class extends Object3D {
         interRay.applyMatrix4(this.matrixWorld);
         const distance = raycaster.ray.origin.distanceTo(interRay);
         if (distance < raycaster.near || distance > raycaster.far) continue;
-        intersects.push({
+        intersects2.push({
           distance,
           // What do we want? intersection point on the ray or on the segment??
           // point: raycaster.ray.at( distance ),
@@ -18627,7 +18641,7 @@ var Line = class extends Object3D {
         interRay.applyMatrix4(this.matrixWorld);
         const distance = raycaster.ray.origin.distanceTo(interRay);
         if (distance < raycaster.near || distance > raycaster.far) continue;
-        intersects.push({
+        intersects2.push({
           distance,
           // What do we want? intersection point on the ray or on the segment??
           // point: raycaster.ray.at( distance ),
@@ -18734,7 +18748,7 @@ var Points = class extends Object3D {
     this.geometry = source.geometry;
     return this;
   }
-  raycast(raycaster, intersects) {
+  raycast(raycaster, intersects2) {
     const geometry = this.geometry;
     const matrixWorld = this.matrixWorld;
     const threshold = raycaster.params.Points.threshold;
@@ -18757,14 +18771,14 @@ var Points = class extends Object3D {
       for (let i = start, il = end; i < il; i++) {
         const a = index.getX(i);
         _position$2.fromBufferAttribute(positionAttribute, a);
-        testPoint(_position$2, a, localThresholdSq, matrixWorld, raycaster, intersects, this);
+        testPoint(_position$2, a, localThresholdSq, matrixWorld, raycaster, intersects2, this);
       }
     } else {
       const start = Math.max(0, drawRange.start);
       const end = Math.min(positionAttribute.count, drawRange.start + drawRange.count);
       for (let i = start, l = end; i < l; i++) {
         _position$2.fromBufferAttribute(positionAttribute, i);
-        testPoint(_position$2, i, localThresholdSq, matrixWorld, raycaster, intersects, this);
+        testPoint(_position$2, i, localThresholdSq, matrixWorld, raycaster, intersects2, this);
       }
     }
   }
@@ -18786,7 +18800,7 @@ var Points = class extends Object3D {
     }
   }
 };
-function testPoint(point, index, localThresholdSq, matrixWorld, raycaster, intersects, object) {
+function testPoint(point, index, localThresholdSq, matrixWorld, raycaster, intersects2, object) {
   const rayPointDistanceSq = _ray.distanceSqToPoint(point);
   if (rayPointDistanceSq < localThresholdSq) {
     const intersectPoint = new Vector3();
@@ -18794,7 +18808,7 @@ function testPoint(point, index, localThresholdSq, matrixWorld, raycaster, inter
     intersectPoint.applyMatrix4(matrixWorld);
     const distance = raycaster.ray.origin.distanceTo(intersectPoint);
     if (distance < raycaster.near || distance > raycaster.far) return;
-    intersects.push({
+    intersects2.push({
       distance,
       distanceToRay: Math.sqrt(rayPointDistanceSq),
       point: intersectPoint,
@@ -18804,6 +18818,205 @@ function testPoint(point, index, localThresholdSq, matrixWorld, raycaster, inter
     });
   }
 }
+var Curve = class {
+  constructor() {
+    this.type = "Curve";
+    this.arcLengthDivisions = 200;
+  }
+  // Virtual base class method to overwrite and implement in subclasses
+  //	- t [0 .. 1]
+  getPoint() {
+    console.warn("THREE.Curve: .getPoint() not implemented.");
+    return null;
+  }
+  // Get point at relative position in curve according to arc length
+  // - u [0 .. 1]
+  getPointAt(u, optionalTarget) {
+    const t = this.getUtoTmapping(u);
+    return this.getPoint(t, optionalTarget);
+  }
+  // Get sequence of points using getPoint( t )
+  getPoints(divisions = 5) {
+    const points = [];
+    for (let d = 0; d <= divisions; d++) {
+      points.push(this.getPoint(d / divisions));
+    }
+    return points;
+  }
+  // Get sequence of points using getPointAt( u )
+  getSpacedPoints(divisions = 5) {
+    const points = [];
+    for (let d = 0; d <= divisions; d++) {
+      points.push(this.getPointAt(d / divisions));
+    }
+    return points;
+  }
+  // Get total curve arc length
+  getLength() {
+    const lengths = this.getLengths();
+    return lengths[lengths.length - 1];
+  }
+  // Get list of cumulative segment lengths
+  getLengths(divisions = this.arcLengthDivisions) {
+    if (this.cacheArcLengths && this.cacheArcLengths.length === divisions + 1 && !this.needsUpdate) {
+      return this.cacheArcLengths;
+    }
+    this.needsUpdate = false;
+    const cache = [];
+    let current, last = this.getPoint(0);
+    let sum = 0;
+    cache.push(0);
+    for (let p = 1; p <= divisions; p++) {
+      current = this.getPoint(p / divisions);
+      sum += current.distanceTo(last);
+      cache.push(sum);
+      last = current;
+    }
+    this.cacheArcLengths = cache;
+    return cache;
+  }
+  updateArcLengths() {
+    this.needsUpdate = true;
+    this.getLengths();
+  }
+  // Given u ( 0 .. 1 ), get a t to find p. This gives you points which are equidistant
+  getUtoTmapping(u, distance) {
+    const arcLengths = this.getLengths();
+    let i = 0;
+    const il = arcLengths.length;
+    let targetArcLength;
+    if (distance) {
+      targetArcLength = distance;
+    } else {
+      targetArcLength = u * arcLengths[il - 1];
+    }
+    let low = 0, high = il - 1, comparison;
+    while (low <= high) {
+      i = Math.floor(low + (high - low) / 2);
+      comparison = arcLengths[i] - targetArcLength;
+      if (comparison < 0) {
+        low = i + 1;
+      } else if (comparison > 0) {
+        high = i - 1;
+      } else {
+        high = i;
+        break;
+      }
+    }
+    i = high;
+    if (arcLengths[i] === targetArcLength) {
+      return i / (il - 1);
+    }
+    const lengthBefore = arcLengths[i];
+    const lengthAfter = arcLengths[i + 1];
+    const segmentLength = lengthAfter - lengthBefore;
+    const segmentFraction = (targetArcLength - lengthBefore) / segmentLength;
+    const t = (i + segmentFraction) / (il - 1);
+    return t;
+  }
+  // Returns a unit vector tangent at t
+  // In case any sub curve does not implement its tangent derivation,
+  // 2 points a small delta apart will be used to find its gradient
+  // which seems to give a reasonable approximation
+  getTangent(t, optionalTarget) {
+    const delta = 1e-4;
+    let t1 = t - delta;
+    let t2 = t + delta;
+    if (t1 < 0) t1 = 0;
+    if (t2 > 1) t2 = 1;
+    const pt1 = this.getPoint(t1);
+    const pt2 = this.getPoint(t2);
+    const tangent = optionalTarget || (pt1.isVector2 ? new Vector2() : new Vector3());
+    tangent.copy(pt2).sub(pt1).normalize();
+    return tangent;
+  }
+  getTangentAt(u, optionalTarget) {
+    const t = this.getUtoTmapping(u);
+    return this.getTangent(t, optionalTarget);
+  }
+  computeFrenetFrames(segments, closed) {
+    const normal = new Vector3();
+    const tangents = [];
+    const normals = [];
+    const binormals = [];
+    const vec = new Vector3();
+    const mat = new Matrix4();
+    for (let i = 0; i <= segments; i++) {
+      const u = i / segments;
+      tangents[i] = this.getTangentAt(u, new Vector3());
+    }
+    normals[0] = new Vector3();
+    binormals[0] = new Vector3();
+    let min = Number.MAX_VALUE;
+    const tx = Math.abs(tangents[0].x);
+    const ty = Math.abs(tangents[0].y);
+    const tz = Math.abs(tangents[0].z);
+    if (tx <= min) {
+      min = tx;
+      normal.set(1, 0, 0);
+    }
+    if (ty <= min) {
+      min = ty;
+      normal.set(0, 1, 0);
+    }
+    if (tz <= min) {
+      normal.set(0, 0, 1);
+    }
+    vec.crossVectors(tangents[0], normal).normalize();
+    normals[0].crossVectors(tangents[0], vec);
+    binormals[0].crossVectors(tangents[0], normals[0]);
+    for (let i = 1; i <= segments; i++) {
+      normals[i] = normals[i - 1].clone();
+      binormals[i] = binormals[i - 1].clone();
+      vec.crossVectors(tangents[i - 1], tangents[i]);
+      if (vec.length() > Number.EPSILON) {
+        vec.normalize();
+        const theta = Math.acos(clamp(tangents[i - 1].dot(tangents[i]), -1, 1));
+        normals[i].applyMatrix4(mat.makeRotationAxis(vec, theta));
+      }
+      binormals[i].crossVectors(tangents[i], normals[i]);
+    }
+    if (closed === true) {
+      let theta = Math.acos(clamp(normals[0].dot(normals[segments]), -1, 1));
+      theta /= segments;
+      if (tangents[0].dot(vec.crossVectors(normals[0], normals[segments])) > 0) {
+        theta = -theta;
+      }
+      for (let i = 1; i <= segments; i++) {
+        normals[i].applyMatrix4(mat.makeRotationAxis(tangents[i], theta * i));
+        binormals[i].crossVectors(tangents[i], normals[i]);
+      }
+    }
+    return {
+      tangents,
+      normals,
+      binormals
+    };
+  }
+  clone() {
+    return new this.constructor().copy(this);
+  }
+  copy(source) {
+    this.arcLengthDivisions = source.arcLengthDivisions;
+    return this;
+  }
+  toJSON() {
+    const data = {
+      metadata: {
+        version: 4.6,
+        type: "Curve",
+        generator: "Curve.toJSON"
+      }
+    };
+    data.arcLengthDivisions = this.arcLengthDivisions;
+    data.type = this.type;
+    return data;
+  }
+  fromJSON(json) {
+    this.arcLengthDivisions = json.arcLengthDivisions;
+    return this;
+  }
+};
 var CircleGeometry = class _CircleGeometry extends BufferGeometry {
   constructor(radius = 1, segments = 32, thetaStart = 0, thetaLength = Math.PI * 2) {
     super();
@@ -18849,6 +19062,514 @@ var CircleGeometry = class _CircleGeometry extends BufferGeometry {
   }
   static fromJSON(data) {
     return new _CircleGeometry(data.radius, data.segments, data.thetaStart, data.thetaLength);
+  }
+};
+var Earcut = {
+  triangulate: function(data, holeIndices, dim = 2) {
+    const hasHoles = holeIndices && holeIndices.length;
+    const outerLen = hasHoles ? holeIndices[0] * dim : data.length;
+    let outerNode = linkedList(data, 0, outerLen, dim, true);
+    const triangles = [];
+    if (!outerNode || outerNode.next === outerNode.prev) return triangles;
+    let minX, minY, maxX, maxY, x, y, invSize;
+    if (hasHoles) outerNode = eliminateHoles(data, holeIndices, outerNode, dim);
+    if (data.length > 80 * dim) {
+      minX = maxX = data[0];
+      minY = maxY = data[1];
+      for (let i = dim; i < outerLen; i += dim) {
+        x = data[i];
+        y = data[i + 1];
+        if (x < minX) minX = x;
+        if (y < minY) minY = y;
+        if (x > maxX) maxX = x;
+        if (y > maxY) maxY = y;
+      }
+      invSize = Math.max(maxX - minX, maxY - minY);
+      invSize = invSize !== 0 ? 32767 / invSize : 0;
+    }
+    earcutLinked(outerNode, triangles, dim, minX, minY, invSize, 0);
+    return triangles;
+  }
+};
+function linkedList(data, start, end, dim, clockwise) {
+  let i, last;
+  if (clockwise === signedArea(data, start, end, dim) > 0) {
+    for (i = start; i < end; i += dim) last = insertNode(i, data[i], data[i + 1], last);
+  } else {
+    for (i = end - dim; i >= start; i -= dim) last = insertNode(i, data[i], data[i + 1], last);
+  }
+  if (last && equals(last, last.next)) {
+    removeNode(last);
+    last = last.next;
+  }
+  return last;
+}
+function filterPoints(start, end) {
+  if (!start) return start;
+  if (!end) end = start;
+  let p = start, again;
+  do {
+    again = false;
+    if (!p.steiner && (equals(p, p.next) || area(p.prev, p, p.next) === 0)) {
+      removeNode(p);
+      p = end = p.prev;
+      if (p === p.next) break;
+      again = true;
+    } else {
+      p = p.next;
+    }
+  } while (again || p !== end);
+  return end;
+}
+function earcutLinked(ear, triangles, dim, minX, minY, invSize, pass) {
+  if (!ear) return;
+  if (!pass && invSize) indexCurve(ear, minX, minY, invSize);
+  let stop = ear, prev, next;
+  while (ear.prev !== ear.next) {
+    prev = ear.prev;
+    next = ear.next;
+    if (invSize ? isEarHashed(ear, minX, minY, invSize) : isEar(ear)) {
+      triangles.push(prev.i / dim | 0);
+      triangles.push(ear.i / dim | 0);
+      triangles.push(next.i / dim | 0);
+      removeNode(ear);
+      ear = next.next;
+      stop = next.next;
+      continue;
+    }
+    ear = next;
+    if (ear === stop) {
+      if (!pass) {
+        earcutLinked(filterPoints(ear), triangles, dim, minX, minY, invSize, 1);
+      } else if (pass === 1) {
+        ear = cureLocalIntersections(filterPoints(ear), triangles, dim);
+        earcutLinked(ear, triangles, dim, minX, minY, invSize, 2);
+      } else if (pass === 2) {
+        splitEarcut(ear, triangles, dim, minX, minY, invSize);
+      }
+      break;
+    }
+  }
+}
+function isEar(ear) {
+  const a = ear.prev, b = ear, c = ear.next;
+  if (area(a, b, c) >= 0) return false;
+  const ax = a.x, bx = b.x, cx = c.x, ay = a.y, by = b.y, cy = c.y;
+  const x0 = ax < bx ? ax < cx ? ax : cx : bx < cx ? bx : cx, y0 = ay < by ? ay < cy ? ay : cy : by < cy ? by : cy, x1 = ax > bx ? ax > cx ? ax : cx : bx > cx ? bx : cx, y1 = ay > by ? ay > cy ? ay : cy : by > cy ? by : cy;
+  let p = c.next;
+  while (p !== a) {
+    if (p.x >= x0 && p.x <= x1 && p.y >= y0 && p.y <= y1 && pointInTriangle(ax, ay, bx, by, cx, cy, p.x, p.y) && area(p.prev, p, p.next) >= 0) return false;
+    p = p.next;
+  }
+  return true;
+}
+function isEarHashed(ear, minX, minY, invSize) {
+  const a = ear.prev, b = ear, c = ear.next;
+  if (area(a, b, c) >= 0) return false;
+  const ax = a.x, bx = b.x, cx = c.x, ay = a.y, by = b.y, cy = c.y;
+  const x0 = ax < bx ? ax < cx ? ax : cx : bx < cx ? bx : cx, y0 = ay < by ? ay < cy ? ay : cy : by < cy ? by : cy, x1 = ax > bx ? ax > cx ? ax : cx : bx > cx ? bx : cx, y1 = ay > by ? ay > cy ? ay : cy : by > cy ? by : cy;
+  const minZ = zOrder(x0, y0, minX, minY, invSize), maxZ = zOrder(x1, y1, minX, minY, invSize);
+  let p = ear.prevZ, n = ear.nextZ;
+  while (p && p.z >= minZ && n && n.z <= maxZ) {
+    if (p.x >= x0 && p.x <= x1 && p.y >= y0 && p.y <= y1 && p !== a && p !== c && pointInTriangle(ax, ay, bx, by, cx, cy, p.x, p.y) && area(p.prev, p, p.next) >= 0) return false;
+    p = p.prevZ;
+    if (n.x >= x0 && n.x <= x1 && n.y >= y0 && n.y <= y1 && n !== a && n !== c && pointInTriangle(ax, ay, bx, by, cx, cy, n.x, n.y) && area(n.prev, n, n.next) >= 0) return false;
+    n = n.nextZ;
+  }
+  while (p && p.z >= minZ) {
+    if (p.x >= x0 && p.x <= x1 && p.y >= y0 && p.y <= y1 && p !== a && p !== c && pointInTriangle(ax, ay, bx, by, cx, cy, p.x, p.y) && area(p.prev, p, p.next) >= 0) return false;
+    p = p.prevZ;
+  }
+  while (n && n.z <= maxZ) {
+    if (n.x >= x0 && n.x <= x1 && n.y >= y0 && n.y <= y1 && n !== a && n !== c && pointInTriangle(ax, ay, bx, by, cx, cy, n.x, n.y) && area(n.prev, n, n.next) >= 0) return false;
+    n = n.nextZ;
+  }
+  return true;
+}
+function cureLocalIntersections(start, triangles, dim) {
+  let p = start;
+  do {
+    const a = p.prev, b = p.next.next;
+    if (!equals(a, b) && intersects(a, p, p.next, b) && locallyInside(a, b) && locallyInside(b, a)) {
+      triangles.push(a.i / dim | 0);
+      triangles.push(p.i / dim | 0);
+      triangles.push(b.i / dim | 0);
+      removeNode(p);
+      removeNode(p.next);
+      p = start = b;
+    }
+    p = p.next;
+  } while (p !== start);
+  return filterPoints(p);
+}
+function splitEarcut(start, triangles, dim, minX, minY, invSize) {
+  let a = start;
+  do {
+    let b = a.next.next;
+    while (b !== a.prev) {
+      if (a.i !== b.i && isValidDiagonal(a, b)) {
+        let c = splitPolygon(a, b);
+        a = filterPoints(a, a.next);
+        c = filterPoints(c, c.next);
+        earcutLinked(a, triangles, dim, minX, minY, invSize, 0);
+        earcutLinked(c, triangles, dim, minX, minY, invSize, 0);
+        return;
+      }
+      b = b.next;
+    }
+    a = a.next;
+  } while (a !== start);
+}
+function eliminateHoles(data, holeIndices, outerNode, dim) {
+  const queue = [];
+  let i, len, start, end, list;
+  for (i = 0, len = holeIndices.length; i < len; i++) {
+    start = holeIndices[i] * dim;
+    end = i < len - 1 ? holeIndices[i + 1] * dim : data.length;
+    list = linkedList(data, start, end, dim, false);
+    if (list === list.next) list.steiner = true;
+    queue.push(getLeftmost(list));
+  }
+  queue.sort(compareX);
+  for (i = 0; i < queue.length; i++) {
+    outerNode = eliminateHole(queue[i], outerNode);
+  }
+  return outerNode;
+}
+function compareX(a, b) {
+  return a.x - b.x;
+}
+function eliminateHole(hole, outerNode) {
+  const bridge = findHoleBridge(hole, outerNode);
+  if (!bridge) {
+    return outerNode;
+  }
+  const bridgeReverse = splitPolygon(bridge, hole);
+  filterPoints(bridgeReverse, bridgeReverse.next);
+  return filterPoints(bridge, bridge.next);
+}
+function findHoleBridge(hole, outerNode) {
+  let p = outerNode, qx = -Infinity, m;
+  const hx = hole.x, hy = hole.y;
+  do {
+    if (hy <= p.y && hy >= p.next.y && p.next.y !== p.y) {
+      const x = p.x + (hy - p.y) * (p.next.x - p.x) / (p.next.y - p.y);
+      if (x <= hx && x > qx) {
+        qx = x;
+        m = p.x < p.next.x ? p : p.next;
+        if (x === hx) return m;
+      }
+    }
+    p = p.next;
+  } while (p !== outerNode);
+  if (!m) return null;
+  const stop = m, mx = m.x, my = m.y;
+  let tanMin = Infinity, tan;
+  p = m;
+  do {
+    if (hx >= p.x && p.x >= mx && hx !== p.x && pointInTriangle(hy < my ? hx : qx, hy, mx, my, hy < my ? qx : hx, hy, p.x, p.y)) {
+      tan = Math.abs(hy - p.y) / (hx - p.x);
+      if (locallyInside(p, hole) && (tan < tanMin || tan === tanMin && (p.x > m.x || p.x === m.x && sectorContainsSector(m, p)))) {
+        m = p;
+        tanMin = tan;
+      }
+    }
+    p = p.next;
+  } while (p !== stop);
+  return m;
+}
+function sectorContainsSector(m, p) {
+  return area(m.prev, m, p.prev) < 0 && area(p.next, m, m.next) < 0;
+}
+function indexCurve(start, minX, minY, invSize) {
+  let p = start;
+  do {
+    if (p.z === 0) p.z = zOrder(p.x, p.y, minX, minY, invSize);
+    p.prevZ = p.prev;
+    p.nextZ = p.next;
+    p = p.next;
+  } while (p !== start);
+  p.prevZ.nextZ = null;
+  p.prevZ = null;
+  sortLinked(p);
+}
+function sortLinked(list) {
+  let i, p, q, e, tail, numMerges, pSize, qSize, inSize = 1;
+  do {
+    p = list;
+    list = null;
+    tail = null;
+    numMerges = 0;
+    while (p) {
+      numMerges++;
+      q = p;
+      pSize = 0;
+      for (i = 0; i < inSize; i++) {
+        pSize++;
+        q = q.nextZ;
+        if (!q) break;
+      }
+      qSize = inSize;
+      while (pSize > 0 || qSize > 0 && q) {
+        if (pSize !== 0 && (qSize === 0 || !q || p.z <= q.z)) {
+          e = p;
+          p = p.nextZ;
+          pSize--;
+        } else {
+          e = q;
+          q = q.nextZ;
+          qSize--;
+        }
+        if (tail) tail.nextZ = e;
+        else list = e;
+        e.prevZ = tail;
+        tail = e;
+      }
+      p = q;
+    }
+    tail.nextZ = null;
+    inSize *= 2;
+  } while (numMerges > 1);
+  return list;
+}
+function zOrder(x, y, minX, minY, invSize) {
+  x = (x - minX) * invSize | 0;
+  y = (y - minY) * invSize | 0;
+  x = (x | x << 8) & 16711935;
+  x = (x | x << 4) & 252645135;
+  x = (x | x << 2) & 858993459;
+  x = (x | x << 1) & 1431655765;
+  y = (y | y << 8) & 16711935;
+  y = (y | y << 4) & 252645135;
+  y = (y | y << 2) & 858993459;
+  y = (y | y << 1) & 1431655765;
+  return x | y << 1;
+}
+function getLeftmost(start) {
+  let p = start, leftmost = start;
+  do {
+    if (p.x < leftmost.x || p.x === leftmost.x && p.y < leftmost.y) leftmost = p;
+    p = p.next;
+  } while (p !== start);
+  return leftmost;
+}
+function pointInTriangle(ax, ay, bx, by, cx, cy, px, py) {
+  return (cx - px) * (ay - py) >= (ax - px) * (cy - py) && (ax - px) * (by - py) >= (bx - px) * (ay - py) && (bx - px) * (cy - py) >= (cx - px) * (by - py);
+}
+function isValidDiagonal(a, b) {
+  return a.next.i !== b.i && a.prev.i !== b.i && !intersectsPolygon(a, b) && // dones't intersect other edges
+  (locallyInside(a, b) && locallyInside(b, a) && middleInside(a, b) && // locally visible
+  (area(a.prev, a, b.prev) || area(a, b.prev, b)) || // does not create opposite-facing sectors
+  equals(a, b) && area(a.prev, a, a.next) > 0 && area(b.prev, b, b.next) > 0);
+}
+function area(p, q, r) {
+  return (q.y - p.y) * (r.x - q.x) - (q.x - p.x) * (r.y - q.y);
+}
+function equals(p1, p2) {
+  return p1.x === p2.x && p1.y === p2.y;
+}
+function intersects(p1, q1, p2, q2) {
+  const o1 = sign(area(p1, q1, p2));
+  const o2 = sign(area(p1, q1, q2));
+  const o3 = sign(area(p2, q2, p1));
+  const o4 = sign(area(p2, q2, q1));
+  if (o1 !== o2 && o3 !== o4) return true;
+  if (o1 === 0 && onSegment(p1, p2, q1)) return true;
+  if (o2 === 0 && onSegment(p1, q2, q1)) return true;
+  if (o3 === 0 && onSegment(p2, p1, q2)) return true;
+  if (o4 === 0 && onSegment(p2, q1, q2)) return true;
+  return false;
+}
+function onSegment(p, q, r) {
+  return q.x <= Math.max(p.x, r.x) && q.x >= Math.min(p.x, r.x) && q.y <= Math.max(p.y, r.y) && q.y >= Math.min(p.y, r.y);
+}
+function sign(num) {
+  return num > 0 ? 1 : num < 0 ? -1 : 0;
+}
+function intersectsPolygon(a, b) {
+  let p = a;
+  do {
+    if (p.i !== a.i && p.next.i !== a.i && p.i !== b.i && p.next.i !== b.i && intersects(p, p.next, a, b)) return true;
+    p = p.next;
+  } while (p !== a);
+  return false;
+}
+function locallyInside(a, b) {
+  return area(a.prev, a, a.next) < 0 ? area(a, b, a.next) >= 0 && area(a, a.prev, b) >= 0 : area(a, b, a.prev) < 0 || area(a, a.next, b) < 0;
+}
+function middleInside(a, b) {
+  let p = a, inside = false;
+  const px = (a.x + b.x) / 2, py = (a.y + b.y) / 2;
+  do {
+    if (p.y > py !== p.next.y > py && p.next.y !== p.y && px < (p.next.x - p.x) * (py - p.y) / (p.next.y - p.y) + p.x)
+      inside = !inside;
+    p = p.next;
+  } while (p !== a);
+  return inside;
+}
+function splitPolygon(a, b) {
+  const a2 = new Node(a.i, a.x, a.y), b2 = new Node(b.i, b.x, b.y), an = a.next, bp = b.prev;
+  a.next = b;
+  b.prev = a;
+  a2.next = an;
+  an.prev = a2;
+  b2.next = a2;
+  a2.prev = b2;
+  bp.next = b2;
+  b2.prev = bp;
+  return b2;
+}
+function insertNode(i, x, y, last) {
+  const p = new Node(i, x, y);
+  if (!last) {
+    p.prev = p;
+    p.next = p;
+  } else {
+    p.next = last.next;
+    p.prev = last;
+    last.next.prev = p;
+    last.next = p;
+  }
+  return p;
+}
+function removeNode(p) {
+  p.next.prev = p.prev;
+  p.prev.next = p.next;
+  if (p.prevZ) p.prevZ.nextZ = p.nextZ;
+  if (p.nextZ) p.nextZ.prevZ = p.prevZ;
+}
+function Node(i, x, y) {
+  this.i = i;
+  this.x = x;
+  this.y = y;
+  this.prev = null;
+  this.next = null;
+  this.z = 0;
+  this.prevZ = null;
+  this.nextZ = null;
+  this.steiner = false;
+}
+function signedArea(data, start, end, dim) {
+  let sum = 0;
+  for (let i = start, j = end - dim; i < end; i += dim) {
+    sum += (data[j] - data[i]) * (data[i + 1] + data[j + 1]);
+    j = i;
+  }
+  return sum;
+}
+var ShapeUtils = class _ShapeUtils {
+  // calculate area of the contour polygon
+  static area(contour) {
+    const n = contour.length;
+    let a = 0;
+    for (let p = n - 1, q = 0; q < n; p = q++) {
+      a += contour[p].x * contour[q].y - contour[q].x * contour[p].y;
+    }
+    return a * 0.5;
+  }
+  static isClockWise(pts) {
+    return _ShapeUtils.area(pts) < 0;
+  }
+  static triangulateShape(contour, holes) {
+    const vertices = [];
+    const holeIndices = [];
+    const faces = [];
+    removeDupEndPts(contour);
+    addContour(vertices, contour);
+    let holeIndex = contour.length;
+    holes.forEach(removeDupEndPts);
+    for (let i = 0; i < holes.length; i++) {
+      holeIndices.push(holeIndex);
+      holeIndex += holes[i].length;
+      addContour(vertices, holes[i]);
+    }
+    const triangles = Earcut.triangulate(vertices, holeIndices);
+    for (let i = 0; i < triangles.length; i += 3) {
+      faces.push(triangles.slice(i, i + 3));
+    }
+    return faces;
+  }
+};
+function removeDupEndPts(points) {
+  const l = points.length;
+  if (l > 2 && points[l - 1].equals(points[0])) {
+    points.pop();
+  }
+}
+function addContour(vertices, contour) {
+  for (let i = 0; i < contour.length; i++) {
+    vertices.push(contour[i].x);
+    vertices.push(contour[i].y);
+  }
+}
+var SphereGeometry = class _SphereGeometry extends BufferGeometry {
+  constructor(radius = 1, widthSegments = 32, heightSegments = 16, phiStart = 0, phiLength = Math.PI * 2, thetaStart = 0, thetaLength = Math.PI) {
+    super();
+    this.type = "SphereGeometry";
+    this.parameters = {
+      radius,
+      widthSegments,
+      heightSegments,
+      phiStart,
+      phiLength,
+      thetaStart,
+      thetaLength
+    };
+    widthSegments = Math.max(3, Math.floor(widthSegments));
+    heightSegments = Math.max(2, Math.floor(heightSegments));
+    const thetaEnd = Math.min(thetaStart + thetaLength, Math.PI);
+    let index = 0;
+    const grid = [];
+    const vertex2 = new Vector3();
+    const normal = new Vector3();
+    const indices = [];
+    const vertices = [];
+    const normals = [];
+    const uvs = [];
+    for (let iy = 0; iy <= heightSegments; iy++) {
+      const verticesRow = [];
+      const v = iy / heightSegments;
+      let uOffset = 0;
+      if (iy === 0 && thetaStart === 0) {
+        uOffset = 0.5 / widthSegments;
+      } else if (iy === heightSegments && thetaEnd === Math.PI) {
+        uOffset = -0.5 / widthSegments;
+      }
+      for (let ix = 0; ix <= widthSegments; ix++) {
+        const u = ix / widthSegments;
+        vertex2.x = -radius * Math.cos(phiStart + u * phiLength) * Math.sin(thetaStart + v * thetaLength);
+        vertex2.y = radius * Math.cos(thetaStart + v * thetaLength);
+        vertex2.z = radius * Math.sin(phiStart + u * phiLength) * Math.sin(thetaStart + v * thetaLength);
+        vertices.push(vertex2.x, vertex2.y, vertex2.z);
+        normal.copy(vertex2).normalize();
+        normals.push(normal.x, normal.y, normal.z);
+        uvs.push(u + uOffset, 1 - v);
+        verticesRow.push(index++);
+      }
+      grid.push(verticesRow);
+    }
+    for (let iy = 0; iy < heightSegments; iy++) {
+      for (let ix = 0; ix < widthSegments; ix++) {
+        const a = grid[iy][ix + 1];
+        const b = grid[iy][ix];
+        const c = grid[iy + 1][ix];
+        const d = grid[iy + 1][ix + 1];
+        if (iy !== 0 || thetaStart > 0) indices.push(a, b, d);
+        if (iy !== heightSegments - 1 || thetaEnd < Math.PI) indices.push(b, c, d);
+      }
+    }
+    this.setIndex(indices);
+    this.setAttribute("position", new Float32BufferAttribute(vertices, 3));
+    this.setAttribute("normal", new Float32BufferAttribute(normals, 3));
+    this.setAttribute("uv", new Float32BufferAttribute(uvs, 2));
+  }
+  copy(source) {
+    super.copy(source);
+    this.parameters = Object.assign({}, source.parameters);
+    return this;
+  }
+  static fromJSON(data) {
+    return new _SphereGeometry(data.radius, data.widthSegments, data.heightSegments, data.phiStart, data.phiLength, data.thetaStart, data.thetaLength);
   }
 };
 var ShadowMaterial = class extends Material {
@@ -19075,6 +19796,80 @@ var MeshPhysicalMaterial = class extends MeshStandardMaterial {
     return this;
   }
 };
+var MeshPhongMaterial = class extends Material {
+  constructor(parameters) {
+    super();
+    this.isMeshPhongMaterial = true;
+    this.type = "MeshPhongMaterial";
+    this.color = new Color(16777215);
+    this.specular = new Color(1118481);
+    this.shininess = 30;
+    this.map = null;
+    this.lightMap = null;
+    this.lightMapIntensity = 1;
+    this.aoMap = null;
+    this.aoMapIntensity = 1;
+    this.emissive = new Color(0);
+    this.emissiveIntensity = 1;
+    this.emissiveMap = null;
+    this.bumpMap = null;
+    this.bumpScale = 1;
+    this.normalMap = null;
+    this.normalMapType = TangentSpaceNormalMap;
+    this.normalScale = new Vector2(1, 1);
+    this.displacementMap = null;
+    this.displacementScale = 1;
+    this.displacementBias = 0;
+    this.specularMap = null;
+    this.alphaMap = null;
+    this.envMap = null;
+    this.combine = MultiplyOperation;
+    this.reflectivity = 1;
+    this.refractionRatio = 0.98;
+    this.wireframe = false;
+    this.wireframeLinewidth = 1;
+    this.wireframeLinecap = "round";
+    this.wireframeLinejoin = "round";
+    this.flatShading = false;
+    this.fog = true;
+    this.setValues(parameters);
+  }
+  copy(source) {
+    super.copy(source);
+    this.color.copy(source.color);
+    this.specular.copy(source.specular);
+    this.shininess = source.shininess;
+    this.map = source.map;
+    this.lightMap = source.lightMap;
+    this.lightMapIntensity = source.lightMapIntensity;
+    this.aoMap = source.aoMap;
+    this.aoMapIntensity = source.aoMapIntensity;
+    this.emissive.copy(source.emissive);
+    this.emissiveMap = source.emissiveMap;
+    this.emissiveIntensity = source.emissiveIntensity;
+    this.bumpMap = source.bumpMap;
+    this.bumpScale = source.bumpScale;
+    this.normalMap = source.normalMap;
+    this.normalMapType = source.normalMapType;
+    this.normalScale.copy(source.normalScale);
+    this.displacementMap = source.displacementMap;
+    this.displacementScale = source.displacementScale;
+    this.displacementBias = source.displacementBias;
+    this.specularMap = source.specularMap;
+    this.alphaMap = source.alphaMap;
+    this.envMap = source.envMap;
+    this.combine = source.combine;
+    this.reflectivity = source.reflectivity;
+    this.refractionRatio = source.refractionRatio;
+    this.wireframe = source.wireframe;
+    this.wireframeLinewidth = source.wireframeLinewidth;
+    this.wireframeLinecap = source.wireframeLinecap;
+    this.wireframeLinejoin = source.wireframeLinejoin;
+    this.flatShading = source.flatShading;
+    this.fog = source.fog;
+    return this;
+  }
+};
 var MeshToonMaterial = class extends Material {
   constructor(parameters) {
     super();
@@ -19132,6 +19927,76 @@ var MeshToonMaterial = class extends Material {
     this.wireframeLinewidth = source.wireframeLinewidth;
     this.wireframeLinecap = source.wireframeLinecap;
     this.wireframeLinejoin = source.wireframeLinejoin;
+    this.fog = source.fog;
+    return this;
+  }
+};
+var MeshLambertMaterial = class extends Material {
+  constructor(parameters) {
+    super();
+    this.isMeshLambertMaterial = true;
+    this.type = "MeshLambertMaterial";
+    this.color = new Color(16777215);
+    this.map = null;
+    this.lightMap = null;
+    this.lightMapIntensity = 1;
+    this.aoMap = null;
+    this.aoMapIntensity = 1;
+    this.emissive = new Color(0);
+    this.emissiveIntensity = 1;
+    this.emissiveMap = null;
+    this.bumpMap = null;
+    this.bumpScale = 1;
+    this.normalMap = null;
+    this.normalMapType = TangentSpaceNormalMap;
+    this.normalScale = new Vector2(1, 1);
+    this.displacementMap = null;
+    this.displacementScale = 1;
+    this.displacementBias = 0;
+    this.specularMap = null;
+    this.alphaMap = null;
+    this.envMap = null;
+    this.combine = MultiplyOperation;
+    this.reflectivity = 1;
+    this.refractionRatio = 0.98;
+    this.wireframe = false;
+    this.wireframeLinewidth = 1;
+    this.wireframeLinecap = "round";
+    this.wireframeLinejoin = "round";
+    this.flatShading = false;
+    this.fog = true;
+    this.setValues(parameters);
+  }
+  copy(source) {
+    super.copy(source);
+    this.color.copy(source.color);
+    this.map = source.map;
+    this.lightMap = source.lightMap;
+    this.lightMapIntensity = source.lightMapIntensity;
+    this.aoMap = source.aoMap;
+    this.aoMapIntensity = source.aoMapIntensity;
+    this.emissive.copy(source.emissive);
+    this.emissiveMap = source.emissiveMap;
+    this.emissiveIntensity = source.emissiveIntensity;
+    this.bumpMap = source.bumpMap;
+    this.bumpScale = source.bumpScale;
+    this.normalMap = source.normalMap;
+    this.normalMapType = source.normalMapType;
+    this.normalScale.copy(source.normalScale);
+    this.displacementMap = source.displacementMap;
+    this.displacementScale = source.displacementScale;
+    this.displacementBias = source.displacementBias;
+    this.specularMap = source.specularMap;
+    this.alphaMap = source.alphaMap;
+    this.envMap = source.envMap;
+    this.combine = source.combine;
+    this.reflectivity = source.reflectivity;
+    this.refractionRatio = source.refractionRatio;
+    this.wireframe = source.wireframe;
+    this.wireframeLinewidth = source.wireframeLinewidth;
+    this.wireframeLinecap = source.wireframeLinecap;
+    this.wireframeLinejoin = source.wireframeLinejoin;
+    this.flatShading = source.flatShading;
     this.fog = source.fog;
     return this;
   }
@@ -20575,6 +21440,13 @@ var DirectionalLight = class extends Light {
     return this;
   }
 };
+var AmbientLight = class extends Light {
+  constructor(color, intensity) {
+    super(color, intensity);
+    this.isAmbientLight = true;
+    this.type = "AmbientLight";
+  }
+};
 var LoaderUtils = class {
   static decodeText(array) {
     if (typeof TextDecoder !== "undefined") {
@@ -21988,30 +22860,30 @@ var Raycaster = class {
       console.error("THREE.Raycaster: Unsupported camera type: " + camera.type);
     }
   }
-  intersectObject(object, recursive = true, intersects = []) {
-    intersectObject(object, this, intersects, recursive);
-    intersects.sort(ascSort);
-    return intersects;
+  intersectObject(object, recursive = true, intersects2 = []) {
+    intersectObject(object, this, intersects2, recursive);
+    intersects2.sort(ascSort);
+    return intersects2;
   }
-  intersectObjects(objects, recursive = true, intersects = []) {
+  intersectObjects(objects, recursive = true, intersects2 = []) {
     for (let i = 0, l = objects.length; i < l; i++) {
-      intersectObject(objects[i], this, intersects, recursive);
+      intersectObject(objects[i], this, intersects2, recursive);
     }
-    intersects.sort(ascSort);
-    return intersects;
+    intersects2.sort(ascSort);
+    return intersects2;
   }
 };
 function ascSort(a, b) {
   return a.distance - b.distance;
 }
-function intersectObject(object, raycaster, intersects, recursive) {
+function intersectObject(object, raycaster, intersects2, recursive) {
   if (object.layers.test(raycaster.layers)) {
-    object.raycast(raycaster, intersects);
+    object.raycast(raycaster, intersects2);
   }
   if (recursive === true) {
     const children = object.children;
     for (let i = 0, l = children.length; i < l; i++) {
-      intersectObject(children[i], raycaster, intersects, true);
+      intersectObject(children[i], raycaster, intersects2, true);
     }
   }
 }
@@ -22124,6 +22996,39 @@ function getBoneList(object) {
   }
   return boneList;
 }
+var GridHelper = class extends LineSegments {
+  constructor(size = 10, divisions = 10, color1 = 4473924, color2 = 8947848) {
+    color1 = new Color(color1);
+    color2 = new Color(color2);
+    const center = divisions / 2;
+    const step = size / divisions;
+    const halfSize = size / 2;
+    const vertices = [], colors = [];
+    for (let i = 0, j = 0, k = -halfSize; i <= divisions; i++, k += step) {
+      vertices.push(-halfSize, 0, k, halfSize, 0, k);
+      vertices.push(k, 0, -halfSize, k, 0, halfSize);
+      const color = i === center ? color1 : color2;
+      color.toArray(colors, j);
+      j += 3;
+      color.toArray(colors, j);
+      j += 3;
+      color.toArray(colors, j);
+      j += 3;
+      color.toArray(colors, j);
+      j += 3;
+    }
+    const geometry = new BufferGeometry();
+    geometry.setAttribute("position", new Float32BufferAttribute(vertices, 3));
+    geometry.setAttribute("color", new Float32BufferAttribute(colors, 3));
+    const material = new LineBasicMaterial({ vertexColors: true, toneMapped: false });
+    super(geometry, material);
+    this.type = "GridHelper";
+  }
+  dispose() {
+    this.geometry.dispose();
+    this.material.dispose();
+  }
+};
 if (typeof __THREE_DEVTOOLS__ !== "undefined") {
   __THREE_DEVTOOLS__.dispatchEvent(new CustomEvent("register", { detail: {
     revision: REVISION
@@ -22136,6 +23041,38 @@ if (typeof window !== "undefined") {
     window.__THREE__ = REVISION;
   }
 }
+
+// assets/lilmap.inline.js
+var LIL_MAP = [{ "p": "mainTexHSVG", "l": "_MainTexHSVG", "t": "vector" }, { "p": "mainTexScrollRotate", "l": "_MainTex_ScrollRotate", "t": "vector" }, { "p": "transparentMode", "l": "_TransparentMode", "t": "int" }, { "p": "cutoff", "l": "_Cutoff", "t": "range" }, { "p": "cull", "l": "_Cull", "t": "int" }, { "p": "useShadow", "l": "_UseShadow", "t": "int" }, { "p": "shadowStrength", "l": "_ShadowStrength", "t": "range" }, { "p": "shadowColor", "l": "_ShadowColor", "t": "color" }, { "p": "shadowBorder", "l": "_ShadowBorder", "t": "range" }, { "p": "shadowBorderRange", "l": "_ShadowBorderRange", "t": "range" }, { "p": "shadowMainStrength", "l": "_ShadowMainStrength", "t": "range" }, { "p": "shadowReceive", "l": "_ShadowReceive", "t": "range" }, { "p": "shadow2ndReceive", "l": "_Shadow2ndReceive", "t": "range" }, { "p": "shadow3rdReceive", "l": "_Shadow3rdReceive", "t": "range" }, { "p": "shadowBlur", "l": "_ShadowBlur", "t": "range" }, { "p": "shadow2ndColor", "l": "_Shadow2ndColor", "t": "color" }, { "p": "shadow2ndBorder", "l": "_Shadow2ndBorder", "t": "range" }, { "p": "shadow2ndBlur", "l": "_Shadow2ndBlur", "t": "range" }, { "p": "shadow3rdColor", "l": "_Shadow3rdColor", "t": "color" }, { "p": "shadow3rdBorder", "l": "_Shadow3rdBorder", "t": "range" }, { "p": "shadow3rdBlur", "l": "_Shadow3rdBlur", "t": "range" }, { "p": "shadowNormalStrength", "l": "_ShadowNormalStrength", "t": "range" }, { "p": "shadow2ndNormalStrength", "l": "_Shadow2ndNormalStrength", "t": "range" }, { "p": "shadow3rdNormalStrength", "l": "_Shadow3rdNormalStrength", "t": "range" }, { "p": "bump.use", "l": "_UseBumpMap", "t": "int" }, { "p": "bump.tex", "l": "_BumpMap", "t": "texture" }, { "p": "bump.scale", "l": "_BumpScale", "t": "range" }, { "p": "bump2nd.use", "l": "_UseBump2ndMap", "t": "int" }, { "p": "bump2nd.tex", "l": "_Bump2ndMap", "t": "texture" }, { "p": "bump2nd.scale", "l": "_Bump2ndScale", "t": "range" }, { "p": "bump2nd.scaleMask", "l": "_Bump2ndScaleMask", "t": "texture" }, { "p": "bump2nd.uvMode", "l": "_Bump2ndMap_UVMode", "t": "int" }, { "p": "outline.enable", "l": "_UseOutline", "t": "int" }, { "p": "outline.color", "l": "_OutlineColor", "t": "color" }, { "p": "outline.tex", "l": "_OutlineTex", "t": "texture" }, { "p": "outline.width", "l": "_OutlineWidth", "t": "range" }, { "p": "outline.widthMask", "l": "_OutlineWidthMask", "t": "texture" }, { "p": "outline.texST", "l": "_OutlineTex_ScrollRotate", "t": "vector" }, { "p": "outline.texScrollRotate", "l": "_OutlineTex_ScrollRotate", "t": "vector" }, { "p": "outline.texHSVG", "l": "_OutlineTexHSVG", "t": "vector" }, { "p": "outline.stencilEnable", "l": "_OutlineStencilRef", "t": "range" }, { "p": "outline.stencilRef", "l": "_OutlineStencilRef", "t": "range" }, { "p": "outline.stencilReadMask", "l": "_OutlineStencilReadMask", "t": "range" }, { "p": "outline.stencilWriteMask", "l": "_OutlineStencilWriteMask", "t": "range" }, { "p": "outline.stencilComp", "l": "_OutlineStencilComp", "t": "float" }, { "p": "outline.stencilPass", "l": "_OutlineStencilPass", "t": "float" }, { "p": "outline.stencilFail", "l": "_OutlineStencilFail", "t": "float" }, { "p": "outline.stencilZFail", "l": "_OutlineStencilZFail", "t": "float" }, { "p": "outline.fixWidth", "l": "_OutlineFixWidth", "t": "range" }, { "p": "outline.fixWidthMode", "l": "_OutlineFixWidth", "t": "range" }, { "p": "outline.vertexR2Width", "l": "_OutlineVertexR2Width", "t": "int" }, { "p": "outline.zBias", "l": "_OutlineZBias", "t": "float" }, { "p": "outline.litEnable", "l": "_OutlineEnableLighting", "t": "range" }, { "p": "outline.litColor", "l": "_OutlineLitColor", "t": "color" }, { "p": "outline.litApplyTex", "l": "_OutlineLitApplyTex", "t": "int" }, { "p": "outline.litShadowReceive", "l": "_OutlineLitShadowReceive", "t": "int" }, { "p": "outline.shaderColorMult", "l": "_OutlineLitColor", "t": "color" }, { "p": "outline.vectorTex", "l": "_OutlineVectorTex", "t": "texture" }, { "p": "outline.vectorScale", "l": "_OutlineVectorScale", "t": "range" }, { "p": "outline.vectorUVMode", "l": "_OutlineVectorUVMode", "t": "int" }, { "p": "outline.litScale", "l": "_OutlineLitScale", "t": "float" }, { "p": "outline.litOffset", "l": "_OutlineLitOffset", "t": "float" }, { "p": "rim.blend", "l": "_RimBlendMode", "t": "int" }, { "p": "rim.color", "l": "_RimColor", "t": "color" }, { "p": "rim.border", "l": "_RimBorder", "t": "range" }, { "p": "rim.blur", "l": "_RimBlur", "t": "range" }, { "p": "rim.fresnelPower", "l": "_RimFresnelPower", "t": "range" }, { "p": "rim.dirStrength", "l": "_RimDirStrength", "t": "range" }, { "p": "rim.dirRange", "l": "_RimDirRange", "t": "range" }, { "p": "rim.indirColor", "l": "_RimIndirColor", "t": "color" }, { "p": "rim.indirBorder", "l": "_RimIndirBorder", "t": "range" }, { "p": "rim.indirBlur", "l": "_RimIndirBlur", "t": "range" }, { "p": "rim.indirRange", "l": "_RimIndirRange", "t": "range" }, { "p": "rim.blendMode", "l": "_RimBlendMode", "t": "int" }, { "p": "rim.enableLighting", "l": "_RimEnableLighting", "t": "range" }, { "p": "rim.mainStrength", "l": "_RimMainStrength", "t": "range" }, { "p": "rim.normalStrength", "l": "_RimNormalStrength", "t": "range" }, { "p": "rim.shadowMask", "l": "_RimShadowMask", "t": "range" }, { "p": "matcap.vrParallax", "l": "_MatCapVRParallaxStrength", "t": "range" }, { "p": "matcap.lod", "l": "_MatCapLod", "t": "range" }, { "p": "matcap.customNormal", "l": "_MatCapCustomNormal", "t": "int" }, { "p": "matcap.bumpMap", "l": "_MatCapBumpMap", "t": "texture" }, { "p": "matcap.bumpScale", "l": "_MatCapBumpScale", "t": "range" }, { "p": "matcap.url", "l": "_MatCapTex", "t": "texture" }, { "p": "matcap.blend", "l": "_MatCapBlend", "t": "range" }, { "p": "matcap.blendMode", "l": "_MatCapBlendMode", "t": "int" }, { "p": "matcap.enableLighting", "l": "_MatCapEnableLighting", "t": "range" }, { "p": "matcap.mainStrength", "l": "_MatCapMainStrength", "t": "range" }, { "p": "matcap.normalStrength", "l": "_MatCapNormalStrength", "t": "range" }, { "p": "matcap.mul", "l": "_MatCapBlend", "t": "range" }, { "p": "matcap.shadowMask", "l": "_MatCapShadowMask", "t": "range" }, { "p": "matcap.color", "l": "_MatCapColor", "t": "color" }, { "p": "matcap.blendMask", "l": "_MatCapBlendMask", "t": "texture" }, { "p": "matcap.backfaceMask", "l": "_MatCapBackfaceMask", "t": "int" }, { "p": "matcap2nd.vrParallax", "l": "_MatCap2ndVRParallaxStrength", "t": "range" }, { "p": "matcap2nd.lod", "l": "_MatCap2ndLod", "t": "range" }, { "p": "matcap2nd.customNormal", "l": "_MatCap2ndCustomNormal", "t": "int" }, { "p": "matcap2nd.bumpMap", "l": "_MatCap2ndBumpMap", "t": "texture" }, { "p": "matcap2nd.bumpScale", "l": "_MatCap2ndBumpScale", "t": "range" }, { "p": "matcap2nd.url", "l": "_MatCap2ndTex", "t": "texture" }, { "p": "matcap2nd.blend", "l": "_MatCap2ndBlend", "t": "range" }, { "p": "matcap2nd.blendMode", "l": "_MatCap2ndBlendMode", "t": "int" }, { "p": "matcap2nd.enableLighting", "l": "_MatCap2ndEnableLighting", "t": "range" }, { "p": "matcap2nd.mainStrength", "l": "_MatCap2ndMainStrength", "t": "range" }, { "p": "matcap2nd.normalStrength", "l": "_MatCap2ndNormalStrength", "t": "range" }, { "p": "matcap2nd.mul", "l": "_MatCap2ndBlend", "t": "range" }, { "p": "matcap2nd.shadowMask", "l": "_MatCap2ndShadowMask", "t": "range" }, { "p": "matcap2nd.color", "l": "_MatCap2ndColor", "t": "color" }, { "p": "matcap2nd.blendMask", "l": "_MatCap2ndBlendMask", "t": "texture" }, { "p": "matcap2nd.backfaceMask", "l": "_MatCap2ndBackfaceMask", "t": "int" }, { "p": "emission.use", "l": "_UseEmission", "t": "int" }, { "p": "emission.color", "l": "_EmissionColor", "t": "color" }, { "p": "emission.blend", "l": "_EmissionBlend", "t": "range" }, { "p": "emission.blendMode", "l": "_EmissionBlendMode", "t": "int" }, { "p": "emission.uvMode", "l": "_EmissionMap_UVMode", "t": "int" }, { "p": "emission.mainStrength", "l": "_EmissionMainStrength", "t": "range" }, { "p": "emission.tex", "l": "_EmissionMap", "t": "texture" }, { "p": "emission.blendMask", "l": "_EmissionBlendMask", "t": "texture" }, { "p": "dither.use", "l": "_UseDither", "t": "int" }, { "p": "dither.url", "l": "_DitherTex", "t": "texture" }, { "p": "dither.maxValue", "l": "_DitherMaxValue", "t": "float" }, { "p": "reflection.use", "l": "_UseReflection", "t": "int" }, { "p": "reflection.apply", "l": "_ApplyReflection", "t": "int" }, { "p": "reflection.toon", "l": "_ReflectionBlendMode", "t": "int" }, { "p": "reflection.normalStrength", "l": "_ReflectionNormalStrength", "t": "range" }, { "p": "reflection.smoothness", "l": "_Smoothness", "t": "range" }, { "p": "reflection.reflectance", "l": "_Reflectance", "t": "range" }, { "p": "reflection.metallic", "l": "_Metallic", "t": "range" }, { "p": "reflection.color", "l": "_ReflectionColor", "t": "color" }, { "p": "reflection.blendMode", "l": "_ReflectionBlendMode", "t": "int" }, { "p": "reflection.aaStrength", "l": "_AAStrength", "t": "range" }, { "p": "backlight.color", "l": "_BacklightColor", "t": "color" }, { "p": "backlight.border", "l": "_BacklightBorder", "t": "range" }, { "p": "backlight.blur", "l": "_BacklightBlur", "t": "range" }, { "p": "backlight.directivity", "l": "_BacklightDirectivity", "t": "float" }, { "p": "backlight.viewStrength", "l": "_BacklightViewStrength", "t": "range" }, { "p": "backlight.normalStrength", "l": "_BacklightNormalStrength", "t": "range" }, { "p": "backlight.mainStrength", "l": "_BacklightMainStrength", "t": "range" }, { "p": "emission2nd.use", "l": "_UseEmission2nd", "t": "int" }, { "p": "emission2nd.color", "l": "_Emission2ndColor", "t": "color" }, { "p": "emission2nd.blend", "l": "_Emission2ndBlend", "t": "range" }, { "p": "emission2nd.blendMode", "l": "_Emission2ndBlendMode", "t": "int" }, { "p": "emission2nd.uvMode", "l": "_Emission2ndMap_UVMode", "t": "int" }, { "p": "emission2nd.tex", "l": "_Emission2ndMap", "t": "texture" }, { "p": "emission2nd.blendMask", "l": "_Emission2ndBlendMask", "t": "texture" }, { "p": "main2nd.decalDebug", "l": "_Main2ndTexIsDecal", "t": "int" }, { "p": "main2nd.isDecal", "l": "_Main2ndTexIsDecal", "t": "int" }, { "p": "main2nd.isLeftOnly", "l": "_Main2ndTexIsLeftOnly", "t": "int" }, { "p": "main2nd.isRightOnly", "l": "_Main2ndTexIsRightOnly", "t": "int" }, { "p": "main2nd.shouldCopy", "l": "_Main2ndTexShouldCopy", "t": "int" }, { "p": "main2nd.shouldFlipMirror", "l": "_Main2ndTexShouldFlipMirror", "t": "int" }, { "p": "main2nd.shouldFlipCopy", "l": "_Main2ndTexShouldFlipCopy", "t": "int" }, { "p": "main2nd.decalAnimation", "l": "_Main2ndTexDecalAnimation", "t": "vector" }, { "p": "main2nd.decalSubParam", "l": "_Main2ndTexDecalSubParam", "t": "vector" }, { "p": "main2nd.texST", "l": "_Main2ndTex_ScrollRotate", "t": "vector" }, { "p": "main2nd.texAngle", "l": "_Main2ndTexAngle", "t": "float" }, { "p": "main2nd.alphaMode", "l": "_Main2ndTexAlphaMode", "t": "int" }, { "p": "main2nd.color", "l": "_Color", "t": "color" }, { "p": "main2nd.tex", "l": "_Main2ndTex", "t": "texture" }, { "p": "main2nd.uvMode", "l": "_Main2ndTex_UVMode", "t": "int" }, { "p": "main2nd.blendMode", "l": "_Main2ndTexBlendMode", "t": "int" }, { "p": "main2nd.enableLighting", "l": "_Main2ndEnableLighting", "t": "range" }, { "p": "main2nd.blendMask", "l": "_Main2ndBlendMask", "t": "texture" }, { "p": "main2nd.cull", "l": "_Cull", "t": "int" }, { "p": "main2nd.dissolveMode", "l": "_Main2ndDissolveParams", "c": "x", "t": "vector" }, { "p": "main2nd.dissolveDir", "l": "_Main2ndDissolvePos", "t": "vector" }, { "p": "main2nd.dissolveThreshold", "l": "_Main2ndDissolveParams", "c": "z", "t": "vector" }, { "p": "main2nd.dissolveSoftness", "l": "_Main2ndDissolveParams", "c": "w", "t": "vector" }, { "p": "main2nd.dissolvePos", "l": "_Main2ndDissolvePos", "t": "vector" }, { "p": "main2nd.dissolveColor", "l": "_Main2ndDissolveColor", "t": "color" }, { "p": "main2nd.dissolveMask", "l": "_Main2ndDissolveMask", "t": "texture" }, { "p": "main2nd.dissolveNoiseMask", "l": "_Main2ndDissolveNoiseMask", "t": "texture" }, { "p": "main2nd.dissolveNoiseMaskST", "l": "_Main2ndDissolveNoiseMask_ScrollRotate", "t": "vector" }, { "p": "main2nd.dissolveNoiseScrollRotate", "l": "_Main2ndDissolveNoiseMask_ScrollRotate", "t": "vector" }, { "p": "main2nd.dissolveNoiseStrength", "l": "_Main2ndDissolveNoiseStrength", "t": "float" }, { "p": "main2nd.distFadeNear", "l": "_Main2ndDistanceFade", "c": "x", "t": "vector" }, { "p": "main2nd.distFadeFar", "l": "_Main2ndDistanceFade", "c": "y", "t": "vector" }, { "p": "main2nd.distFadeStrength", "l": "_Main2ndDistanceFade", "c": "z", "t": "vector" }, { "p": "main3rd.decalDebug", "l": "_Main3rdTexIsDecal", "t": "int" }, { "p": "main3rd.isDecal", "l": "_Main3rdTexIsDecal", "t": "int" }, { "p": "main3rd.isLeftOnly", "l": "_Main3rdTexIsLeftOnly", "t": "int" }, { "p": "main3rd.isRightOnly", "l": "_Main3rdTexIsRightOnly", "t": "int" }, { "p": "main3rd.shouldCopy", "l": "_Main3rdTexShouldCopy", "t": "int" }, { "p": "main3rd.shouldFlipMirror", "l": "_Main3rdTexShouldFlipMirror", "t": "int" }, { "p": "main3rd.shouldFlipCopy", "l": "_Main3rdTexShouldFlipCopy", "t": "int" }, { "p": "main3rd.decalAnimation", "l": "_Main3rdTexDecalAnimation", "t": "vector" }, { "p": "main3rd.decalSubParam", "l": "_Main3rdTexDecalSubParam", "t": "vector" }, { "p": "main3rd.texST", "l": "_Main3rdTex_ScrollRotate", "t": "vector" }, { "p": "main3rd.texAngle", "l": "_Main3rdTexAngle", "t": "float" }, { "p": "main3rd.alphaMode", "l": "_Main3rdTexAlphaMode", "t": "int" }, { "p": "main3rd.color", "l": "_Color", "t": "color" }, { "p": "main3rd.tex", "l": "_Main3rdTex", "t": "texture" }, { "p": "main3rd.uvMode", "l": "_Main3rdTex_UVMode", "t": "int" }, { "p": "main3rd.blendMode", "l": "_Main3rdTexBlendMode", "t": "int" }, { "p": "main3rd.enableLighting", "l": "_Main3rdEnableLighting", "t": "range" }, { "p": "main3rd.blendMask", "l": "_Main3rdBlendMask", "t": "texture" }, { "p": "main3rd.cull", "l": "_Cull", "t": "int" }, { "p": "main3rd.dissolveMode", "l": "_Main3rdDissolveParams", "c": "x", "t": "vector" }, { "p": "main3rd.dissolveDir", "l": "_Main3rdDissolvePos", "t": "vector" }, { "p": "main3rd.dissolveThreshold", "l": "_Main3rdDissolveParams", "c": "z", "t": "vector" }, { "p": "main3rd.dissolveSoftness", "l": "_Main3rdDissolveParams", "c": "w", "t": "vector" }, { "p": "main3rd.dissolvePos", "l": "_Main3rdDissolvePos", "t": "vector" }, { "p": "main3rd.dissolveColor", "l": "_Main3rdDissolveColor", "t": "color" }, { "p": "main3rd.dissolveMask", "l": "_Main3rdDissolveMask", "t": "texture" }, { "p": "main3rd.dissolveNoiseMask", "l": "_Main3rdDissolveNoiseMask", "t": "texture" }, { "p": "main3rd.dissolveNoiseMaskST", "l": "_Main3rdDissolveNoiseMask_ScrollRotate", "t": "vector" }, { "p": "main3rd.dissolveNoiseScrollRotate", "l": "_Main3rdDissolveNoiseMask_ScrollRotate", "t": "vector" }, { "p": "main3rd.dissolveNoiseStrength", "l": "_Main3rdDissolveNoiseStrength", "t": "float" }, { "p": "main3rd.distFadeNear", "l": "_Main3rdDistanceFade", "c": "x", "t": "vector" }, { "p": "main3rd.distFadeFar", "l": "_Main3rdDistanceFade", "c": "y", "t": "vector" }, { "p": "main3rd.distFadeStrength", "l": "_Main3rdDistanceFade", "c": "z", "t": "vector" }, { "p": "stencil.use", "l": "_StencilRef", "t": "range" }, { "p": "stencil.ref", "l": "_StencilRef", "t": "range" }, { "p": "stencil.readMask", "l": "_StencilReadMask", "t": "range" }, { "p": "stencil.writeMask", "l": "_StencilWriteMask", "t": "range" }, { "p": "stencil.comp", "l": "_StencilComp", "t": "float" }, { "p": "stencil.pass", "l": "_StencilPass", "t": "float" }, { "p": "stencil.fail", "l": "_StencilFail", "t": "float" }, { "p": "stencil.zfail", "l": "_StencilZFail", "t": "float" }, { "p": "dissolve.mode", "l": "_DissolveParams", "c": "x", "t": "vector" }, { "p": "dissolve.linear", "l": "_DissolveParams", "c": "y", "t": "vector" }, { "p": "dissolve.threshold", "l": "_DissolveParams", "c": "z", "t": "vector" }, { "p": "dissolve.softness", "l": "_DissolveParams", "c": "w", "t": "vector" }, { "p": "dissolve.pos", "l": "_DissolvePos", "t": "vector" }, { "p": "dissolve.color", "l": "_DissolveColor", "t": "color" }, { "p": "dissolve.maskTex", "l": "_DissolveMask", "t": "texture" }, { "p": "dissolve.noiseTex", "l": "_DissolveNoiseMask", "t": "texture" }, { "p": "dissolve.noiseStrength", "l": "_DissolveNoiseStrength", "t": "float" }];
+var LIL_BY_NAME = { "_MainTexHSVG": [{ "p": "mainTexHSVG", "l": "_MainTexHSVG", "t": "vector" }], "_MainTex_ScrollRotate": [{ "p": "mainTexScrollRotate", "l": "_MainTex_ScrollRotate", "t": "vector" }], "_TransparentMode": [{ "p": "transparentMode", "l": "_TransparentMode", "t": "int" }], "_Cutoff": [{ "p": "cutoff", "l": "_Cutoff", "t": "range" }], "_Cull": [{ "p": "cull", "l": "_Cull", "t": "int" }, { "p": "main2nd.cull", "l": "_Cull", "t": "int" }, { "p": "main3rd.cull", "l": "_Cull", "t": "int" }], "_UseShadow": [{ "p": "useShadow", "l": "_UseShadow", "t": "int" }], "_ShadowStrength": [{ "p": "shadowStrength", "l": "_ShadowStrength", "t": "range" }], "_ShadowColor": [{ "p": "shadowColor", "l": "_ShadowColor", "t": "color" }], "_ShadowBorder": [{ "p": "shadowBorder", "l": "_ShadowBorder", "t": "range" }], "_ShadowBorderRange": [{ "p": "shadowBorderRange", "l": "_ShadowBorderRange", "t": "range" }], "_ShadowMainStrength": [{ "p": "shadowMainStrength", "l": "_ShadowMainStrength", "t": "range" }], "_ShadowReceive": [{ "p": "shadowReceive", "l": "_ShadowReceive", "t": "range" }], "_Shadow2ndReceive": [{ "p": "shadow2ndReceive", "l": "_Shadow2ndReceive", "t": "range" }], "_Shadow3rdReceive": [{ "p": "shadow3rdReceive", "l": "_Shadow3rdReceive", "t": "range" }], "_ShadowBlur": [{ "p": "shadowBlur", "l": "_ShadowBlur", "t": "range" }], "_Shadow2ndColor": [{ "p": "shadow2ndColor", "l": "_Shadow2ndColor", "t": "color" }], "_Shadow2ndBorder": [{ "p": "shadow2ndBorder", "l": "_Shadow2ndBorder", "t": "range" }], "_Shadow2ndBlur": [{ "p": "shadow2ndBlur", "l": "_Shadow2ndBlur", "t": "range" }], "_Shadow3rdColor": [{ "p": "shadow3rdColor", "l": "_Shadow3rdColor", "t": "color" }], "_Shadow3rdBorder": [{ "p": "shadow3rdBorder", "l": "_Shadow3rdBorder", "t": "range" }], "_Shadow3rdBlur": [{ "p": "shadow3rdBlur", "l": "_Shadow3rdBlur", "t": "range" }], "_ShadowNormalStrength": [{ "p": "shadowNormalStrength", "l": "_ShadowNormalStrength", "t": "range" }], "_Shadow2ndNormalStrength": [{ "p": "shadow2ndNormalStrength", "l": "_Shadow2ndNormalStrength", "t": "range" }], "_Shadow3rdNormalStrength": [{ "p": "shadow3rdNormalStrength", "l": "_Shadow3rdNormalStrength", "t": "range" }], "_UseBumpMap": [{ "p": "bump.use", "l": "_UseBumpMap", "t": "int" }], "_BumpMap": [{ "p": "bump.tex", "l": "_BumpMap", "t": "texture" }], "_BumpScale": [{ "p": "bump.scale", "l": "_BumpScale", "t": "range" }], "_UseBump2ndMap": [{ "p": "bump2nd.use", "l": "_UseBump2ndMap", "t": "int" }], "_Bump2ndMap": [{ "p": "bump2nd.tex", "l": "_Bump2ndMap", "t": "texture" }], "_Bump2ndScale": [{ "p": "bump2nd.scale", "l": "_Bump2ndScale", "t": "range" }], "_Bump2ndScaleMask": [{ "p": "bump2nd.scaleMask", "l": "_Bump2ndScaleMask", "t": "texture" }], "_Bump2ndMap_UVMode": [{ "p": "bump2nd.uvMode", "l": "_Bump2ndMap_UVMode", "t": "int" }], "_UseOutline": [{ "p": "outline.enable", "l": "_UseOutline", "t": "int" }], "_OutlineColor": [{ "p": "outline.color", "l": "_OutlineColor", "t": "color" }], "_OutlineTex": [{ "p": "outline.tex", "l": "_OutlineTex", "t": "texture" }], "_OutlineWidth": [{ "p": "outline.width", "l": "_OutlineWidth", "t": "range" }], "_OutlineWidthMask": [{ "p": "outline.widthMask", "l": "_OutlineWidthMask", "t": "texture" }], "_OutlineTex_ScrollRotate": [{ "p": "outline.texST", "l": "_OutlineTex_ScrollRotate", "t": "vector" }, { "p": "outline.texScrollRotate", "l": "_OutlineTex_ScrollRotate", "t": "vector" }], "_OutlineTexHSVG": [{ "p": "outline.texHSVG", "l": "_OutlineTexHSVG", "t": "vector" }], "_OutlineStencilRef": [{ "p": "outline.stencilEnable", "l": "_OutlineStencilRef", "t": "range" }, { "p": "outline.stencilRef", "l": "_OutlineStencilRef", "t": "range" }], "_OutlineStencilReadMask": [{ "p": "outline.stencilReadMask", "l": "_OutlineStencilReadMask", "t": "range" }], "_OutlineStencilWriteMask": [{ "p": "outline.stencilWriteMask", "l": "_OutlineStencilWriteMask", "t": "range" }], "_OutlineStencilComp": [{ "p": "outline.stencilComp", "l": "_OutlineStencilComp", "t": "float" }], "_OutlineStencilPass": [{ "p": "outline.stencilPass", "l": "_OutlineStencilPass", "t": "float" }], "_OutlineStencilFail": [{ "p": "outline.stencilFail", "l": "_OutlineStencilFail", "t": "float" }], "_OutlineStencilZFail": [{ "p": "outline.stencilZFail", "l": "_OutlineStencilZFail", "t": "float" }], "_OutlineFixWidth": [{ "p": "outline.fixWidth", "l": "_OutlineFixWidth", "t": "range" }, { "p": "outline.fixWidthMode", "l": "_OutlineFixWidth", "t": "range" }], "_OutlineVertexR2Width": [{ "p": "outline.vertexR2Width", "l": "_OutlineVertexR2Width", "t": "int" }], "_OutlineZBias": [{ "p": "outline.zBias", "l": "_OutlineZBias", "t": "float" }], "_OutlineEnableLighting": [{ "p": "outline.litEnable", "l": "_OutlineEnableLighting", "t": "range" }], "_OutlineLitColor": [{ "p": "outline.litColor", "l": "_OutlineLitColor", "t": "color" }, { "p": "outline.shaderColorMult", "l": "_OutlineLitColor", "t": "color" }], "_OutlineLitApplyTex": [{ "p": "outline.litApplyTex", "l": "_OutlineLitApplyTex", "t": "int" }], "_OutlineLitShadowReceive": [{ "p": "outline.litShadowReceive", "l": "_OutlineLitShadowReceive", "t": "int" }], "_OutlineVectorTex": [{ "p": "outline.vectorTex", "l": "_OutlineVectorTex", "t": "texture" }], "_OutlineVectorScale": [{ "p": "outline.vectorScale", "l": "_OutlineVectorScale", "t": "range" }], "_OutlineVectorUVMode": [{ "p": "outline.vectorUVMode", "l": "_OutlineVectorUVMode", "t": "int" }], "_OutlineLitScale": [{ "p": "outline.litScale", "l": "_OutlineLitScale", "t": "float" }], "_OutlineLitOffset": [{ "p": "outline.litOffset", "l": "_OutlineLitOffset", "t": "float" }], "_RimBlendMode": [{ "p": "rim.blend", "l": "_RimBlendMode", "t": "int" }, { "p": "rim.blendMode", "l": "_RimBlendMode", "t": "int" }], "_RimColor": [{ "p": "rim.color", "l": "_RimColor", "t": "color" }], "_RimBorder": [{ "p": "rim.border", "l": "_RimBorder", "t": "range" }], "_RimBlur": [{ "p": "rim.blur", "l": "_RimBlur", "t": "range" }], "_RimFresnelPower": [{ "p": "rim.fresnelPower", "l": "_RimFresnelPower", "t": "range" }], "_RimDirStrength": [{ "p": "rim.dirStrength", "l": "_RimDirStrength", "t": "range" }], "_RimDirRange": [{ "p": "rim.dirRange", "l": "_RimDirRange", "t": "range" }], "_RimIndirColor": [{ "p": "rim.indirColor", "l": "_RimIndirColor", "t": "color" }], "_RimIndirBorder": [{ "p": "rim.indirBorder", "l": "_RimIndirBorder", "t": "range" }], "_RimIndirBlur": [{ "p": "rim.indirBlur", "l": "_RimIndirBlur", "t": "range" }], "_RimIndirRange": [{ "p": "rim.indirRange", "l": "_RimIndirRange", "t": "range" }], "_RimEnableLighting": [{ "p": "rim.enableLighting", "l": "_RimEnableLighting", "t": "range" }], "_RimMainStrength": [{ "p": "rim.mainStrength", "l": "_RimMainStrength", "t": "range" }], "_RimNormalStrength": [{ "p": "rim.normalStrength", "l": "_RimNormalStrength", "t": "range" }], "_RimShadowMask": [{ "p": "rim.shadowMask", "l": "_RimShadowMask", "t": "range" }], "_MatCapVRParallaxStrength": [{ "p": "matcap.vrParallax", "l": "_MatCapVRParallaxStrength", "t": "range" }], "_MatCapLod": [{ "p": "matcap.lod", "l": "_MatCapLod", "t": "range" }], "_MatCapCustomNormal": [{ "p": "matcap.customNormal", "l": "_MatCapCustomNormal", "t": "int" }], "_MatCapBumpMap": [{ "p": "matcap.bumpMap", "l": "_MatCapBumpMap", "t": "texture" }], "_MatCapBumpScale": [{ "p": "matcap.bumpScale", "l": "_MatCapBumpScale", "t": "range" }], "_MatCapTex": [{ "p": "matcap.url", "l": "_MatCapTex", "t": "texture" }], "_MatCapBlend": [{ "p": "matcap.blend", "l": "_MatCapBlend", "t": "range" }, { "p": "matcap.mul", "l": "_MatCapBlend", "t": "range" }], "_MatCapBlendMode": [{ "p": "matcap.blendMode", "l": "_MatCapBlendMode", "t": "int" }], "_MatCapEnableLighting": [{ "p": "matcap.enableLighting", "l": "_MatCapEnableLighting", "t": "range" }], "_MatCapMainStrength": [{ "p": "matcap.mainStrength", "l": "_MatCapMainStrength", "t": "range" }], "_MatCapNormalStrength": [{ "p": "matcap.normalStrength", "l": "_MatCapNormalStrength", "t": "range" }], "_MatCapShadowMask": [{ "p": "matcap.shadowMask", "l": "_MatCapShadowMask", "t": "range" }], "_MatCapColor": [{ "p": "matcap.color", "l": "_MatCapColor", "t": "color" }], "_MatCapBlendMask": [{ "p": "matcap.blendMask", "l": "_MatCapBlendMask", "t": "texture" }], "_MatCapBackfaceMask": [{ "p": "matcap.backfaceMask", "l": "_MatCapBackfaceMask", "t": "int" }], "_MatCap2ndVRParallaxStrength": [{ "p": "matcap2nd.vrParallax", "l": "_MatCap2ndVRParallaxStrength", "t": "range" }], "_MatCap2ndLod": [{ "p": "matcap2nd.lod", "l": "_MatCap2ndLod", "t": "range" }], "_MatCap2ndCustomNormal": [{ "p": "matcap2nd.customNormal", "l": "_MatCap2ndCustomNormal", "t": "int" }], "_MatCap2ndBumpMap": [{ "p": "matcap2nd.bumpMap", "l": "_MatCap2ndBumpMap", "t": "texture" }], "_MatCap2ndBumpScale": [{ "p": "matcap2nd.bumpScale", "l": "_MatCap2ndBumpScale", "t": "range" }], "_MatCap2ndTex": [{ "p": "matcap2nd.url", "l": "_MatCap2ndTex", "t": "texture" }], "_MatCap2ndBlend": [{ "p": "matcap2nd.blend", "l": "_MatCap2ndBlend", "t": "range" }, { "p": "matcap2nd.mul", "l": "_MatCap2ndBlend", "t": "range" }], "_MatCap2ndBlendMode": [{ "p": "matcap2nd.blendMode", "l": "_MatCap2ndBlendMode", "t": "int" }], "_MatCap2ndEnableLighting": [{ "p": "matcap2nd.enableLighting", "l": "_MatCap2ndEnableLighting", "t": "range" }], "_MatCap2ndMainStrength": [{ "p": "matcap2nd.mainStrength", "l": "_MatCap2ndMainStrength", "t": "range" }], "_MatCap2ndNormalStrength": [{ "p": "matcap2nd.normalStrength", "l": "_MatCap2ndNormalStrength", "t": "range" }], "_MatCap2ndShadowMask": [{ "p": "matcap2nd.shadowMask", "l": "_MatCap2ndShadowMask", "t": "range" }], "_MatCap2ndColor": [{ "p": "matcap2nd.color", "l": "_MatCap2ndColor", "t": "color" }], "_MatCap2ndBlendMask": [{ "p": "matcap2nd.blendMask", "l": "_MatCap2ndBlendMask", "t": "texture" }], "_MatCap2ndBackfaceMask": [{ "p": "matcap2nd.backfaceMask", "l": "_MatCap2ndBackfaceMask", "t": "int" }], "_UseEmission": [{ "p": "emission.use", "l": "_UseEmission", "t": "int" }], "_EmissionColor": [{ "p": "emission.color", "l": "_EmissionColor", "t": "color" }], "_EmissionBlend": [{ "p": "emission.blend", "l": "_EmissionBlend", "t": "range" }], "_EmissionBlendMode": [{ "p": "emission.blendMode", "l": "_EmissionBlendMode", "t": "int" }], "_EmissionMap_UVMode": [{ "p": "emission.uvMode", "l": "_EmissionMap_UVMode", "t": "int" }], "_EmissionMainStrength": [{ "p": "emission.mainStrength", "l": "_EmissionMainStrength", "t": "range" }], "_EmissionMap": [{ "p": "emission.tex", "l": "_EmissionMap", "t": "texture" }], "_EmissionBlendMask": [{ "p": "emission.blendMask", "l": "_EmissionBlendMask", "t": "texture" }], "_UseDither": [{ "p": "dither.use", "l": "_UseDither", "t": "int" }], "_DitherTex": [{ "p": "dither.url", "l": "_DitherTex", "t": "texture" }], "_DitherMaxValue": [{ "p": "dither.maxValue", "l": "_DitherMaxValue", "t": "float" }], "_UseReflection": [{ "p": "reflection.use", "l": "_UseReflection", "t": "int" }], "_ApplyReflection": [{ "p": "reflection.apply", "l": "_ApplyReflection", "t": "int" }], "_ReflectionBlendMode": [{ "p": "reflection.toon", "l": "_ReflectionBlendMode", "t": "int" }, { "p": "reflection.blendMode", "l": "_ReflectionBlendMode", "t": "int" }], "_ReflectionNormalStrength": [{ "p": "reflection.normalStrength", "l": "_ReflectionNormalStrength", "t": "range" }], "_Smoothness": [{ "p": "reflection.smoothness", "l": "_Smoothness", "t": "range" }], "_Reflectance": [{ "p": "reflection.reflectance", "l": "_Reflectance", "t": "range" }], "_Metallic": [{ "p": "reflection.metallic", "l": "_Metallic", "t": "range" }], "_ReflectionColor": [{ "p": "reflection.color", "l": "_ReflectionColor", "t": "color" }], "_AAStrength": [{ "p": "reflection.aaStrength", "l": "_AAStrength", "t": "range" }], "_BacklightColor": [{ "p": "backlight.color", "l": "_BacklightColor", "t": "color" }], "_BacklightBorder": [{ "p": "backlight.border", "l": "_BacklightBorder", "t": "range" }], "_BacklightBlur": [{ "p": "backlight.blur", "l": "_BacklightBlur", "t": "range" }], "_BacklightDirectivity": [{ "p": "backlight.directivity", "l": "_BacklightDirectivity", "t": "float" }], "_BacklightViewStrength": [{ "p": "backlight.viewStrength", "l": "_BacklightViewStrength", "t": "range" }], "_BacklightNormalStrength": [{ "p": "backlight.normalStrength", "l": "_BacklightNormalStrength", "t": "range" }], "_BacklightMainStrength": [{ "p": "backlight.mainStrength", "l": "_BacklightMainStrength", "t": "range" }], "_UseEmission2nd": [{ "p": "emission2nd.use", "l": "_UseEmission2nd", "t": "int" }], "_Emission2ndColor": [{ "p": "emission2nd.color", "l": "_Emission2ndColor", "t": "color" }], "_Emission2ndBlend": [{ "p": "emission2nd.blend", "l": "_Emission2ndBlend", "t": "range" }], "_Emission2ndBlendMode": [{ "p": "emission2nd.blendMode", "l": "_Emission2ndBlendMode", "t": "int" }], "_Emission2ndMap_UVMode": [{ "p": "emission2nd.uvMode", "l": "_Emission2ndMap_UVMode", "t": "int" }], "_Emission2ndMap": [{ "p": "emission2nd.tex", "l": "_Emission2ndMap", "t": "texture" }], "_Emission2ndBlendMask": [{ "p": "emission2nd.blendMask", "l": "_Emission2ndBlendMask", "t": "texture" }], "_Main2ndTexIsDecal": [{ "p": "main2nd.decalDebug", "l": "_Main2ndTexIsDecal", "t": "int" }, { "p": "main2nd.isDecal", "l": "_Main2ndTexIsDecal", "t": "int" }], "_Main2ndTexIsLeftOnly": [{ "p": "main2nd.isLeftOnly", "l": "_Main2ndTexIsLeftOnly", "t": "int" }], "_Main2ndTexIsRightOnly": [{ "p": "main2nd.isRightOnly", "l": "_Main2ndTexIsRightOnly", "t": "int" }], "_Main2ndTexShouldCopy": [{ "p": "main2nd.shouldCopy", "l": "_Main2ndTexShouldCopy", "t": "int" }], "_Main2ndTexShouldFlipMirror": [{ "p": "main2nd.shouldFlipMirror", "l": "_Main2ndTexShouldFlipMirror", "t": "int" }], "_Main2ndTexShouldFlipCopy": [{ "p": "main2nd.shouldFlipCopy", "l": "_Main2ndTexShouldFlipCopy", "t": "int" }], "_Main2ndTexDecalAnimation": [{ "p": "main2nd.decalAnimation", "l": "_Main2ndTexDecalAnimation", "t": "vector" }], "_Main2ndTexDecalSubParam": [{ "p": "main2nd.decalSubParam", "l": "_Main2ndTexDecalSubParam", "t": "vector" }], "_Main2ndTex_ScrollRotate": [{ "p": "main2nd.texST", "l": "_Main2ndTex_ScrollRotate", "t": "vector" }], "_Main2ndTexAngle": [{ "p": "main2nd.texAngle", "l": "_Main2ndTexAngle", "t": "float" }], "_Main2ndTexAlphaMode": [{ "p": "main2nd.alphaMode", "l": "_Main2ndTexAlphaMode", "t": "int" }], "_Color": [{ "p": "main2nd.color", "l": "_Color", "t": "color" }, { "p": "main3rd.color", "l": "_Color", "t": "color" }], "_Main2ndTex": [{ "p": "main2nd.tex", "l": "_Main2ndTex", "t": "texture" }], "_Main2ndTex_UVMode": [{ "p": "main2nd.uvMode", "l": "_Main2ndTex_UVMode", "t": "int" }], "_Main2ndTexBlendMode": [{ "p": "main2nd.blendMode", "l": "_Main2ndTexBlendMode", "t": "int" }], "_Main2ndEnableLighting": [{ "p": "main2nd.enableLighting", "l": "_Main2ndEnableLighting", "t": "range" }], "_Main2ndBlendMask": [{ "p": "main2nd.blendMask", "l": "_Main2ndBlendMask", "t": "texture" }], "_Main2ndDissolveParams": [{ "p": "main2nd.dissolveMode", "l": "_Main2ndDissolveParams", "c": "x", "t": "vector" }, { "p": "main2nd.dissolveThreshold", "l": "_Main2ndDissolveParams", "c": "z", "t": "vector" }, { "p": "main2nd.dissolveSoftness", "l": "_Main2ndDissolveParams", "c": "w", "t": "vector" }], "_Main2ndDissolvePos": [{ "p": "main2nd.dissolveDir", "l": "_Main2ndDissolvePos", "t": "vector" }, { "p": "main2nd.dissolvePos", "l": "_Main2ndDissolvePos", "t": "vector" }], "_Main2ndDissolveColor": [{ "p": "main2nd.dissolveColor", "l": "_Main2ndDissolveColor", "t": "color" }], "_Main2ndDissolveMask": [{ "p": "main2nd.dissolveMask", "l": "_Main2ndDissolveMask", "t": "texture" }], "_Main2ndDissolveNoiseMask": [{ "p": "main2nd.dissolveNoiseMask", "l": "_Main2ndDissolveNoiseMask", "t": "texture" }], "_Main2ndDissolveNoiseMask_ScrollRotate": [{ "p": "main2nd.dissolveNoiseMaskST", "l": "_Main2ndDissolveNoiseMask_ScrollRotate", "t": "vector" }, { "p": "main2nd.dissolveNoiseScrollRotate", "l": "_Main2ndDissolveNoiseMask_ScrollRotate", "t": "vector" }], "_Main2ndDissolveNoiseStrength": [{ "p": "main2nd.dissolveNoiseStrength", "l": "_Main2ndDissolveNoiseStrength", "t": "float" }], "_Main2ndDistanceFade": [{ "p": "main2nd.distFadeNear", "l": "_Main2ndDistanceFade", "c": "x", "t": "vector" }, { "p": "main2nd.distFadeFar", "l": "_Main2ndDistanceFade", "c": "y", "t": "vector" }, { "p": "main2nd.distFadeStrength", "l": "_Main2ndDistanceFade", "c": "z", "t": "vector" }], "_Main3rdTexIsDecal": [{ "p": "main3rd.decalDebug", "l": "_Main3rdTexIsDecal", "t": "int" }, { "p": "main3rd.isDecal", "l": "_Main3rdTexIsDecal", "t": "int" }], "_Main3rdTexIsLeftOnly": [{ "p": "main3rd.isLeftOnly", "l": "_Main3rdTexIsLeftOnly", "t": "int" }], "_Main3rdTexIsRightOnly": [{ "p": "main3rd.isRightOnly", "l": "_Main3rdTexIsRightOnly", "t": "int" }], "_Main3rdTexShouldCopy": [{ "p": "main3rd.shouldCopy", "l": "_Main3rdTexShouldCopy", "t": "int" }], "_Main3rdTexShouldFlipMirror": [{ "p": "main3rd.shouldFlipMirror", "l": "_Main3rdTexShouldFlipMirror", "t": "int" }], "_Main3rdTexShouldFlipCopy": [{ "p": "main3rd.shouldFlipCopy", "l": "_Main3rdTexShouldFlipCopy", "t": "int" }], "_Main3rdTexDecalAnimation": [{ "p": "main3rd.decalAnimation", "l": "_Main3rdTexDecalAnimation", "t": "vector" }], "_Main3rdTexDecalSubParam": [{ "p": "main3rd.decalSubParam", "l": "_Main3rdTexDecalSubParam", "t": "vector" }], "_Main3rdTex_ScrollRotate": [{ "p": "main3rd.texST", "l": "_Main3rdTex_ScrollRotate", "t": "vector" }], "_Main3rdTexAngle": [{ "p": "main3rd.texAngle", "l": "_Main3rdTexAngle", "t": "float" }], "_Main3rdTexAlphaMode": [{ "p": "main3rd.alphaMode", "l": "_Main3rdTexAlphaMode", "t": "int" }], "_Main3rdTex": [{ "p": "main3rd.tex", "l": "_Main3rdTex", "t": "texture" }], "_Main3rdTex_UVMode": [{ "p": "main3rd.uvMode", "l": "_Main3rdTex_UVMode", "t": "int" }], "_Main3rdTexBlendMode": [{ "p": "main3rd.blendMode", "l": "_Main3rdTexBlendMode", "t": "int" }], "_Main3rdEnableLighting": [{ "p": "main3rd.enableLighting", "l": "_Main3rdEnableLighting", "t": "range" }], "_Main3rdBlendMask": [{ "p": "main3rd.blendMask", "l": "_Main3rdBlendMask", "t": "texture" }], "_Main3rdDissolveParams": [{ "p": "main3rd.dissolveMode", "l": "_Main3rdDissolveParams", "c": "x", "t": "vector" }, { "p": "main3rd.dissolveThreshold", "l": "_Main3rdDissolveParams", "c": "z", "t": "vector" }, { "p": "main3rd.dissolveSoftness", "l": "_Main3rdDissolveParams", "c": "w", "t": "vector" }], "_Main3rdDissolvePos": [{ "p": "main3rd.dissolveDir", "l": "_Main3rdDissolvePos", "t": "vector" }, { "p": "main3rd.dissolvePos", "l": "_Main3rdDissolvePos", "t": "vector" }], "_Main3rdDissolveColor": [{ "p": "main3rd.dissolveColor", "l": "_Main3rdDissolveColor", "t": "color" }], "_Main3rdDissolveMask": [{ "p": "main3rd.dissolveMask", "l": "_Main3rdDissolveMask", "t": "texture" }], "_Main3rdDissolveNoiseMask": [{ "p": "main3rd.dissolveNoiseMask", "l": "_Main3rdDissolveNoiseMask", "t": "texture" }], "_Main3rdDissolveNoiseMask_ScrollRotate": [{ "p": "main3rd.dissolveNoiseMaskST", "l": "_Main3rdDissolveNoiseMask_ScrollRotate", "t": "vector" }, { "p": "main3rd.dissolveNoiseScrollRotate", "l": "_Main3rdDissolveNoiseMask_ScrollRotate", "t": "vector" }], "_Main3rdDissolveNoiseStrength": [{ "p": "main3rd.dissolveNoiseStrength", "l": "_Main3rdDissolveNoiseStrength", "t": "float" }], "_Main3rdDistanceFade": [{ "p": "main3rd.distFadeNear", "l": "_Main3rdDistanceFade", "c": "x", "t": "vector" }, { "p": "main3rd.distFadeFar", "l": "_Main3rdDistanceFade", "c": "y", "t": "vector" }, { "p": "main3rd.distFadeStrength", "l": "_Main3rdDistanceFade", "c": "z", "t": "vector" }], "_StencilRef": [{ "p": "stencil.use", "l": "_StencilRef", "t": "range" }, { "p": "stencil.ref", "l": "_StencilRef", "t": "range" }], "_StencilReadMask": [{ "p": "stencil.readMask", "l": "_StencilReadMask", "t": "range" }], "_StencilWriteMask": [{ "p": "stencil.writeMask", "l": "_StencilWriteMask", "t": "range" }], "_StencilComp": [{ "p": "stencil.comp", "l": "_StencilComp", "t": "float" }], "_StencilPass": [{ "p": "stencil.pass", "l": "_StencilPass", "t": "float" }], "_StencilFail": [{ "p": "stencil.fail", "l": "_StencilFail", "t": "float" }], "_StencilZFail": [{ "p": "stencil.zfail", "l": "_StencilZFail", "t": "float" }], "_DissolveParams": [{ "p": "dissolve.mode", "l": "_DissolveParams", "c": "x", "t": "vector" }, { "p": "dissolve.linear", "l": "_DissolveParams", "c": "y", "t": "vector" }, { "p": "dissolve.threshold", "l": "_DissolveParams", "c": "z", "t": "vector" }, { "p": "dissolve.softness", "l": "_DissolveParams", "c": "w", "t": "vector" }], "_DissolvePos": [{ "p": "dissolve.pos", "l": "_DissolvePos", "t": "vector" }], "_DissolveColor": [{ "p": "dissolve.color", "l": "_DissolveColor", "t": "color" }], "_DissolveMask": [{ "p": "dissolve.maskTex", "l": "_DissolveMask", "t": "texture" }], "_DissolveNoiseMask": [{ "p": "dissolve.noiseTex", "l": "_DissolveNoiseMask", "t": "texture" }], "_DissolveNoiseStrength": [{ "p": "dissolve.noiseStrength", "l": "_DissolveNoiseStrength", "t": "float" }] };
+var LIL_DERIVED = [{ "l": "_UseRim", "p": "rim.blend", "on": 3, "off": 0 }, { "l": "_UseMatCap", "p": "matcap.blend", "on": 1, "off": 0 }, { "l": "_UseMatCap2nd", "p": "matcap2nd.blend", "on": 1, "off": 0 }, { "l": "_UseBacklight", "p": "backlight.blend", "on": 1, "off": 0 }, { "l": "_UseMain2ndTex", "p": "main2nd.use", "on": 1, "off": 0 }, { "l": "_UseMain3rdTex", "p": "main3rd.use", "on": 1, "off": 0 }];
+var LIL_PRESET_GUID = "330d117753a947947bf5a4f237b9a9f3";
+
+// assets/lilpresets.inline.js
+var LIL_PRESETS = [
+  { "n": "Skin-Anime", "l": "皮肤 · 动画", "c": 0, "rim": { "blend": 0, "color": [1, 1, 1, 1], "border": 0.5, "blur": 0.10000000149011612, "fresnelPower": 3, "enableLighting": 1, "shadowMask": 0 }, "matcap": { "blend": 0, "color": [1, 1, 1, 1], "mul": 1, "enableLighting": 1, "blendMode": 1 }, "main2nd": { "use": 0, "color": [1, 1, 1, 1], "decalAnimation": [1, 1, 1, 30], "decalSubParam": [1, 1, 0, 1], "texAngle": 0, "decalDebug": 0, "isDecal": 0, "isLeftOnly": 0, "isRightOnly": 0, "shouldCopy": 0, "shouldFlipMirror": 0, "shouldFlipCopy": 0, "blendMode": 0, "enableLighting": 1, "cull": 2 }, "main3rd": { "use": 0, "color": [1, 1, 1, 1], "decalAnimation": [1, 1, 1, 30], "decalSubParam": [1, 1, 0, 1], "texAngle": 0, "decalDebug": 0, "isDecal": 0, "isLeftOnly": 0, "isRightOnly": 0, "shouldCopy": 0, "shouldFlipMirror": 0, "shouldFlipCopy": 0, "blendMode": 0, "enableLighting": 1, "cull": 2 }, "shadowColor": [0.925000011920929, 0.699999988079071, 0.7400000095367432, 1], "shadow2ndColor": [1, 0.699999988079071, 0.75, 0], "reflection": { "color": [1, 1, 1, 1], "use": 0, "smoothness": 1, "metallic": 0, "apply": 0 }, "emission": { "color": [1, 1, 1, 1], "use": 0, "blend": 1 }, "emission2nd": { "color": [1, 1, 1, 1], "use": 0, "blend": 1 }, "outline": { "color": [0.8999999761581421, 0.6000000238418579, 0.6000000238418579, 1], "texST": [0, 0, 0, 0], "texScrollRotate": [0, 0, 0, 0], "texHSVG": [0, 1, 1, 2], "width": 0.15000000596046448, "fixWidth": 1, "fixWidthMode": 1, "vertexR2Width": 0, "litEnable": 1, "stencilEnable": 0, "stencilRef": 0, "stencilReadMask": 255, "stencilWriteMask": 255, "stencilComp": 8, "stencilPass": 0, "stencilFail": 0, "stencilZFail": 0 }, "mainTexScrollRotate": [0, 0, 0, 0], "mainTexHSVG": [0, 1, 1, 1], "cutoff": 0.5, "bump": { "use": 0, "scale": 1 }, "bump2nd": { "use": 0, "scale": 1 }, "useShadow": 1, "shadowReceive": 0, "shadowBorder": 0.10000000149011612, "shadowBlur": 0.004999999888241291, "shadowStrength": 1, "shadow2ndBorder": 0.15000000596046448, "shadow2ndBlur": 0.05000000074505806, "shadowMainStrength": 0, "shadowBorderRange": 0, "cull": 2, "stencil": { "use": 0, "ref": 0, "readMask": 255, "writeMask": 255, "comp": 8, "pass": 0, "fail": 0, "zfail": 0 } },
+  { "n": "Skin-Illust", "l": "皮肤 · 插画", "c": 0, "rim": { "blend": 0, "color": [1, 1, 1, 1], "indirColor": [1, 1, 1, 1], "normalStrength": 1, "border": 0.5, "blur": 0.10000000149011612, "fresnelPower": 3, "enableLighting": 1, "shadowMask": 0, "dirStrength": 0, "dirRange": 0, "indirRange": 0, "indirBorder": 0.5, "indirBlur": 0.10000000149011612 }, "matcap": { "blend": 0, "color": [1, 1, 1, 1], "vrParallax": 1, "mul": 1, "enableLighting": 1, "shadowMask": 0, "backfaceMask": 0, "lod": 0, "blendMode": 1, "normalStrength": 1, "customNormal": 0, "bumpScale": 1 }, "backlight": { "blend": 0, "color": [0.8500000238418579, 0.800000011920929, 0.699999988079071, 1], "normalStrength": 1, "border": 0.3499999940395355, "blur": 0.05000000074505806, "directivity": 5, "viewStrength": 1 }, "shadowColor": [0.9333333373069763, 0.7413907051086426, 0.7098039388656616, 1], "shadow2ndColor": [1, 0.9571183323860168, 0.9528301358222961, 0], "shadow3rdColor": [0, 0, 0, 0], "reflection": { "color": [1, 1, 1, 1], "use": 0, "smoothness": 1, "metallic": 0, "reflectance": 0.03999999910593033, "apply": 0, "normalStrength": 1, "toon": 1, "blendMode": 1 }, "outline": { "color": [0.6039215922355652, 0.38039207458496094, 0.4085533618927002, 1], "litColor": [1, 0.19999906420707703, 0, 0.501960813999176], "shaderColorMult": [1, 0.19999906420707703, 0, 0.501960813999176], "texST": [0, 0, 0, 0], "texScrollRotate": [0, 0, 0, 0], "texHSVG": [0, 1, 1, 1], "litApplyTex": 1, "litScale": 10, "litOffset": -8, "width": 0.07999999821186066, "fixWidth": 0.5, "fixWidthMode": 0.5, "vertexR2Width": 2, "vectorScale": 1, "litEnable": 1, "zBias": 0 }, "useShadow": 1, "shadowStrength": 0.75, "shadowNormalStrength": 1, "shadowBorder": 0.25, "shadowBlur": 0.20000000298023224, "shadowReceive": 0, "shadow2ndNormalStrength": 1, "shadow2ndBorder": 0, "shadow2ndBlur": 0, "shadow2ndReceive": 0, "shadow3rdNormalStrength": 1, "shadow3rdBorder": 0.25, "shadow3rdBlur": 0.10000000149011612, "shadow3rdReceive": 0, "shadowBorderRange": 0, "shadowMainStrength": 0 },
+  { "n": "Skin-Flat", "l": "皮肤 · 平涂", "c": 0, "rim": { "blend": 0, "color": [1, 1, 1, 1], "border": 0.5, "blur": 0.10000000149011612, "fresnelPower": 3, "enableLighting": 1, "shadowMask": 0 }, "matcap": { "blend": 0, "color": [1, 1, 1, 1], "mul": 1, "enableLighting": 1, "blendMode": 1 }, "main2nd": { "use": 0, "color": [1, 1, 1, 1], "decalAnimation": [1, 1, 1, 30], "decalSubParam": [1, 1, 0, 1], "texAngle": 0, "decalDebug": 0, "isDecal": 0, "isLeftOnly": 0, "isRightOnly": 0, "shouldCopy": 0, "shouldFlipMirror": 0, "shouldFlipCopy": 0, "blendMode": 0, "enableLighting": 1, "cull": 2 }, "main3rd": { "use": 0, "color": [1, 1, 1, 1], "decalAnimation": [1, 1, 1, 30], "decalSubParam": [1, 1, 0, 1], "texAngle": 0, "decalDebug": 0, "isDecal": 0, "isLeftOnly": 0, "isRightOnly": 0, "shouldCopy": 0, "shouldFlipMirror": 0, "shouldFlipCopy": 0, "blendMode": 0, "enableLighting": 1, "cull": 2 }, "shadowColor": [0.699999988079071, 0.75, 0.8500000238418579, 1], "shadow2ndColor": [0, 0, 0, 0], "reflection": { "color": [1, 1, 1, 1], "use": 0, "smoothness": 1, "metallic": 0, "apply": 0 }, "emission": { "color": [1, 1, 1, 1], "use": 0, "blend": 1 }, "emission2nd": { "color": [1, 1, 1, 1], "use": 0, "blend": 1 }, "mainTexScrollRotate": [0, 0, 0, 0], "mainTexHSVG": [0, 1, 1, 1], "cutoff": 0.5, "bump": { "use": 0, "scale": 1 }, "bump2nd": { "use": 0, "scale": 1 }, "useShadow": 0, "shadowReceive": 0, "shadowBorder": 0.10000000149011612, "shadowBlur": 0.10000000149011612, "shadowStrength": 1, "shadow2ndBorder": 0.5, "shadow2ndBlur": 0.30000001192092896, "shadowMainStrength": 1, "shadowBorderRange": 0, "cull": 2, "stencil": { "use": 0, "ref": 0, "readMask": 255, "writeMask": 255, "comp": 8, "pass": 0, "fail": 0, "zfail": 0 } },
+  { "n": "Skin-Outline", "l": "皮肤 · 描边", "c": 0, "rim": { "blend": 0, "color": [1, 1, 1, 1], "border": 0.5, "blur": 0.10000000149011612, "fresnelPower": 3, "enableLighting": 1, "shadowMask": 0 }, "matcap": { "blend": 0, "color": [1, 1, 1, 1], "mul": 1, "enableLighting": 1, "blendMode": 1 }, "main2nd": { "use": 0, "color": [1, 1, 1, 1], "decalAnimation": [1, 1, 1, 30], "decalSubParam": [1, 1, 0, 1], "texAngle": 0, "decalDebug": 0, "isDecal": 0, "isLeftOnly": 0, "isRightOnly": 0, "shouldCopy": 0, "shouldFlipMirror": 0, "shouldFlipCopy": 0, "blendMode": 0, "enableLighting": 1, "cull": 2 }, "main3rd": { "use": 0, "color": [1, 1, 1, 1], "decalAnimation": [1, 1, 1, 30], "decalSubParam": [1, 1, 0, 1], "texAngle": 0, "decalDebug": 0, "isDecal": 0, "isLeftOnly": 0, "isRightOnly": 0, "shouldCopy": 0, "shouldFlipMirror": 0, "shouldFlipCopy": 0, "blendMode": 0, "enableLighting": 1, "cull": 2 }, "shadowColor": [1, 0.699999988079071, 0.75, 1], "shadow2ndColor": [1, 0.699999988079071, 0.75, 0], "reflection": { "color": [1, 1, 1, 1], "use": 0, "smoothness": 1, "metallic": 0, "apply": 0 }, "emission": { "color": [1, 1, 1, 1], "use": 0, "blend": 1 }, "emission2nd": { "color": [1, 1, 1, 1], "use": 0, "blend": 1 }, "outline": { "color": [0.949999988079071, 0.699999988079071, 0.699999988079071, 1], "texST": [0, 0, 0, 0], "texScrollRotate": [0, 0, 0, 0], "texHSVG": [0, 1, 1, 2], "width": 0.10000000149011612, "fixWidth": 1, "fixWidthMode": 1, "vertexR2Width": 0, "litEnable": 1, "stencilEnable": 0, "stencilRef": 0, "stencilReadMask": 255, "stencilWriteMask": 255, "stencilComp": 8, "stencilPass": 0, "stencilFail": 0, "stencilZFail": 0 }, "mainTexScrollRotate": [0, 0, 0, 0], "mainTexHSVG": [0, 1, 1, 1], "cutoff": 0.5, "bump": { "use": 0, "scale": 1 }, "bump2nd": { "use": 0, "scale": 1 }, "useShadow": 0, "shadowReceive": 0, "shadowBorder": 0.10000000149011612, "shadowBlur": 0.10000000149011612, "shadowStrength": 0.5, "shadow2ndBorder": 0.15000000596046448, "shadow2ndBlur": 0.05000000074505806, "shadowMainStrength": 0, "shadowBorderRange": 0, "cull": 2, "stencil": { "use": 0, "ref": 0, "readMask": 255, "writeMask": 255, "comp": 8, "pass": 0, "fail": 0, "zfail": 0 } },
+  { "n": "Skin-OutlineShadow", "l": "皮肤 · 描边+阴影", "c": 0, "rim": { "blend": 0, "color": [1, 1, 1, 1], "border": 0.5, "blur": 0.10000000149011612, "fresnelPower": 3, "enableLighting": 1, "shadowMask": 0 }, "matcap": { "blend": 0, "color": [1, 1, 1, 1], "mul": 1, "enableLighting": 1, "blendMode": 1 }, "main2nd": { "use": 0, "color": [1, 1, 1, 1], "decalAnimation": [1, 1, 1, 30], "decalSubParam": [1, 1, 0, 1], "texAngle": 0, "decalDebug": 0, "isDecal": 0, "isLeftOnly": 0, "isRightOnly": 0, "shouldCopy": 0, "shouldFlipMirror": 0, "shouldFlipCopy": 0, "blendMode": 0, "enableLighting": 1, "cull": 2 }, "main3rd": { "use": 0, "color": [1, 1, 1, 1], "decalAnimation": [1, 1, 1, 30], "decalSubParam": [1, 1, 0, 1], "texAngle": 0, "decalDebug": 0, "isDecal": 0, "isLeftOnly": 0, "isRightOnly": 0, "shouldCopy": 0, "shouldFlipMirror": 0, "shouldFlipCopy": 0, "blendMode": 0, "enableLighting": 1, "cull": 2 }, "shadowColor": [1, 0.699999988079071, 0.75, 1], "shadow2ndColor": [1, 0.699999988079071, 0.75, 0], "reflection": { "color": [1, 1, 1, 1], "use": 0, "smoothness": 1, "metallic": 0, "apply": 0 }, "emission": { "color": [1, 1, 1, 1], "use": 0, "blend": 1 }, "emission2nd": { "color": [1, 1, 1, 1], "use": 0, "blend": 1 }, "outline": { "color": [0.949999988079071, 0.699999988079071, 0.699999988079071, 1], "texST": [0, 0, 0, 0], "texScrollRotate": [0, 0, 0, 0], "texHSVG": [0, 1, 1, 2], "width": 0.10000000149011612, "fixWidth": 1, "fixWidthMode": 1, "vertexR2Width": 0, "litEnable": 1, "stencilEnable": 0, "stencilRef": 0, "stencilReadMask": 255, "stencilWriteMask": 255, "stencilComp": 8, "stencilPass": 0, "stencilFail": 0, "stencilZFail": 0 }, "mainTexScrollRotate": [0, 0, 0, 0], "mainTexHSVG": [0, 1, 1, 1], "cutoff": 0.5, "bump": { "use": 0, "scale": 1 }, "bump2nd": { "use": 0, "scale": 1 }, "useShadow": 1, "shadowReceive": 0, "shadowBorder": 0.10000000149011612, "shadowBlur": 0.10000000149011612, "shadowStrength": 0.5, "shadow2ndBorder": 0.15000000596046448, "shadow2ndBlur": 0.05000000074505806, "shadowMainStrength": 0, "shadowBorderRange": 0, "cull": 2, "stencil": { "use": 0, "ref": 0, "readMask": 255, "writeMask": 255, "comp": 8, "pass": 0, "fail": 0, "zfail": 0 } },
+  { "n": "Hair-Anime", "l": "头发 · 动画", "c": 1, "rim": { "blend": 3, "color": [0.5, 0.4624999761581421, 0.42499983310699463, 1], "border": 0.6499999761581421, "blur": 0.05000000074505806, "fresnelPower": 1, "enableLighting": 1, "shadowMask": 1 }, "matcap": { "blend": 0, "color": [1, 1, 1, 1], "mul": 1, "enableLighting": 1, "blendMode": 1 }, "main2nd": { "use": 0, "color": [1, 1, 1, 1], "decalAnimation": [1, 1, 1, 30], "decalSubParam": [1, 1, 0, 1], "texAngle": 0, "decalDebug": 0, "isDecal": 0, "isLeftOnly": 0, "isRightOnly": 0, "shouldCopy": 0, "shouldFlipMirror": 0, "shouldFlipCopy": 0, "blendMode": 0, "enableLighting": 1, "cull": 0 }, "main3rd": { "use": 0, "color": [1, 1, 1, 1], "decalAnimation": [1, 1, 1, 30], "decalSubParam": [1, 1, 0, 1], "texAngle": 0, "decalDebug": 0, "isDecal": 0, "isLeftOnly": 0, "isRightOnly": 0, "shouldCopy": 0, "shouldFlipMirror": 0, "shouldFlipCopy": 0, "blendMode": 0, "enableLighting": 1, "cull": 0 }, "shadowColor": [0.6000000238418579, 0.6499999761581421, 0.75, 1], "shadow2ndColor": [0.699999988079071, 0.75, 0.8500000238418579, 0], "reflection": { "color": [1, 1, 1, 1], "use": 0, "smoothness": 1, "metallic": 0, "apply": 0 }, "emission": { "color": [1, 1, 1, 1], "use": 0, "blend": 1 }, "emission2nd": { "color": [1, 1, 1, 1], "use": 0, "blend": 1 }, "outline": { "color": [0.699999988079071, 0.699999988079071, 0.699999988079071, 1], "texST": [0, 0, 0, 0], "texScrollRotate": [0, 0, 0, 0], "texHSVG": [0, 1, 1, 2], "width": 0.15000000596046448, "fixWidth": 1, "fixWidthMode": 1, "vertexR2Width": 0, "litEnable": 1, "stencilEnable": 0, "stencilRef": 0, "stencilReadMask": 255, "stencilWriteMask": 255, "stencilComp": 8, "stencilPass": 0, "stencilFail": 0, "stencilZFail": 0 }, "mainTexScrollRotate": [0, 0, 0, 0], "mainTexHSVG": [0, 1, 1, 1], "cutoff": 0.5, "bump": { "use": 0, "scale": 1 }, "bump2nd": { "use": 0, "scale": 1 }, "useShadow": 1, "shadowReceive": 0, "shadowBorder": 0.10000000149011612, "shadowBlur": 0.004999999888241291, "shadowStrength": 0.800000011920929, "shadow2ndBorder": 0.44999998807907104, "shadow2ndBlur": 0.10000000149011612, "shadowMainStrength": 1, "shadowBorderRange": 0, "cull": 0, "stencil": { "use": 0, "ref": 0, "readMask": 255, "writeMask": 255, "comp": 8, "pass": 0, "fail": 0, "zfail": 0 } },
+  { "n": "Hair-Illust", "l": "头发 · 插画", "c": 1, "rim": { "blend": 3, "color": [0.2763438820838928, 0.37768736481666565, 0.5094339847564697, 1], "indirColor": [1, 1, 1, 1], "normalStrength": 1, "border": 0.25, "blur": 0.05000000074505806, "fresnelPower": 3, "enableLighting": 1, "shadowMask": 0.8999999761581421, "dirStrength": 0, "dirRange": 0, "indirRange": 0, "indirBorder": 0.5, "indirBlur": 0.10000000149011612 }, "matcap": { "blend": 0, "color": [1, 1, 1, 1], "vrParallax": 1, "mul": 1, "enableLighting": 1, "shadowMask": 0, "backfaceMask": 0, "lod": 0, "blendMode": 1, "normalStrength": 1, "customNormal": 0, "bumpScale": 1 }, "backlight": { "blend": 1, "color": [0.8301886916160583, 0.7595391869544983, 0.5208258628845215, 1], "normalStrength": 1, "border": 0.19999998807907104, "blur": 0.019999999552965164, "directivity": 5, "viewStrength": 1 }, "shadowColor": [0.7181452512741089, 0.6312744617462158, 0.7735849022865295, 1], "shadow2ndColor": [0.5126699209213257, 0.47098594903945923, 0.6792452931404114, 1], "shadow3rdColor": [0, 0, 0, 0], "reflection": { "color": [1, 1, 1, 1], "use": 0, "smoothness": 1, "metallic": 0, "reflectance": 0.03999999910593033, "apply": 0, "normalStrength": 1, "toon": 1, "blendMode": 1 }, "outline": { "color": [0.4156862497329712, 0.3803921043872833, 0.529411792755127, 1], "litColor": [1, 0.28058210015296936, 0, 0.250980406999588], "shaderColorMult": [1, 0.28058210015296936, 0, 0.250980406999588], "texST": [0, 0, 0, 0], "texScrollRotate": [0, 0, 0, 0], "texHSVG": [0, 1, 1, 1], "litApplyTex": 0, "litScale": 10, "litOffset": -8, "width": 0.07999999821186066, "fixWidth": 0.5, "fixWidthMode": 0.5, "vertexR2Width": 0, "vectorScale": 1, "litEnable": 1, "zBias": 0 }, "useShadow": 1, "shadowStrength": 0.5, "shadowNormalStrength": 1, "shadowBorder": 0.75, "shadowBlur": 0.019999999552965164, "shadowReceive": 0, "shadow2ndNormalStrength": 1, "shadow2ndBorder": 0.4000000059604645, "shadow2ndBlur": 0.05000000074505806, "shadow2ndReceive": 0, "shadow3rdNormalStrength": 1, "shadow3rdBorder": 0.25, "shadow3rdBlur": 0.10000000149011612, "shadow3rdReceive": 0, "shadowBorderRange": 0.05000000074505806, "shadowMainStrength": 0 },
+  { "n": "Hair-Standard", "l": "头发 · 标准", "c": 1, "rim": { "blend": 0, "color": [1, 1, 1, 1], "border": 0.5, "blur": 0.10000000149011612, "fresnelPower": 3, "enableLighting": 1, "shadowMask": 0 }, "matcap": { "blend": 0, "color": [1, 1, 1, 1], "mul": 1, "enableLighting": 1, "blendMode": 1 }, "main2nd": { "use": 0, "color": [1, 1, 1, 1], "decalAnimation": [1, 1, 1, 30], "decalSubParam": [1, 1, 0, 1], "texAngle": 0, "decalDebug": 0, "isDecal": 0, "isLeftOnly": 0, "isRightOnly": 0, "shouldCopy": 0, "shouldFlipMirror": 0, "shouldFlipCopy": 0, "blendMode": 0, "enableLighting": 1, "cull": 0 }, "main3rd": { "use": 0, "color": [1, 1, 1, 1], "decalAnimation": [1, 1, 1, 30], "decalSubParam": [1, 1, 0, 1], "texAngle": 0, "decalDebug": 0, "isDecal": 0, "isLeftOnly": 0, "isRightOnly": 0, "shouldCopy": 0, "shouldFlipMirror": 0, "shouldFlipCopy": 0, "blendMode": 0, "enableLighting": 1, "cull": 0 }, "shadowColor": [0.6000000238418579, 0.6499999761581421, 0.75, 1], "shadow2ndColor": [0.699999988079071, 0.75, 0.8500000238418579, 1], "reflection": { "color": [1, 1, 1, 1], "use": 0, "smoothness": 1, "metallic": 0, "apply": 0 }, "emission": { "color": [1, 1, 1, 1], "use": 0, "blend": 1 }, "emission2nd": { "color": [1, 1, 1, 1], "use": 0, "blend": 1 }, "mainTexScrollRotate": [0, 0, 0, 0], "mainTexHSVG": [0, 1, 1, 1], "cutoff": 0.5, "bump": { "use": 0, "scale": 1 }, "bump2nd": { "use": 0, "scale": 1 }, "useShadow": 1, "shadowReceive": 0, "shadowBorder": 0.10000000149011612, "shadowBlur": 0.15000000596046448, "shadowStrength": 0.6499999761581421, "shadow2ndBorder": 0.44999998807907104, "shadow2ndBlur": 0.10000000149011612, "shadowMainStrength": 1, "shadowBorderRange": 0, "cull": 0, "stencil": { "use": 0, "ref": 0, "readMask": 255, "writeMask": 255, "comp": 8, "pass": 0, "fail": 0, "zfail": 0 } },
+  { "n": "Hair-Outline", "l": "头发 · 描边", "c": 1, "rim": { "blend": 0, "color": [1, 1, 1, 1], "border": 0.5, "blur": 0.10000000149011612, "fresnelPower": 3, "enableLighting": 1, "shadowMask": 0 }, "matcap": { "blend": 0, "color": [1, 1, 1, 1], "mul": 1, "enableLighting": 1, "blendMode": 1 }, "main2nd": { "use": 0, "color": [1, 1, 1, 1], "decalAnimation": [1, 1, 1, 30], "decalSubParam": [1, 1, 0, 1], "texAngle": 0, "decalDebug": 0, "isDecal": 0, "isLeftOnly": 0, "isRightOnly": 0, "shouldCopy": 0, "shouldFlipMirror": 0, "shouldFlipCopy": 0, "blendMode": 0, "enableLighting": 1, "cull": 0 }, "main3rd": { "use": 0, "color": [1, 1, 1, 1], "decalAnimation": [1, 1, 1, 30], "decalSubParam": [1, 1, 0, 1], "texAngle": 0, "decalDebug": 0, "isDecal": 0, "isLeftOnly": 0, "isRightOnly": 0, "shouldCopy": 0, "shouldFlipMirror": 0, "shouldFlipCopy": 0, "blendMode": 0, "enableLighting": 1, "cull": 0 }, "shadowColor": [0.6000000238418579, 0.6499999761581421, 0.75, 1], "shadow2ndColor": [0.699999988079071, 0.75, 0.8500000238418579, 1], "reflection": { "color": [1, 1, 1, 1], "use": 0, "smoothness": 1, "metallic": 0, "apply": 0 }, "emission": { "color": [1, 1, 1, 1], "use": 0, "blend": 1 }, "emission2nd": { "color": [1, 1, 1, 1], "use": 0, "blend": 1 }, "outline": { "color": [0.800000011920929, 0.800000011920929, 0.800000011920929, 1], "texST": [0, 0, 0, 0], "texScrollRotate": [0, 0, 0, 0], "texHSVG": [0, 1, 1, 2], "width": 0.10000000149011612, "fixWidth": 1, "fixWidthMode": 1, "vertexR2Width": 0, "litEnable": 1, "stencilEnable": 0, "stencilRef": 0, "stencilReadMask": 255, "stencilWriteMask": 255, "stencilComp": 8, "stencilPass": 0, "stencilFail": 0, "stencilZFail": 0 }, "mainTexScrollRotate": [0, 0, 0, 0], "mainTexHSVG": [0, 1, 1, 1], "cutoff": 0.5, "bump": { "use": 0, "scale": 1 }, "bump2nd": { "use": 0, "scale": 1 }, "useShadow": 1, "shadowReceive": 0, "shadowBorder": 0.10000000149011612, "shadowBlur": 0.15000000596046448, "shadowStrength": 0.6499999761581421, "shadow2ndBorder": 0.44999998807907104, "shadow2ndBlur": 0.10000000149011612, "shadowMainStrength": 1, "shadowBorderRange": 0, "cull": 0, "stencil": { "use": 0, "ref": 0, "readMask": 255, "writeMask": 255, "comp": 8, "pass": 0, "fail": 0, "zfail": 0 } },
+  { "n": "Hair-OutlineRimLight", "l": "头发 · 描边+Rim", "c": 1, "rim": { "blend": 3, "color": [0.5, 0.4624999761581421, 0.42499983310699463, 1], "border": 0.800000011920929, "blur": 0.05000000074505806, "fresnelPower": 1, "enableLighting": 1, "shadowMask": 1 }, "matcap": { "blend": 0, "color": [1, 1, 1, 1], "mul": 1, "enableLighting": 1, "blendMode": 1 }, "main2nd": { "use": 0, "color": [1, 1, 1, 1], "decalAnimation": [1, 1, 1, 30], "decalSubParam": [1, 1, 0, 1], "texAngle": 0, "decalDebug": 0, "isDecal": 0, "isLeftOnly": 0, "isRightOnly": 0, "shouldCopy": 0, "shouldFlipMirror": 0, "shouldFlipCopy": 0, "blendMode": 0, "enableLighting": 1, "cull": 0 }, "main3rd": { "use": 0, "color": [1, 1, 1, 1], "decalAnimation": [1, 1, 1, 30], "decalSubParam": [1, 1, 0, 1], "texAngle": 0, "decalDebug": 0, "isDecal": 0, "isLeftOnly": 0, "isRightOnly": 0, "shouldCopy": 0, "shouldFlipMirror": 0, "shouldFlipCopy": 0, "blendMode": 0, "enableLighting": 1, "cull": 0 }, "shadowColor": [0.6000000238418579, 0.6499999761581421, 0.75, 1], "shadow2ndColor": [0.699999988079071, 0.75, 0.8500000238418579, 1], "reflection": { "color": [1, 1, 1, 1], "use": 0, "smoothness": 1, "metallic": 0, "apply": 0 }, "emission": { "color": [1, 1, 1, 1], "use": 0, "blend": 1 }, "emission2nd": { "color": [1, 1, 1, 1], "use": 0, "blend": 1 }, "outline": { "color": [0.800000011920929, 0.800000011920929, 0.800000011920929, 1], "texST": [0, 0, 0, 0], "texScrollRotate": [0, 0, 0, 0], "texHSVG": [0, 1, 1, 2], "width": 0.10000000149011612, "fixWidth": 1, "fixWidthMode": 1, "vertexR2Width": 0, "litEnable": 1, "stencilEnable": 0, "stencilRef": 0, "stencilReadMask": 255, "stencilWriteMask": 255, "stencilComp": 8, "stencilPass": 0, "stencilFail": 0, "stencilZFail": 0 }, "mainTexScrollRotate": [0, 0, 0, 0], "mainTexHSVG": [0, 1, 1, 1], "cutoff": 0.5, "bump": { "use": 0, "scale": 1 }, "bump2nd": { "use": 0, "scale": 1 }, "useShadow": 1, "shadowReceive": 0, "shadowBorder": 0.10000000149011612, "shadowBlur": 0.15000000596046448, "shadowStrength": 0.6499999761581421, "shadow2ndBorder": 0.44999998807907104, "shadow2ndBlur": 0.10000000149011612, "shadowMainStrength": 1, "shadowBorderRange": 0, "cull": 0, "stencil": { "use": 0, "ref": 0, "readMask": 255, "writeMask": 255, "comp": 8, "pass": 0, "fail": 0, "zfail": 0 } },
+  { "n": "Cloth-Anime", "l": "衣服 · 动画", "c": 2, "rim": { "blend": 3, "color": [0.5, 0.4624999761581421, 0.42499983310699463, 1], "border": 0.75, "blur": 0.05000000074505806, "fresnelPower": 1, "enableLighting": 1, "shadowMask": 1 }, "matcap": { "blend": 0, "color": [1, 1, 1, 1], "mul": 1, "enableLighting": 1, "blendMode": 1 }, "main2nd": { "use": 0, "color": [1, 1, 1, 1], "decalAnimation": [1, 1, 1, 30], "decalSubParam": [1, 1, 0, 1], "texAngle": 0, "decalDebug": 0, "isDecal": 0, "isLeftOnly": 0, "isRightOnly": 0, "shouldCopy": 0, "shouldFlipMirror": 0, "shouldFlipCopy": 0, "blendMode": 0, "enableLighting": 1, "cull": 0 }, "main3rd": { "use": 0, "color": [1, 1, 1, 1], "decalAnimation": [1, 1, 1, 30], "decalSubParam": [1, 1, 0, 1], "texAngle": 0, "decalDebug": 0, "isDecal": 0, "isLeftOnly": 0, "isRightOnly": 0, "shouldCopy": 0, "shouldFlipMirror": 0, "shouldFlipCopy": 0, "blendMode": 0, "enableLighting": 1, "cull": 0 }, "shadowColor": [0.75, 0.800000011920929, 0.949999988079071, 1], "shadow2ndColor": [0.6200000047683716, 0.6800000071525574, 0.9300000071525574, 0], "reflection": { "color": [1, 1, 1, 1], "use": 0, "smoothness": 1, "metallic": 0, "apply": 0 }, "emission": { "color": [1, 1, 1, 1], "use": 0, "blend": 1 }, "emission2nd": { "color": [1, 1, 1, 1], "use": 0, "blend": 1 }, "outline": { "color": [0.44999998807907104, 0.5499998927116394, 0.6499999761581421, 1], "texST": [0, 0, 0, 0], "texScrollRotate": [0, 0, 0, 0], "texHSVG": [0, 1, 1, 2], "width": 0.15000000596046448, "fixWidth": 1, "fixWidthMode": 1, "vertexR2Width": 0, "litEnable": 1, "stencilEnable": 0, "stencilRef": 0, "stencilReadMask": 255, "stencilWriteMask": 255, "stencilComp": 8, "stencilPass": 0, "stencilFail": 0, "stencilZFail": 0 }, "mainTexScrollRotate": [0, 0, 0, 0], "mainTexHSVG": [0, 1, 1, 1], "cutoff": 0.5, "bump": { "use": 0, "scale": 1 }, "bump2nd": { "use": 0, "scale": 1 }, "useShadow": 1, "shadowReceive": 0, "shadowBorder": 0.20000000298023224, "shadowBlur": 0.004999999888241291, "shadowStrength": 0.800000011920929, "shadow2ndBorder": 0.15000000596046448, "shadow2ndBlur": 0.10000000149011612, "shadowMainStrength": 1, "shadowBorderRange": 0, "cull": 0, "stencil": { "use": 0, "ref": 0, "readMask": 255, "writeMask": 255, "comp": 8, "pass": 0, "fail": 0, "zfail": 0 } },
+  { "n": "Cloth-Illust", "l": "衣服 · 插画", "c": 2, "rim": { "blend": 3, "color": [0.6603773832321167, 0.5053094029426575, 0.4765930771827698, 1], "indirColor": [0, 0, 0, 1], "normalStrength": 1, "border": 0.5, "blur": 0.6499999761581421, "fresnelPower": 3.5, "enableLighting": 1, "shadowMask": 0.5, "dirStrength": 0, "dirRange": 0, "indirRange": 0, "indirBorder": 0.9850000143051147, "indirBlur": 0.029999971389770508 }, "matcap": { "blend": 0, "color": [1, 1, 1, 1], "vrParallax": 1, "mul": 1, "enableLighting": 1, "shadowMask": 0, "backfaceMask": 0, "lod": 0, "blendMode": 1, "normalStrength": 1, "customNormal": 0, "bumpScale": 1 }, "backlight": { "blend": 1, "color": [0.8500000238418579, 0.800000011920929, 0.699999988079071, 1], "normalStrength": 1, "border": 0.3500000238418579, "blur": 0.30000001192092896, "directivity": 5, "viewStrength": 1 }, "shadowColor": [0.7181452512741089, 0.6312744617462158, 0.7735849022865295, 1], "shadow2ndColor": [0.5126699209213257, 0.47098594903945923, 0.6792452931404114, 1], "shadow3rdColor": [0, 0, 0, 0], "reflection": { "color": [1, 1, 1, 1], "use": 0, "smoothness": 1, "metallic": 0, "reflectance": 0.03999999910593033, "apply": 0, "normalStrength": 1, "toon": 1, "blendMode": 1 }, "outline": { "color": [0.4156862497329712, 0.3803921043872833, 0.529411792755127, 1], "litColor": [1, 0.2823529541492462, 0, 0.250980406999588], "shaderColorMult": [1, 0.2823529541492462, 0, 0.250980406999588], "texST": [0, 0, 0, 0], "texScrollRotate": [0, 0, 0, 0], "texHSVG": [0, 1, 1, 1], "litApplyTex": 0, "litScale": 10, "litOffset": -8, "width": 0.07999999821186066, "fixWidth": 0.5, "fixWidthMode": 0.5, "vertexR2Width": 0, "vectorScale": 1, "litEnable": 1, "zBias": 0 }, "useShadow": 1, "shadowStrength": 0.6499999761581421, "shadowNormalStrength": 1, "shadowBorder": 0.5, "shadowBlur": 0.10000000149011612, "shadowReceive": 0, "shadow2ndNormalStrength": 1, "shadow2ndBorder": 0.15000000596046448, "shadow2ndBlur": 0.10000000149011612, "shadow2ndReceive": 0, "shadow3rdNormalStrength": 1, "shadow3rdBorder": 0.25, "shadow3rdBlur": 0.10000000149011612, "shadow3rdReceive": 0, "shadowBorderRange": 0.07999999821186066, "shadowMainStrength": 0.25 },
+  { "n": "Cloth-Standard", "l": "衣服 · 标准", "c": 2, "rim": { "blend": 3, "color": [0.5, 0.4624999761581421, 0.42499983310699463, 1], "border": 0.6499999761581421, "blur": 0.5, "fresnelPower": 1, "enableLighting": 1, "shadowMask": 1 }, "matcap": { "blend": 0, "color": [1, 1, 1, 1], "mul": 1, "enableLighting": 1, "blendMode": 1 }, "main2nd": { "use": 0, "color": [1, 1, 1, 1], "decalAnimation": [1, 1, 1, 30], "decalSubParam": [1, 1, 0, 1], "texAngle": 0, "decalDebug": 0, "isDecal": 0, "isLeftOnly": 0, "isRightOnly": 0, "shouldCopy": 0, "shouldFlipMirror": 0, "shouldFlipCopy": 0, "blendMode": 0, "enableLighting": 1, "cull": 0 }, "main3rd": { "use": 0, "color": [1, 1, 1, 1], "decalAnimation": [1, 1, 1, 30], "decalSubParam": [1, 1, 0, 1], "texAngle": 0, "decalDebug": 0, "isDecal": 0, "isLeftOnly": 0, "isRightOnly": 0, "shouldCopy": 0, "shouldFlipMirror": 0, "shouldFlipCopy": 0, "blendMode": 0, "enableLighting": 1, "cull": 0 }, "shadowColor": [0.699999988079071, 0.75, 0.8500000238418579, 1], "shadow2ndColor": [0.5499998927116394, 0.6200000047683716, 0.75, 1], "reflection": { "color": [1, 1, 1, 1], "use": 0, "smoothness": 1, "metallic": 0, "apply": 0 }, "emission": { "color": [1, 1, 1, 1], "use": 0, "blend": 1 }, "emission2nd": { "color": [1, 1, 1, 1], "use": 0, "blend": 1 }, "mainTexScrollRotate": [0, 0, 0, 0], "mainTexHSVG": [0, 1, 1, 1], "cutoff": 0.5, "bump": { "use": 0, "scale": 1 }, "bump2nd": { "use": 0, "scale": 1 }, "useShadow": 1, "shadowReceive": 0, "shadowBorder": 0.20000000298023224, "shadowBlur": 0.10000000149011612, "shadowStrength": 1, "shadow2ndBorder": 0.25, "shadow2ndBlur": 0.10000000149011612, "shadowMainStrength": 0, "shadowBorderRange": 0, "cull": 0, "stencil": { "use": 0, "ref": 0, "readMask": 255, "writeMask": 255, "comp": 8, "pass": 0, "fail": 0, "zfail": 0 } },
+  { "n": "Cloth-Outline", "l": "衣服 · 描边", "c": 2, "rim": { "blend": 3, "color": [0.5, 0.4624999761581421, 0.42499983310699463, 1], "border": 0.6499999761581421, "blur": 0.5, "fresnelPower": 1, "enableLighting": 1, "shadowMask": 1 }, "matcap": { "blend": 0, "color": [1, 1, 1, 1], "mul": 1, "enableLighting": 1, "blendMode": 1 }, "main2nd": { "use": 0, "color": [1, 1, 1, 1], "decalAnimation": [1, 1, 1, 30], "decalSubParam": [1, 1, 0, 1], "texAngle": 0, "decalDebug": 0, "isDecal": 0, "isLeftOnly": 0, "isRightOnly": 0, "shouldCopy": 0, "shouldFlipMirror": 0, "shouldFlipCopy": 0, "blendMode": 0, "enableLighting": 1, "cull": 0 }, "main3rd": { "use": 0, "color": [1, 1, 1, 1], "decalAnimation": [1, 1, 1, 30], "decalSubParam": [1, 1, 0, 1], "texAngle": 0, "decalDebug": 0, "isDecal": 0, "isLeftOnly": 0, "isRightOnly": 0, "shouldCopy": 0, "shouldFlipMirror": 0, "shouldFlipCopy": 0, "blendMode": 0, "enableLighting": 1, "cull": 0 }, "shadowColor": [0.699999988079071, 0.75, 0.8500000238418579, 1], "shadow2ndColor": [0.5499998927116394, 0.6200000047683716, 0.75, 1], "reflection": { "color": [1, 1, 1, 1], "use": 0, "smoothness": 1, "metallic": 0, "apply": 0 }, "emission": { "color": [1, 1, 1, 1], "use": 0, "blend": 1 }, "emission2nd": { "color": [1, 1, 1, 1], "use": 0, "blend": 1 }, "outline": { "color": [0.6000000238418579, 0.699999988079071, 0.800000011920929, 1], "texST": [0, 0, 0, 0], "texScrollRotate": [0, 0, 0, 0], "texHSVG": [0, 1, 1, 2], "width": 0.10000000149011612, "fixWidth": 1, "fixWidthMode": 1, "vertexR2Width": 0, "litEnable": 1, "stencilEnable": 0, "stencilRef": 0, "stencilReadMask": 255, "stencilWriteMask": 255, "stencilComp": 8, "stencilPass": 0, "stencilFail": 0, "stencilZFail": 0 }, "mainTexScrollRotate": [0, 0, 0, 0], "mainTexHSVG": [0, 1, 1, 1], "cutoff": 0.5, "bump": { "use": 0, "scale": 1 }, "bump2nd": { "use": 0, "scale": 1 }, "useShadow": 1, "shadowReceive": 0, "shadowBorder": 0.20000000298023224, "shadowBlur": 0.10000000149011612, "shadowStrength": 1, "shadow2ndBorder": 0.25, "shadow2ndBlur": 0.10000000149011612, "shadowMainStrength": 0, "shadowBorderRange": 0, "cull": 0, "stencil": { "use": 0, "ref": 0, "readMask": 255, "writeMask": 255, "comp": 8, "pass": 0, "fail": 0, "zfail": 0 } },
+  { "n": "Nature-Fur", "l": "自然 · 毛发", "c": 3, "rm": "FurTwoPass", "rim": { "blend": 0, "color": [0.6599999666213989, 0.5, 0.47999995946884155, 1], "indirColor": [1, 1, 1, 1], "normalStrength": 1, "border": 0.5, "blur": 0.6499999761581421, "fresnelPower": 3.5, "enableLighting": 1, "shadowMask": 0.5, "dirStrength": 0, "dirRange": 0, "indirRange": 0, "indirBorder": 0.5, "indirBlur": 0.10000000149011612 }, "matcap": { "blend": 0, "color": [1, 1, 1, 1], "vrParallax": 1, "mul": 1, "enableLighting": 1, "shadowMask": 0, "backfaceMask": 0, "lod": 0, "blendMode": 1, "normalStrength": 1, "customNormal": 0, "bumpScale": 1 }, "backlight": { "blend": 0, "color": [0.8500000238418579, 0.800000011920929, 0.699999988079071, 1], "normalStrength": 1, "border": 0.3499999940395355, "blur": 0.05000000074505806, "directivity": 5, "viewStrength": 1 }, "shadowColor": [0.8199999928474426, 0.7599999904632568, 0.8500000238418579, 1], "shadow2ndColor": [0.6800000071525574, 0.6599999666213989, 0.7899999618530273, 1], "shadow3rdColor": [0, 0, 0, 0], "reflection": { "color": [1, 1, 1, 1], "use": 0, "smoothness": 1, "metallic": 0, "reflectance": 0.03999999910593033, "apply": 0, "normalStrength": 1, "toon": 1, "blendMode": 1 }, "useShadow": 1, "shadowStrength": 1, "shadowNormalStrength": 1, "shadowBorder": 0.5, "shadowBlur": 0.10000000149011612, "shadowReceive": 0, "shadow2ndNormalStrength": 1, "shadow2ndBorder": 0.15000000596046448, "shadow2ndBlur": 0.10000000149011612, "shadow2ndReceive": 0, "shadow3rdNormalStrength": 1, "shadow3rdBorder": 0.25, "shadow3rdBlur": 0.10000000149011612, "shadow3rdReceive": 0, "shadowBorderRange": 0.07999999821186066, "shadowMainStrength": 0, "cutoff": 0.0010000000474974513 },
+  { "n": "Inorganic-Metal", "l": "无机 · 金属", "c": 4, "rim": { "blend": 0, "color": [1, 1, 1, 1], "border": 0.5, "blur": 0.10000000149011612, "fresnelPower": 3, "enableLighting": 1, "shadowMask": 0 }, "matcap": { "blend": 0, "color": [1, 1, 1, 1], "mul": 1, "enableLighting": 1, "blendMode": 1 }, "main2nd": { "use": 0, "color": [1, 1, 1, 1], "decalAnimation": [1, 1, 1, 30], "decalSubParam": [1, 1, 0, 1], "texAngle": 0, "decalDebug": 0, "isDecal": 0, "isLeftOnly": 0, "isRightOnly": 0, "shouldCopy": 0, "shouldFlipMirror": 0, "shouldFlipCopy": 0, "blendMode": 0, "enableLighting": 1, "cull": 0 }, "main3rd": { "use": 0, "color": [1, 1, 1, 1], "decalAnimation": [1, 1, 1, 30], "decalSubParam": [1, 1, 0, 1], "texAngle": 0, "decalDebug": 0, "isDecal": 0, "isLeftOnly": 0, "isRightOnly": 0, "shouldCopy": 0, "shouldFlipMirror": 0, "shouldFlipCopy": 0, "blendMode": 0, "enableLighting": 1, "cull": 0 }, "shadowColor": [0, 0, 0, 1], "shadow2ndColor": [0.7300000190734863, 0.3899998068809509, 0.36999979615211487, 0], "reflection": { "color": [1, 1, 1, 1], "use": 1, "smoothness": 0.949999988079071, "metallic": 1, "apply": 1 }, "emission": { "color": [1, 1, 1, 1], "use": 0, "blend": 1 }, "emission2nd": { "color": [1, 1, 1, 1], "use": 0, "blend": 1 }, "mainTexScrollRotate": [0, 0, 0, 0], "mainTexHSVG": [0, 1, 1, 1], "cutoff": 0.5, "bump": { "use": 0, "scale": 1 }, "bump2nd": { "use": 0, "scale": 1 }, "useShadow": 1, "shadowReceive": 0, "shadowBorder": 0.5, "shadowBlur": 0.25, "shadowStrength": 0.5, "shadow2ndBorder": 0.5, "shadow2ndBlur": 0.30000001192092896, "shadowMainStrength": 1, "shadowBorderRange": 0, "cull": 0, "stencil": { "use": 0, "ref": 0, "readMask": 255, "writeMask": 255, "comp": 8, "pass": 0, "fail": 0, "zfail": 0 } },
+  { "n": "Inorganic-Metal (MatCap)", "l": "无机 · Metal (MatCap)", "c": 4, "rim": { "blend": 0, "color": [1, 1, 1, 1], "indirColor": [1, 1, 1, 1], "normalStrength": 1, "border": 0.5, "blur": 0.10000000149011612, "fresnelPower": 3, "enableLighting": 1, "shadowMask": 0, "dirStrength": 0, "dirRange": 0, "indirRange": 0, "indirBorder": 0.5, "indirBlur": 0.10000000149011612 }, "matcap": { "blend": 1, "color": [1.4980392456054688, 1.4980392456054688, 1.4980392456054688, 1], "vrParallax": 1, "mul": 1, "enableLighting": 0, "shadowMask": 0, "backfaceMask": 0, "lod": 0, "blendMode": 3, "normalStrength": 1, "customNormal": 0, "bumpScale": 1 }, "backlight": { "blend": 0, "color": [0.8500000238418579, 0.800000011920929, 0.699999988079071, 1], "normalStrength": 1, "border": 0.3499999940395355, "blur": 0.05000000074505806, "directivity": 5, "viewStrength": 1 }, "shadowColor": [0.699999988079071, 0.75, 0.8500000238418579, 1], "shadow2ndColor": [0, 0, 0, 0], "shadow3rdColor": [0, 0, 0, 0], "reflection": { "color": [1, 1, 1, 1], "use": 0, "smoothness": 1, "metallic": 0, "reflectance": 0.03999999910593033, "apply": 0, "normalStrength": 1, "toon": 1, "blendMode": 1 }, "useShadow": 0, "shadowStrength": 1, "shadowNormalStrength": 1, "shadowBorder": 0.10000000149011612, "shadowBlur": 0.10000000149011612, "shadowReceive": 0, "shadow2ndNormalStrength": 1, "shadow2ndBorder": 0.5, "shadow2ndBlur": 0.30000001192092896, "shadow2ndReceive": 0, "shadow3rdNormalStrength": 1, "shadow3rdBorder": 0.25, "shadow3rdBlur": 0.10000000149011612, "shadow3rdReceive": 0, "shadowBorderRange": 0, "shadowMainStrength": 1 },
+  { "n": "Inorganic-Glass", "l": "无机 · 玻璃", "c": 4, "sh": "dce3f3e248acc7b4daeda00daf616b4d", "rim": { "blend": 0, "color": [1, 1, 1, 1], "border": 0.5, "blur": 0.10000000149011612, "fresnelPower": 3, "enableLighting": 1, "shadowMask": 0 }, "matcap": { "blend": 0, "color": [1, 1, 1, 1], "mul": 1, "enableLighting": 1, "blendMode": 1 }, "main2nd": { "use": 0, "color": [1, 1, 1, 0], "decalAnimation": [1, 1, 1, 30], "decalSubParam": [1, 1, 0, 1], "texAngle": 0, "decalDebug": 0, "isDecal": 0, "isLeftOnly": 0, "isRightOnly": 0, "shouldCopy": 0, "shouldFlipMirror": 0, "shouldFlipCopy": 0, "blendMode": 0, "enableLighting": 1, "cull": 2 }, "main3rd": { "use": 0, "color": [1, 1, 1, 0], "decalAnimation": [1, 1, 1, 30], "decalSubParam": [1, 1, 0, 1], "texAngle": 0, "decalDebug": 0, "isDecal": 0, "isLeftOnly": 0, "isRightOnly": 0, "shouldCopy": 0, "shouldFlipMirror": 0, "shouldFlipCopy": 0, "blendMode": 0, "enableLighting": 1, "cull": 2 }, "shadowColor": [0.699999988079071, 0.75, 0.8500000238418579, 1], "shadow2ndColor": [0, 0, 0, 0], "reflection": { "color": [1, 1, 1, 1], "use": 1, "smoothness": 1, "metallic": 0, "apply": 1 }, "emission": { "color": [1, 1, 1, 1], "use": 0, "blend": 1 }, "emission2nd": { "color": [1, 1, 1, 1], "use": 0, "blend": 1 }, "mainTexScrollRotate": [0, 0, 0, 0], "mainTexHSVG": [0, 1, 1, 1], "cutoff": 0.5, "bump": { "use": 0, "scale": 1 }, "bump2nd": { "use": 0, "scale": 1 }, "useShadow": 0, "shadowReceive": 0, "shadowBorder": 0.5, "shadowBlur": 0.10000000149011612, "shadowStrength": 1, "shadow2ndBorder": 0.5, "shadow2ndBlur": 0.30000001192092896, "shadowMainStrength": 1, "shadowBorderRange": 0, "cull": 2, "stencil": { "use": 0, "ref": 0, "readMask": 255, "writeMask": 255, "comp": 8, "pass": 0, "fail": 0, "zfail": 0 } },
+  { "n": "Inorganic-LiteGlass", "l": "无机 · 轻玻璃", "c": 4, "sh": "165365ab7100a044ca85fc8c33548a62", "rim": { "blend": 0, "color": [1, 1, 1, 1], "border": 0.5, "blur": 0.10000000149011612, "fresnelPower": 3, "enableLighting": 1, "shadowMask": 0 }, "matcap": { "blend": 0, "color": [1, 1, 1, 1], "mul": 1, "enableLighting": 1, "blendMode": 1 }, "main2nd": { "use": 0, "color": [1, 1, 1, 0], "decalAnimation": [1, 1, 1, 30], "decalSubParam": [1, 1, 0, 1], "texAngle": 0, "decalDebug": 0, "isDecal": 0, "isLeftOnly": 0, "isRightOnly": 0, "shouldCopy": 0, "shouldFlipMirror": 0, "shouldFlipCopy": 0, "blendMode": 0, "enableLighting": 1, "cull": 2 }, "main3rd": { "use": 0, "color": [1, 1, 1, 0], "decalAnimation": [1, 1, 1, 30], "decalSubParam": [1, 1, 0, 1], "texAngle": 0, "decalDebug": 0, "isDecal": 0, "isLeftOnly": 0, "isRightOnly": 0, "shouldCopy": 0, "shouldFlipMirror": 0, "shouldFlipCopy": 0, "blendMode": 0, "enableLighting": 1, "cull": 2 }, "shadowColor": [0.699999988079071, 0.75, 0.8500000238418579, 1], "shadow2ndColor": [0, 0, 0, 0], "reflection": { "color": [1, 1, 1, 1], "use": 1, "smoothness": 1, "metallic": 0, "apply": 1 }, "emission": { "color": [1, 1, 1, 1], "use": 0, "blend": 1 }, "emission2nd": { "color": [1, 1, 1, 1], "use": 0, "blend": 1 }, "mainTexScrollRotate": [0, 0, 0, 0], "mainTexHSVG": [0, 1, 1, 1], "cutoff": 0, "bump": { "use": 0, "scale": 1 }, "bump2nd": { "use": 0, "scale": 1 }, "useShadow": 0, "shadowReceive": 0, "shadowBorder": 0.5, "shadowBlur": 0.10000000149011612, "shadowStrength": 1, "shadow2ndBorder": 0.5, "shadow2ndBlur": 0.30000001192092896, "shadowMainStrength": 1, "shadowBorderRange": 0, "cull": 2, "stencil": { "use": 0, "ref": 0, "readMask": 255, "writeMask": 255, "comp": 8, "pass": 0, "fail": 0, "zfail": 0 } }
+];
+
+// assets/lilshaders.inline.js
+var LIL_SHADERS = [{ "name": "lilToon", "guid": "df12117ecd77c31469c224178886498e", "file": "lts.shader", "visible": true, "outline": false, "tess": false, "lite": false, "cutout": false, "trans": false, "refraction": false, "fur": false, "gem": false, "multi": false, "renderingMode": "Opaque" }, { "name": "Hidden/lilToonLite", "guid": "381af8ba8e1740a41b9768ccfb0416c2", "file": "ltsl.shader", "visible": false, "outline": false, "tess": false, "lite": true, "cutout": false, "trans": false, "refraction": false, "fur": false, "gem": false, "multi": false, "renderingMode": "Opaque" }, { "name": "Hidden/lilToonLiteCutout", "guid": "b957dce3d03ff5445ac989f8de643c7f", "file": "ltsl_cutout.shader", "visible": false, "outline": false, "tess": false, "lite": true, "cutout": true, "trans": false, "refraction": false, "fur": false, "gem": false, "multi": false, "renderingMode": "Cutout" }, { "name": "Hidden/lilToonLiteCutoutOutline", "guid": "8cf5267d397b04846856f6d3d9561da0", "file": "ltsl_cutout_o.shader", "visible": false, "outline": true, "tess": false, "lite": true, "cutout": true, "trans": false, "refraction": false, "fur": false, "gem": false, "multi": false, "renderingMode": "Cutout" }, { "name": "Hidden/lilToonLiteOutline", "guid": "583a88005abb81a4ebbce757b4851a0d", "file": "ltsl_o.shader", "visible": false, "outline": true, "tess": false, "lite": true, "cutout": false, "trans": false, "refraction": false, "fur": false, "gem": false, "multi": false, "renderingMode": "Opaque" }, { "name": "Hidden/lilToonLiteOnePassTransparent", "guid": "34c2907eba944ed45a43970e0c11bcfd", "file": "ltsl_onetrans.shader", "visible": false, "outline": false, "tess": false, "lite": true, "cutout": false, "trans": true, "refraction": false, "fur": false, "gem": false, "multi": false, "renderingMode": "OnePassTransparent" }, { "name": "Hidden/lilToonLiteOnePassTransparentOutline", "guid": "701268c07d37f5441b25b2cb99fae4b3", "file": "ltsl_onetrans_o.shader", "visible": false, "outline": true, "tess": false, "lite": true, "cutout": false, "trans": true, "refraction": false, "fur": false, "gem": false, "multi": false, "renderingMode": "OnePassTransparent" }, { "name": "_lil/[Optional] lilToonLiteOverlay", "guid": "d28e4b78ba8368e49a44f86c0291df58", "file": "ltsl_overlay.shader", "visible": false, "outline": false, "tess": false, "lite": true, "cutout": false, "trans": false, "refraction": false, "fur": false, "gem": false, "multi": false, "renderingMode": "Opaque" }, { "name": "_lil/[Optional] lilToonLiteOverlayOnePass", "guid": "dc9ded9f9d6f16c4e92cbb8f4269ae31", "file": "ltsl_overlay_one.shader", "visible": false, "outline": false, "tess": false, "lite": true, "cutout": false, "trans": false, "refraction": false, "fur": false, "gem": false, "multi": false, "renderingMode": "OnePassTransparent" }, { "name": "Hidden/lilToonLiteTransparent", "guid": "0e3ece1bd59542743bccadb21f68318e", "file": "ltsl_trans.shader", "visible": false, "outline": false, "tess": false, "lite": true, "cutout": false, "trans": true, "refraction": false, "fur": false, "gem": false, "multi": false, "renderingMode": "Transparent" }, { "name": "Hidden/lilToonLiteTransparentOutline", "guid": "1c12a37046f07ac4486881deaf0187ea", "file": "ltsl_trans_o.shader", "visible": false, "outline": true, "tess": false, "lite": true, "cutout": false, "trans": true, "refraction": false, "fur": false, "gem": false, "multi": false, "renderingMode": "Transparent" }, { "name": "Hidden/lilToonLiteTwoPassTransparent", "guid": "82226adb1a0b8c4418f574cfdcf523da", "file": "ltsl_twotrans.shader", "visible": false, "outline": false, "tess": false, "lite": true, "cutout": false, "trans": true, "refraction": false, "fur": false, "gem": false, "multi": false, "renderingMode": "TwoPassTransparent" }, { "name": "Hidden/lilToonLiteTwoPassTransparentOutline", "guid": "62df797f407281640a224388953448cc", "file": "ltsl_twotrans_o.shader", "visible": false, "outline": true, "tess": false, "lite": true, "cutout": false, "trans": true, "refraction": false, "fur": false, "gem": false, "multi": false, "renderingMode": "TwoPassTransparent" }, { "name": "_lil/lilToonMulti", "guid": "9294844b15dca184d914a632279b24e1", "file": "ltsmulti.shader", "visible": false, "outline": false, "tess": false, "lite": false, "cutout": false, "trans": false, "refraction": false, "fur": false, "gem": false, "multi": true, "renderingMode": "Opaque" }, { "name": "Hidden/lilToonMultiFur", "guid": "1e50f1bc4d1b0e34cbf16b82589f6407", "file": "ltsmulti_fur.shader", "visible": false, "outline": false, "tess": false, "lite": false, "cutout": false, "trans": false, "refraction": false, "fur": true, "gem": false, "multi": true, "renderingMode": "Fur" }, { "name": "Hidden/lilToonMultiGem", "guid": "69f861c14129e724096c0955f8079012", "file": "ltsmulti_gem.shader", "visible": false, "outline": false, "tess": false, "lite": false, "cutout": false, "trans": false, "refraction": false, "fur": false, "gem": true, "multi": true, "renderingMode": "Gem" }, { "name": "Hidden/lilToonMultiOutline", "guid": "51b2dee0ab07bd84d8147601ff89e511", "file": "ltsmulti_o.shader", "visible": false, "outline": true, "tess": false, "lite": false, "cutout": false, "trans": false, "refraction": false, "fur": false, "gem": false, "multi": true, "renderingMode": "Opaque" }, { "name": "Hidden/lilToonMultiRefraction", "guid": "d7af54cdd86902d41b8c240e06b93009", "file": "ltsmulti_ref.shader", "visible": false, "outline": false, "tess": false, "lite": false, "cutout": false, "trans": false, "refraction": true, "fur": false, "gem": false, "multi": true, "renderingMode": "Refraction" }, { "name": "Hidden/ltsother_baker", "guid": "f96a89829ccb1e54b85214550519a8d6", "file": "ltspass_baker.shader", "visible": false, "outline": false, "tess": false, "lite": false, "cutout": false, "trans": false, "refraction": false, "fur": false, "gem": false, "multi": false, "renderingMode": "Opaque" }, { "name": "Hidden/ltspass_cutout", "guid": "ad219df2a46e841488aee6a013e84e36", "file": "ltspass_cutout.shader", "visible": false, "outline": false, "tess": false, "lite": false, "cutout": false, "trans": false, "refraction": false, "fur": false, "gem": false, "multi": false, "renderingMode": "Opaque" }, { "name": "Hidden/ltspass_dummy", "guid": "2bde4bd29a2a70a4d9cf98772a6717ac", "file": "ltspass_dummy.shader", "visible": false, "outline": false, "tess": false, "lite": false, "cutout": false, "trans": false, "refraction": false, "fur": false, "gem": false, "multi": false, "renderingMode": "Opaque" }, { "name": "Hidden/ltspass_lite_cutout", "guid": "8a6ef0489c3ffbf46812460af3d52bb0", "file": "ltspass_lite_cutout.shader", "visible": false, "outline": false, "tess": false, "lite": false, "cutout": false, "trans": false, "refraction": false, "fur": false, "gem": false, "multi": false, "renderingMode": "Opaque" }, { "name": "Hidden/ltspass_lite_opaque", "guid": "59b5e58e88aae8a4ca42d1a7253e2fb2", "file": "ltspass_lite_opaque.shader", "visible": false, "outline": false, "tess": false, "lite": false, "cutout": false, "trans": false, "refraction": false, "fur": false, "gem": false, "multi": false, "renderingMode": "Opaque" }, { "name": "Hidden/ltspass_lite_transparent", "guid": "8773c83ab40fff24b800f74360819a6c", "file": "ltspass_lite_transparent.shader", "visible": false, "outline": false, "tess": false, "lite": false, "cutout": false, "trans": false, "refraction": false, "fur": false, "gem": false, "multi": false, "renderingMode": "Opaque" }, { "name": "Hidden/ltspass_opaque", "guid": "61b4f98a5d78b4a4a9d89180fac793fc", "file": "ltspass_opaque.shader", "visible": false, "outline": false, "tess": false, "lite": false, "cutout": false, "trans": false, "refraction": false, "fur": false, "gem": false, "multi": false, "renderingMode": "Opaque" }, { "name": "Hidden/ltspass_proponly", "guid": "fd68f52288a6b0243bf6c217bf0930ea", "file": "ltspass_proponly.shader", "visible": false, "outline": false, "tess": false, "lite": false, "cutout": false, "trans": false, "refraction": false, "fur": false, "gem": false, "multi": false, "renderingMode": "Opaque" }, { "name": "Hidden/ltspass_tess_cutout", "guid": "14006db8206fb304aa86110d57626d40", "file": "ltspass_tess_cutout.shader", "visible": false, "outline": false, "tess": false, "lite": false, "cutout": false, "trans": false, "refraction": false, "fur": false, "gem": false, "multi": false, "renderingMode": "Opaque" }, { "name": "Hidden/ltspass_tess_opaque", "guid": "7a7ac427f85673a45a3e4190fc10bc28", "file": "ltspass_tess_opaque.shader", "visible": false, "outline": false, "tess": false, "lite": false, "cutout": false, "trans": false, "refraction": false, "fur": false, "gem": false, "multi": false, "renderingMode": "Opaque" }, { "name": "Hidden/ltspass_tess_transparent", "guid": "bdf24b2e925ce8a4fb0e903889a52e0e", "file": "ltspass_tess_transparent.shader", "visible": false, "outline": false, "tess": false, "lite": false, "cutout": false, "trans": false, "refraction": false, "fur": false, "gem": false, "multi": false, "renderingMode": "Opaque" }, { "name": "Hidden/ltspass_transparent", "guid": "2683fad669f20ec49b8e9656954a33a8", "file": "ltspass_transparent.shader", "visible": false, "outline": false, "tess": false, "lite": false, "cutout": false, "trans": false, "refraction": false, "fur": false, "gem": false, "multi": false, "renderingMode": "Opaque" }, { "name": "Hidden/lilToonCutout", "guid": "85d6126cae43b6847aff4b13f4adb8ec", "file": "lts_cutout.shader", "visible": false, "outline": false, "tess": false, "lite": false, "cutout": true, "trans": false, "refraction": false, "fur": false, "gem": false, "multi": false, "renderingMode": "Cutout" }, { "name": "Hidden/lilToonCutoutOutline", "guid": "3b4aa19949601f046a20ca8bdaee929f", "file": "lts_cutout_o.shader", "visible": false, "outline": true, "tess": false, "lite": false, "cutout": true, "trans": false, "refraction": false, "fur": false, "gem": false, "multi": false, "renderingMode": "Cutout" }, { "name": "_lil/[Optional] lilToonOutlineOnlyCutout", "guid": "3b3957e6c393b114bab6f835b4ed8f5d", "file": "lts_cutout_oo.shader", "visible": false, "outline": true, "tess": false, "lite": false, "cutout": true, "trans": false, "refraction": false, "fur": false, "gem": false, "multi": false, "renderingMode": "Cutout" }, { "name": "_lil/[Optional] lilToonFakeShadow", "guid": "00795bf598b44dc4e9bd363348e77085", "file": "lts_fakeshadow.shader", "visible": false, "outline": false, "tess": false, "lite": false, "cutout": false, "trans": false, "refraction": false, "fur": false, "gem": false, "multi": false, "renderingMode": "Opaque" }, { "name": "Hidden/lilToonFur", "guid": "55706696b2bdb5d4d8541b89e17085c8", "file": "lts_fur.shader", "visible": false, "outline": false, "tess": false, "lite": false, "cutout": false, "trans": false, "refraction": false, "fur": true, "gem": false, "multi": false, "renderingMode": "Fur" }, { "name": "_lil/[Optional] lilToonFurOnlyTransparent", "guid": "33aad051c4a3a844a8f9330addb86a97", "file": "lts_furonly.shader", "visible": false, "outline": false, "tess": false, "lite": false, "cutout": false, "trans": true, "refraction": false, "fur": true, "gem": false, "multi": false, "renderingMode": "Fur" }, { "name": "_lil/[Optional] lilToonFurOnlyCutout", "guid": "7ec9f85eb7ee04943adfe19c2ba5901f", "file": "lts_furonly_cutout.shader", "visible": false, "outline": false, "tess": false, "lite": false, "cutout": true, "trans": false, "refraction": false, "fur": true, "gem": false, "multi": false, "renderingMode": "Fur" }, { "name": "_lil/[Optional] lilToonFurOnlyTwoPass", "guid": "f8d9dfac6dbfaaf4c9c3aaf4bd8c955f", "file": "lts_furonly_two.shader", "visible": false, "outline": false, "tess": false, "lite": false, "cutout": false, "trans": false, "refraction": false, "fur": true, "gem": false, "multi": false, "renderingMode": "Fur" }, { "name": "Hidden/lilToonFurCutout", "guid": "544c75f56e9af8048b29a6ace5f52091", "file": "lts_fur_cutout.shader", "visible": false, "outline": false, "tess": false, "lite": false, "cutout": true, "trans": false, "refraction": false, "fur": true, "gem": false, "multi": false, "renderingMode": "Fur" }, { "name": "Hidden/lilToonFurTwoPass", "guid": "54bc8b41278802d4a81b27fe402994e2", "file": "lts_fur_two.shader", "visible": false, "outline": false, "tess": false, "lite": false, "cutout": false, "trans": false, "refraction": false, "fur": true, "gem": false, "multi": false, "renderingMode": "Fur" }, { "name": "Hidden/lilToonGem", "guid": "a8d94439709469942bc7dcc9156ba110", "file": "lts_gem.shader", "visible": false, "outline": false, "tess": false, "lite": false, "cutout": false, "trans": false, "refraction": false, "fur": false, "gem": true, "multi": false, "renderingMode": "Gem" }, { "name": "Hidden/lilToonOutline", "guid": "efa77a80ca0344749b4f19fdd5891cbe", "file": "lts_o.shader", "visible": false, "outline": true, "tess": false, "lite": false, "cutout": false, "trans": false, "refraction": false, "fur": false, "gem": false, "multi": false, "renderingMode": "Opaque" }, { "name": "Hidden/lilToonOnePassTransparent", "guid": "b269573b9937b8340b3e9e191a3ba5a8", "file": "lts_onetrans.shader", "visible": false, "outline": false, "tess": false, "lite": false, "cutout": false, "trans": true, "refraction": false, "fur": false, "gem": false, "multi": false, "renderingMode": "OnePassTransparent" }, { "name": "Hidden/lilToonOnePassTransparentOutline", "guid": "7171688840c632447b22ec14e2bdef7e", "file": "lts_onetrans_o.shader", "visible": false, "outline": true, "tess": false, "lite": false, "cutout": false, "trans": true, "refraction": false, "fur": false, "gem": false, "multi": false, "renderingMode": "OnePassTransparent" }, { "name": "_lil/[Optional] lilToonOutlineOnly", "guid": "fba17785d6b2c594ab6c0303c834da65", "file": "lts_oo.shader", "visible": false, "outline": true, "tess": false, "lite": false, "cutout": false, "trans": false, "refraction": false, "fur": false, "gem": false, "multi": false, "renderingMode": "Opaque" }, { "name": "_lil/[Optional] lilToonOverlay", "guid": "94274b8ef5d3af842b9427384cba3a8f", "file": "lts_overlay.shader", "visible": false, "outline": false, "tess": false, "lite": false, "cutout": false, "trans": false, "refraction": false, "fur": false, "gem": false, "multi": false, "renderingMode": "Opaque" }, { "name": "_lil/[Optional] lilToonOverlayOnePass", "guid": "33e950d038b8dfd4f824f3985c2abfb7", "file": "lts_overlay_one.shader", "visible": false, "outline": false, "tess": false, "lite": false, "cutout": false, "trans": false, "refraction": false, "fur": false, "gem": false, "multi": false, "renderingMode": "OnePassTransparent" }, { "name": "Hidden/lilToonRefraction", "guid": "dce3f3e248acc7b4daeda00daf616b4d", "file": "lts_ref.shader", "visible": false, "outline": false, "tess": false, "lite": false, "cutout": false, "trans": false, "refraction": true, "fur": false, "gem": false, "multi": false, "renderingMode": "Refraction" }, { "name": "Hidden/lilToonRefractionBlur", "guid": "3fb94a39b2685ee4d9817dcaf6542d99", "file": "lts_ref_blur.shader", "visible": false, "outline": false, "tess": false, "lite": false, "cutout": false, "trans": false, "refraction": true, "fur": false, "gem": false, "multi": false, "renderingMode": "Refraction" }, { "name": "Hidden/lilToonTessellation", "guid": "3eef4aee6ba0de047b0d40409ea2891c", "file": "lts_tess.shader", "visible": false, "outline": false, "tess": true, "lite": false, "cutout": false, "trans": false, "refraction": false, "fur": false, "gem": false, "multi": false, "renderingMode": "Opaque" }, { "name": "Hidden/lilToonTessellationCutout", "guid": "bbfffd5515b843c41a85067191cbf687", "file": "lts_tess_cutout.shader", "visible": false, "outline": false, "tess": true, "lite": false, "cutout": true, "trans": false, "refraction": false, "fur": false, "gem": false, "multi": false, "renderingMode": "Cutout" }, { "name": "Hidden/lilToonTessellationCutoutOutline", "guid": "5ba517885727277409feada18effa4a6", "file": "lts_tess_cutout_o.shader", "visible": false, "outline": true, "tess": true, "lite": false, "cutout": true, "trans": false, "refraction": false, "fur": false, "gem": false, "multi": false, "renderingMode": "Cutout" }, { "name": "Hidden/lilToonTessellationOutline", "guid": "c6d605ee23b18fc46903f38c67db701f", "file": "lts_tess_o.shader", "visible": false, "outline": true, "tess": true, "lite": false, "cutout": false, "trans": false, "refraction": false, "fur": false, "gem": false, "multi": false, "renderingMode": "Opaque" }, { "name": "Hidden/lilToonTessellationOnePassTransparent", "guid": "90f83c35b0769a748abba5d0880f36d5", "file": "lts_tess_onetrans.shader", "visible": false, "outline": false, "tess": true, "lite": false, "cutout": false, "trans": true, "refraction": false, "fur": false, "gem": false, "multi": false, "renderingMode": "OnePassTransparent" }, { "name": "Hidden/lilToonTessellationOnePassTransparentOutline", "guid": "67ed0252d63362a4ab23707a720508b7", "file": "lts_tess_onetrans_o.shader", "visible": false, "outline": true, "tess": true, "lite": false, "cutout": false, "trans": true, "refraction": false, "fur": false, "gem": false, "multi": false, "renderingMode": "OnePassTransparent" }, { "name": "Hidden/lilToonTessellationTransparent", "guid": "afa1a194f5a2fd243bda3a17bca1b36e", "file": "lts_tess_trans.shader", "visible": false, "outline": false, "tess": true, "lite": false, "cutout": false, "trans": true, "refraction": false, "fur": false, "gem": false, "multi": false, "renderingMode": "Transparent" }, { "name": "Hidden/lilToonTessellationTransparentOutline", "guid": "9b0c2630b12933248922527d4507cfa9", "file": "lts_tess_trans_o.shader", "visible": false, "outline": true, "tess": true, "lite": false, "cutout": false, "trans": true, "refraction": false, "fur": false, "gem": false, "multi": false, "renderingMode": "Transparent" }, { "name": "Hidden/lilToonTessellationTwoPassTransparent", "guid": "7e398ea50f9b70045b1774e05b46a39f", "file": "lts_tess_twotrans.shader", "visible": false, "outline": false, "tess": true, "lite": false, "cutout": false, "trans": true, "refraction": false, "fur": false, "gem": false, "multi": false, "renderingMode": "TwoPassTransparent" }, { "name": "Hidden/lilToonTessellationTwoPassTransparentOutline", "guid": "7e61dbad981ad4f43a03722155db1c6a", "file": "lts_tess_twotrans_o.shader", "visible": false, "outline": true, "tess": true, "lite": false, "cutout": false, "trans": true, "refraction": false, "fur": false, "gem": false, "multi": false, "renderingMode": "TwoPassTransparent" }, { "name": "Hidden/lilToonTransparent", "guid": "165365ab7100a044ca85fc8c33548a62", "file": "lts_trans.shader", "visible": false, "outline": false, "tess": false, "lite": false, "cutout": false, "trans": true, "refraction": false, "fur": false, "gem": false, "multi": false, "renderingMode": "Transparent" }, { "name": "Hidden/lilToonTransparentOutline", "guid": "3c79b10c7e0b2784aaa4c2f8dd17d55e", "file": "lts_trans_o.shader", "visible": false, "outline": true, "tess": false, "lite": false, "cutout": false, "trans": true, "refraction": false, "fur": false, "gem": false, "multi": false, "renderingMode": "Transparent" }, { "name": "_lil/[Optional] lilToonOutlineOnlyTransparent", "guid": "0c762f24b85918a49812fc5690619178", "file": "lts_trans_oo.shader", "visible": false, "outline": true, "tess": false, "lite": false, "cutout": false, "trans": true, "refraction": false, "fur": false, "gem": false, "multi": false, "renderingMode": "Transparent" }, { "name": "Hidden/lilToonTwoPassTransparent", "guid": "6a77405f7dfdc1447af58854c7f43f39", "file": "lts_twotrans.shader", "visible": false, "outline": false, "tess": false, "lite": false, "cutout": false, "trans": true, "refraction": false, "fur": false, "gem": false, "multi": false, "renderingMode": "TwoPassTransparent" }, { "name": "Hidden/lilToonTwoPassTransparentOutline", "guid": "9cf054060007d784394b8b0bb703e441", "file": "lts_twotrans_o.shader", "visible": false, "outline": true, "tess": false, "lite": false, "cutout": false, "trans": true, "refraction": false, "fur": false, "gem": false, "multi": false, "renderingMode": "TwoPassTransparent" }];
 
 // node_modules/three/examples/jsm/controls/OrbitControls.js
 var _changeEvent = { type: "change" };
@@ -22238,16 +23175,16 @@ var OrbitControls = class extends EventDispatcher {
           spherical.phi += sphericalDelta.phi;
         }
         let min = scope.minAzimuthAngle;
-        let max = scope.maxAzimuthAngle;
-        if (isFinite(min) && isFinite(max)) {
+        let max2 = scope.maxAzimuthAngle;
+        if (isFinite(min) && isFinite(max2)) {
           if (min < -Math.PI) min += twoPI;
           else if (min > Math.PI) min -= twoPI;
-          if (max < -Math.PI) max += twoPI;
-          else if (max > Math.PI) max -= twoPI;
-          if (min <= max) {
-            spherical.theta = Math.max(min, Math.min(max, spherical.theta));
+          if (max2 < -Math.PI) max2 += twoPI;
+          else if (max2 > Math.PI) max2 -= twoPI;
+          if (min <= max2) {
+            spherical.theta = Math.max(min, Math.min(max2, spherical.theta));
           } else {
-            spherical.theta = spherical.theta > (min + max) / 2 ? Math.max(min, spherical.theta) : Math.min(max, spherical.theta);
+            spherical.theta = spherical.theta > (min + max2) / 2 ? Math.max(min, spherical.theta) : Math.min(max2, spherical.theta);
           }
         }
         spherical.phi = Math.max(scope.minPolarAngle, Math.min(scope.maxPolarAngle, spherical.phi));
@@ -23917,8 +24854,8 @@ var GLTFCubicSplineInterpolant = class extends Interpolant {
     const stride = this.valueSize;
     const stride2 = stride * 2;
     const stride3 = stride * 3;
-    const td = t1 - t0;
-    const p = (t - t0) / td;
+    const td2 = t1 - t0;
+    const p = (t - t0) / td2;
     const pp = p * p;
     const ppp = pp * p;
     const offset1 = i1 * stride3;
@@ -23929,9 +24866,9 @@ var GLTFCubicSplineInterpolant = class extends Interpolant {
     const s1 = s3 - pp + p;
     for (let i = 0; i !== stride; i++) {
       const p0 = values[offset0 + i + stride];
-      const m0 = values[offset0 + i + stride2] * td;
+      const m0 = values[offset0 + i + stride2] * td2;
       const p1 = values[offset1 + i + stride];
-      const m1 = values[offset1 + i] * td;
+      const m1 = values[offset1 + i] * td2;
       result[i] = s0 * p0 + s1 * m0 + s2 * p1 + s3 * m1;
     }
     return result;
@@ -25279,11 +26216,11 @@ function computeBounds(geometry, primitiveDef, parser) {
   if (attributes.POSITION !== void 0) {
     const accessor = parser.json.accessors[attributes.POSITION];
     const min = accessor.min;
-    const max = accessor.max;
-    if (min !== void 0 && max !== void 0) {
+    const max2 = accessor.max;
+    if (min !== void 0 && max2 !== void 0) {
       box.set(
         new Vector3(min[0], min[1], min[2]),
-        new Vector3(max[0], max[1], max[2])
+        new Vector3(max2[0], max2[1], max2[2])
       );
       if (accessor.normalized) {
         const boxScale = getNormalizedComponentScale(WEBGL_COMPONENT_TYPES[accessor.componentType]);
@@ -25306,11 +26243,11 @@ function computeBounds(geometry, primitiveDef, parser) {
       if (target.POSITION !== void 0) {
         const accessor = parser.json.accessors[target.POSITION];
         const min = accessor.min;
-        const max = accessor.max;
-        if (min !== void 0 && max !== void 0) {
-          vector.setX(Math.max(Math.abs(min[0]), Math.abs(max[0])));
-          vector.setY(Math.max(Math.abs(min[1]), Math.abs(max[1])));
-          vector.setZ(Math.max(Math.abs(min[2]), Math.abs(max[2])));
+        const max2 = accessor.max;
+        if (min !== void 0 && max2 !== void 0) {
+          vector.setX(Math.max(Math.abs(min[0]), Math.abs(max2[0])));
+          vector.setY(Math.max(Math.abs(min[1]), Math.abs(max2[1])));
+          vector.setZ(Math.max(Math.abs(min[2]), Math.abs(max2[2])));
           if (accessor.normalized) {
             const boxScale = getNormalizedComponentScale(WEBGL_COMPONENT_TYPES[accessor.componentType]);
             vector.multiplyScalar(boxScale);
@@ -25356,6 +26293,3004 @@ function addPrimitiveAttributes(geometry, primitiveDef, parser) {
   return Promise.all(pending).then(function() {
     return primitiveDef.targets !== void 0 ? addMorphTargets(geometry, primitiveDef.targets, parser) : geometry;
   });
+}
+
+// node_modules/three/examples/jsm/libs/fflate.module.js
+var durl = function(c) {
+  return URL.createObjectURL(new Blob([c], { type: "text/javascript" }));
+};
+var cwk = function(u) {
+  return new Worker(u);
+};
+try {
+  URL.revokeObjectURL(durl(""));
+} catch (e) {
+  durl = function(c) {
+    return "data:application/javascript;charset=UTF-8," + encodeURI(c);
+  };
+  cwk = function(u) {
+    return new Worker(u, { type: "module" });
+  };
+}
+var u8 = Uint8Array;
+var u16 = Uint16Array;
+var u32 = Uint32Array;
+var fleb = new u8([
+  0,
+  0,
+  0,
+  0,
+  0,
+  0,
+  0,
+  0,
+  1,
+  1,
+  1,
+  1,
+  2,
+  2,
+  2,
+  2,
+  3,
+  3,
+  3,
+  3,
+  4,
+  4,
+  4,
+  4,
+  5,
+  5,
+  5,
+  5,
+  0,
+  /* unused */
+  0,
+  0,
+  /* impossible */
+  0
+]);
+var fdeb = new u8([
+  0,
+  0,
+  0,
+  0,
+  1,
+  1,
+  2,
+  2,
+  3,
+  3,
+  4,
+  4,
+  5,
+  5,
+  6,
+  6,
+  7,
+  7,
+  8,
+  8,
+  9,
+  9,
+  10,
+  10,
+  11,
+  11,
+  12,
+  12,
+  13,
+  13,
+  /* unused */
+  0,
+  0
+]);
+var clim = new u8([16, 17, 18, 0, 8, 7, 9, 6, 10, 5, 11, 4, 12, 3, 13, 2, 14, 1, 15]);
+var freb = function(eb, start) {
+  var b = new u16(31);
+  for (var i = 0; i < 31; ++i) {
+    b[i] = start += 1 << eb[i - 1];
+  }
+  var r = new u32(b[30]);
+  for (var i = 1; i < 30; ++i) {
+    for (var j = b[i]; j < b[i + 1]; ++j) {
+      r[j] = j - b[i] << 5 | i;
+    }
+  }
+  return [b, r];
+};
+var _a = freb(fleb, 2);
+var fl = _a[0];
+var revfl = _a[1];
+fl[28] = 258, revfl[258] = 28;
+var _b = freb(fdeb, 0);
+var fd = _b[0];
+var revfd = _b[1];
+var rev = new u16(32768);
+for (i = 0; i < 32768; ++i) {
+  x = (i & 43690) >>> 1 | (i & 21845) << 1;
+  x = (x & 52428) >>> 2 | (x & 13107) << 2;
+  x = (x & 61680) >>> 4 | (x & 3855) << 4;
+  rev[i] = ((x & 65280) >>> 8 | (x & 255) << 8) >>> 1;
+}
+var x;
+var i;
+var hMap = function(cd, mb, r) {
+  var s = cd.length;
+  var i = 0;
+  var l = new u16(mb);
+  for (; i < s; ++i)
+    ++l[cd[i] - 1];
+  var le = new u16(mb);
+  for (i = 0; i < mb; ++i) {
+    le[i] = le[i - 1] + l[i - 1] << 1;
+  }
+  var co;
+  if (r) {
+    co = new u16(1 << mb);
+    var rvb = 15 - mb;
+    for (i = 0; i < s; ++i) {
+      if (cd[i]) {
+        var sv = i << 4 | cd[i];
+        var r_1 = mb - cd[i];
+        var v = le[cd[i] - 1]++ << r_1;
+        for (var m = v | (1 << r_1) - 1; v <= m; ++v) {
+          co[rev[v] >>> rvb] = sv;
+        }
+      }
+    }
+  } else {
+    co = new u16(s);
+    for (i = 0; i < s; ++i) {
+      if (cd[i]) {
+        co[i] = rev[le[cd[i] - 1]++] >>> 15 - cd[i];
+      }
+    }
+  }
+  return co;
+};
+var flt = new u8(288);
+for (i = 0; i < 144; ++i)
+  flt[i] = 8;
+var i;
+for (i = 144; i < 256; ++i)
+  flt[i] = 9;
+var i;
+for (i = 256; i < 280; ++i)
+  flt[i] = 7;
+var i;
+for (i = 280; i < 288; ++i)
+  flt[i] = 8;
+var i;
+var fdt = new u8(32);
+for (i = 0; i < 32; ++i)
+  fdt[i] = 5;
+var i;
+var flrm = /* @__PURE__ */ hMap(flt, 9, 1);
+var fdrm = /* @__PURE__ */ hMap(fdt, 5, 1);
+var max = function(a) {
+  var m = a[0];
+  for (var i = 1; i < a.length; ++i) {
+    if (a[i] > m)
+      m = a[i];
+  }
+  return m;
+};
+var bits = function(d, p, m) {
+  var o = p / 8 | 0;
+  return (d[o] | d[o + 1] << 8) >> (p & 7) & m;
+};
+var bits16 = function(d, p) {
+  var o = p / 8 | 0;
+  return (d[o] | d[o + 1] << 8 | d[o + 2] << 16) >> (p & 7);
+};
+var shft = function(p) {
+  return (p / 8 | 0) + (p & 7 && 1);
+};
+var slc = function(v, s, e) {
+  if (s == null || s < 0)
+    s = 0;
+  if (e == null || e > v.length)
+    e = v.length;
+  var n = new (v instanceof u16 ? u16 : v instanceof u32 ? u32 : u8)(e - s);
+  n.set(v.subarray(s, e));
+  return n;
+};
+var inflt = function(dat, buf, st) {
+  var sl = dat.length;
+  if (!sl || st && !st.l && sl < 5)
+    return buf || new u8(0);
+  var noBuf = !buf || st;
+  var noSt = !st || st.i;
+  if (!st)
+    st = {};
+  if (!buf)
+    buf = new u8(sl * 3);
+  var cbuf = function(l2) {
+    var bl = buf.length;
+    if (l2 > bl) {
+      var nbuf = new u8(Math.max(bl * 2, l2));
+      nbuf.set(buf);
+      buf = nbuf;
+    }
+  };
+  var final = st.f || 0, pos = st.p || 0, bt = st.b || 0, lm = st.l, dm = st.d, lbt = st.m, dbt = st.n;
+  var tbts = sl * 8;
+  do {
+    if (!lm) {
+      st.f = final = bits(dat, pos, 1);
+      var type = bits(dat, pos + 1, 3);
+      pos += 3;
+      if (!type) {
+        var s = shft(pos) + 4, l = dat[s - 4] | dat[s - 3] << 8, t = s + l;
+        if (t > sl) {
+          if (noSt)
+            throw "unexpected EOF";
+          break;
+        }
+        if (noBuf)
+          cbuf(bt + l);
+        buf.set(dat.subarray(s, t), bt);
+        st.b = bt += l, st.p = pos = t * 8;
+        continue;
+      } else if (type == 1)
+        lm = flrm, dm = fdrm, lbt = 9, dbt = 5;
+      else if (type == 2) {
+        var hLit = bits(dat, pos, 31) + 257, hcLen = bits(dat, pos + 10, 15) + 4;
+        var tl = hLit + bits(dat, pos + 5, 31) + 1;
+        pos += 14;
+        var ldt = new u8(tl);
+        var clt = new u8(19);
+        for (var i = 0; i < hcLen; ++i) {
+          clt[clim[i]] = bits(dat, pos + i * 3, 7);
+        }
+        pos += hcLen * 3;
+        var clb = max(clt), clbmsk = (1 << clb) - 1;
+        var clm = hMap(clt, clb, 1);
+        for (var i = 0; i < tl; ) {
+          var r = clm[bits(dat, pos, clbmsk)];
+          pos += r & 15;
+          var s = r >>> 4;
+          if (s < 16) {
+            ldt[i++] = s;
+          } else {
+            var c = 0, n = 0;
+            if (s == 16)
+              n = 3 + bits(dat, pos, 3), pos += 2, c = ldt[i - 1];
+            else if (s == 17)
+              n = 3 + bits(dat, pos, 7), pos += 3;
+            else if (s == 18)
+              n = 11 + bits(dat, pos, 127), pos += 7;
+            while (n--)
+              ldt[i++] = c;
+          }
+        }
+        var lt = ldt.subarray(0, hLit), dt = ldt.subarray(hLit);
+        lbt = max(lt);
+        dbt = max(dt);
+        lm = hMap(lt, lbt, 1);
+        dm = hMap(dt, dbt, 1);
+      } else
+        throw "invalid block type";
+      if (pos > tbts) {
+        if (noSt)
+          throw "unexpected EOF";
+        break;
+      }
+    }
+    if (noBuf)
+      cbuf(bt + 131072);
+    var lms = (1 << lbt) - 1, dms = (1 << dbt) - 1;
+    var lpos = pos;
+    for (; ; lpos = pos) {
+      var c = lm[bits16(dat, pos) & lms], sym = c >>> 4;
+      pos += c & 15;
+      if (pos > tbts) {
+        if (noSt)
+          throw "unexpected EOF";
+        break;
+      }
+      if (!c)
+        throw "invalid length/literal";
+      if (sym < 256)
+        buf[bt++] = sym;
+      else if (sym == 256) {
+        lpos = pos, lm = null;
+        break;
+      } else {
+        var add = sym - 254;
+        if (sym > 264) {
+          var i = sym - 257, b = fleb[i];
+          add = bits(dat, pos, (1 << b) - 1) + fl[i];
+          pos += b;
+        }
+        var d = dm[bits16(dat, pos) & dms], dsym = d >>> 4;
+        if (!d)
+          throw "invalid distance";
+        pos += d & 15;
+        var dt = fd[dsym];
+        if (dsym > 3) {
+          var b = fdeb[dsym];
+          dt += bits16(dat, pos) & (1 << b) - 1, pos += b;
+        }
+        if (pos > tbts) {
+          if (noSt)
+            throw "unexpected EOF";
+          break;
+        }
+        if (noBuf)
+          cbuf(bt + 131072);
+        var end = bt + add;
+        for (; bt < end; bt += 4) {
+          buf[bt] = buf[bt - dt];
+          buf[bt + 1] = buf[bt + 1 - dt];
+          buf[bt + 2] = buf[bt + 2 - dt];
+          buf[bt + 3] = buf[bt + 3 - dt];
+        }
+        bt = end;
+      }
+    }
+    st.l = lm, st.p = lpos, st.b = bt;
+    if (lm)
+      final = 1, st.m = lbt, st.d = dm, st.n = dbt;
+  } while (!final);
+  return bt == buf.length ? buf : slc(buf, 0, bt);
+};
+var et = /* @__PURE__ */ new u8(0);
+var zlv = function(d) {
+  if ((d[0] & 15) != 8 || d[0] >>> 4 > 7 || (d[0] << 8 | d[1]) % 31)
+    throw "invalid zlib data";
+  if (d[1] & 32)
+    throw "invalid zlib data: preset dictionaries not supported";
+};
+function unzlibSync(data, out) {
+  return inflt((zlv(data), data.subarray(2, -4)), out);
+}
+var td = typeof TextDecoder != "undefined" && /* @__PURE__ */ new TextDecoder();
+var tds = 0;
+try {
+  td.decode(et, { stream: true });
+  tds = 1;
+} catch (e) {
+}
+
+// node_modules/three/examples/jsm/curves/NURBSUtils.js
+function findSpan(p, u, U) {
+  const n = U.length - p - 1;
+  if (u >= U[n]) {
+    return n - 1;
+  }
+  if (u <= U[p]) {
+    return p;
+  }
+  let low = p;
+  let high = n;
+  let mid = Math.floor((low + high) / 2);
+  while (u < U[mid] || u >= U[mid + 1]) {
+    if (u < U[mid]) {
+      high = mid;
+    } else {
+      low = mid;
+    }
+    mid = Math.floor((low + high) / 2);
+  }
+  return mid;
+}
+function calcBasisFunctions(span, u, p, U) {
+  const N = [];
+  const left = [];
+  const right = [];
+  N[0] = 1;
+  for (let j = 1; j <= p; ++j) {
+    left[j] = u - U[span + 1 - j];
+    right[j] = U[span + j] - u;
+    let saved = 0;
+    for (let r = 0; r < j; ++r) {
+      const rv = right[r + 1];
+      const lv = left[j - r];
+      const temp = N[r] / (rv + lv);
+      N[r] = saved + rv * temp;
+      saved = lv * temp;
+    }
+    N[j] = saved;
+  }
+  return N;
+}
+function calcBSplinePoint(p, U, P, u) {
+  const span = findSpan(p, u, U);
+  const N = calcBasisFunctions(span, u, p, U);
+  const C = new Vector4(0, 0, 0, 0);
+  for (let j = 0; j <= p; ++j) {
+    const point = P[span - p + j];
+    const Nj = N[j];
+    const wNj = point.w * Nj;
+    C.x += point.x * wNj;
+    C.y += point.y * wNj;
+    C.z += point.z * wNj;
+    C.w += point.w * Nj;
+  }
+  return C;
+}
+function calcBasisFunctionDerivatives(span, u, p, n, U) {
+  const zeroArr = [];
+  for (let i = 0; i <= p; ++i)
+    zeroArr[i] = 0;
+  const ders = [];
+  for (let i = 0; i <= n; ++i)
+    ders[i] = zeroArr.slice(0);
+  const ndu = [];
+  for (let i = 0; i <= p; ++i)
+    ndu[i] = zeroArr.slice(0);
+  ndu[0][0] = 1;
+  const left = zeroArr.slice(0);
+  const right = zeroArr.slice(0);
+  for (let j = 1; j <= p; ++j) {
+    left[j] = u - U[span + 1 - j];
+    right[j] = U[span + j] - u;
+    let saved = 0;
+    for (let r2 = 0; r2 < j; ++r2) {
+      const rv = right[r2 + 1];
+      const lv = left[j - r2];
+      ndu[j][r2] = rv + lv;
+      const temp = ndu[r2][j - 1] / ndu[j][r2];
+      ndu[r2][j] = saved + rv * temp;
+      saved = lv * temp;
+    }
+    ndu[j][j] = saved;
+  }
+  for (let j = 0; j <= p; ++j) {
+    ders[0][j] = ndu[j][p];
+  }
+  for (let r2 = 0; r2 <= p; ++r2) {
+    let s1 = 0;
+    let s2 = 1;
+    const a = [];
+    for (let i = 0; i <= p; ++i) {
+      a[i] = zeroArr.slice(0);
+    }
+    a[0][0] = 1;
+    for (let k = 1; k <= n; ++k) {
+      let d = 0;
+      const rk = r2 - k;
+      const pk = p - k;
+      if (r2 >= k) {
+        a[s2][0] = a[s1][0] / ndu[pk + 1][rk];
+        d = a[s2][0] * ndu[rk][pk];
+      }
+      const j1 = rk >= -1 ? 1 : -rk;
+      const j2 = r2 - 1 <= pk ? k - 1 : p - r2;
+      for (let j3 = j1; j3 <= j2; ++j3) {
+        a[s2][j3] = (a[s1][j3] - a[s1][j3 - 1]) / ndu[pk + 1][rk + j3];
+        d += a[s2][j3] * ndu[rk + j3][pk];
+      }
+      if (r2 <= pk) {
+        a[s2][k] = -a[s1][k - 1] / ndu[pk + 1][r2];
+        d += a[s2][k] * ndu[r2][pk];
+      }
+      ders[k][r2] = d;
+      const j = s1;
+      s1 = s2;
+      s2 = j;
+    }
+  }
+  let r = p;
+  for (let k = 1; k <= n; ++k) {
+    for (let j = 0; j <= p; ++j) {
+      ders[k][j] *= r;
+    }
+    r *= p - k;
+  }
+  return ders;
+}
+function calcBSplineDerivatives(p, U, P, u, nd) {
+  const du = nd < p ? nd : p;
+  const CK = [];
+  const span = findSpan(p, u, U);
+  const nders = calcBasisFunctionDerivatives(span, u, p, du, U);
+  const Pw = [];
+  for (let i = 0; i < P.length; ++i) {
+    const point = P[i].clone();
+    const w = point.w;
+    point.x *= w;
+    point.y *= w;
+    point.z *= w;
+    Pw[i] = point;
+  }
+  for (let k = 0; k <= du; ++k) {
+    const point = Pw[span - p].clone().multiplyScalar(nders[k][0]);
+    for (let j = 1; j <= p; ++j) {
+      point.add(Pw[span - p + j].clone().multiplyScalar(nders[k][j]));
+    }
+    CK[k] = point;
+  }
+  for (let k = du + 1; k <= nd + 1; ++k) {
+    CK[k] = new Vector4(0, 0, 0);
+  }
+  return CK;
+}
+function calcKoverI(k, i) {
+  let nom = 1;
+  for (let j = 2; j <= k; ++j) {
+    nom *= j;
+  }
+  let denom = 1;
+  for (let j = 2; j <= i; ++j) {
+    denom *= j;
+  }
+  for (let j = 2; j <= k - i; ++j) {
+    denom *= j;
+  }
+  return nom / denom;
+}
+function calcRationalCurveDerivatives(Pders) {
+  const nd = Pders.length;
+  const Aders = [];
+  const wders = [];
+  for (let i = 0; i < nd; ++i) {
+    const point = Pders[i];
+    Aders[i] = new Vector3(point.x, point.y, point.z);
+    wders[i] = point.w;
+  }
+  const CK = [];
+  for (let k = 0; k < nd; ++k) {
+    const v = Aders[k].clone();
+    for (let i = 1; i <= k; ++i) {
+      v.sub(CK[k - i].clone().multiplyScalar(calcKoverI(k, i) * wders[i]));
+    }
+    CK[k] = v.divideScalar(wders[0]);
+  }
+  return CK;
+}
+function calcNURBSDerivatives(p, U, P, u, nd) {
+  const Pders = calcBSplineDerivatives(p, U, P, u, nd);
+  return calcRationalCurveDerivatives(Pders);
+}
+
+// node_modules/three/examples/jsm/curves/NURBSCurve.js
+var NURBSCurve = class extends Curve {
+  constructor(degree, knots, controlPoints, startKnot, endKnot) {
+    super();
+    this.degree = degree;
+    this.knots = knots;
+    this.controlPoints = [];
+    this.startKnot = startKnot || 0;
+    this.endKnot = endKnot || this.knots.length - 1;
+    for (let i = 0; i < controlPoints.length; ++i) {
+      const point = controlPoints[i];
+      this.controlPoints[i] = new Vector4(point.x, point.y, point.z, point.w);
+    }
+  }
+  getPoint(t, optionalTarget = new Vector3()) {
+    const point = optionalTarget;
+    const u = this.knots[this.startKnot] + t * (this.knots[this.endKnot] - this.knots[this.startKnot]);
+    const hpoint = calcBSplinePoint(this.degree, this.knots, this.controlPoints, u);
+    if (hpoint.w !== 1) {
+      hpoint.divideScalar(hpoint.w);
+    }
+    return point.set(hpoint.x, hpoint.y, hpoint.z);
+  }
+  getTangent(t, optionalTarget = new Vector3()) {
+    const tangent = optionalTarget;
+    const u = this.knots[0] + t * (this.knots[this.knots.length - 1] - this.knots[0]);
+    const ders = calcNURBSDerivatives(this.degree, this.knots, this.controlPoints, u, 1);
+    tangent.copy(ders[1]).normalize();
+    return tangent;
+  }
+};
+
+// node_modules/three/examples/jsm/loaders/FBXLoader.js
+var fbxTree;
+var connections;
+var sceneGraph;
+var FBXLoader = class extends Loader {
+  constructor(manager) {
+    super(manager);
+  }
+  load(url, onLoad, onProgress, onError) {
+    const scope = this;
+    const path = scope.path === "" ? LoaderUtils.extractUrlBase(url) : scope.path;
+    const loader = new FileLoader(this.manager);
+    loader.setPath(scope.path);
+    loader.setResponseType("arraybuffer");
+    loader.setRequestHeader(scope.requestHeader);
+    loader.setWithCredentials(scope.withCredentials);
+    loader.load(url, function(buffer) {
+      try {
+        onLoad(scope.parse(buffer, path));
+      } catch (e) {
+        if (onError) {
+          onError(e);
+        } else {
+          console.error(e);
+        }
+        scope.manager.itemError(url);
+      }
+    }, onProgress, onError);
+  }
+  parse(FBXBuffer, path) {
+    if (isFbxFormatBinary(FBXBuffer)) {
+      fbxTree = new BinaryParser().parse(FBXBuffer);
+    } else {
+      const FBXText = convertArrayBufferToString(FBXBuffer);
+      if (!isFbxFormatASCII(FBXText)) {
+        throw new Error("THREE.FBXLoader: Unknown format.");
+      }
+      if (getFbxVersion(FBXText) < 7e3) {
+        throw new Error("THREE.FBXLoader: FBX version not supported, FileVersion: " + getFbxVersion(FBXText));
+      }
+      fbxTree = new TextParser().parse(FBXText);
+    }
+    const textureLoader = new TextureLoader(this.manager).setPath(this.resourcePath || path).setCrossOrigin(this.crossOrigin);
+    return new FBXTreeParser(textureLoader, this.manager).parse(fbxTree);
+  }
+};
+var FBXTreeParser = class {
+  constructor(textureLoader, manager) {
+    this.textureLoader = textureLoader;
+    this.manager = manager;
+  }
+  parse() {
+    connections = this.parseConnections();
+    const images = this.parseImages();
+    const textures = this.parseTextures(images);
+    const materials = this.parseMaterials(textures);
+    const deformers = this.parseDeformers();
+    const geometryMap = new GeometryParser().parse(deformers);
+    this.parseScene(deformers, geometryMap, materials);
+    return sceneGraph;
+  }
+  // Parses FBXTree.Connections which holds parent-child connections between objects (e.g. material -> texture, model->geometry )
+  // and details the connection type
+  parseConnections() {
+    const connectionMap = /* @__PURE__ */ new Map();
+    if ("Connections" in fbxTree) {
+      const rawConnections = fbxTree.Connections.connections;
+      rawConnections.forEach(function(rawConnection) {
+        const fromID = rawConnection[0];
+        const toID = rawConnection[1];
+        const relationship = rawConnection[2];
+        if (!connectionMap.has(fromID)) {
+          connectionMap.set(fromID, {
+            parents: [],
+            children: []
+          });
+        }
+        const parentRelationship = { ID: toID, relationship };
+        connectionMap.get(fromID).parents.push(parentRelationship);
+        if (!connectionMap.has(toID)) {
+          connectionMap.set(toID, {
+            parents: [],
+            children: []
+          });
+        }
+        const childRelationship = { ID: fromID, relationship };
+        connectionMap.get(toID).children.push(childRelationship);
+      });
+    }
+    return connectionMap;
+  }
+  // Parse FBXTree.Objects.Video for embedded image data
+  // These images are connected to textures in FBXTree.Objects.Textures
+  // via FBXTree.Connections.
+  parseImages() {
+    const images = {};
+    const blobs = {};
+    if ("Video" in fbxTree.Objects) {
+      const videoNodes = fbxTree.Objects.Video;
+      for (const nodeID in videoNodes) {
+        const videoNode = videoNodes[nodeID];
+        const id = parseInt(nodeID);
+        images[id] = videoNode.RelativeFilename || videoNode.Filename;
+        if ("Content" in videoNode) {
+          const arrayBufferContent = videoNode.Content instanceof ArrayBuffer && videoNode.Content.byteLength > 0;
+          const base64Content = typeof videoNode.Content === "string" && videoNode.Content !== "";
+          if (arrayBufferContent || base64Content) {
+            const image = this.parseImage(videoNodes[nodeID]);
+            blobs[videoNode.RelativeFilename || videoNode.Filename] = image;
+          }
+        }
+      }
+    }
+    for (const id in images) {
+      const filename = images[id];
+      if (blobs[filename] !== void 0) images[id] = blobs[filename];
+      else images[id] = images[id].split("\\").pop();
+    }
+    return images;
+  }
+  // Parse embedded image data in FBXTree.Video.Content
+  parseImage(videoNode) {
+    const content = videoNode.Content;
+    const fileName = videoNode.RelativeFilename || videoNode.Filename;
+    const extension = fileName.slice(fileName.lastIndexOf(".") + 1).toLowerCase();
+    let type;
+    switch (extension) {
+      case "bmp":
+        type = "image/bmp";
+        break;
+      case "jpg":
+      case "jpeg":
+        type = "image/jpeg";
+        break;
+      case "png":
+        type = "image/png";
+        break;
+      case "tif":
+        type = "image/tiff";
+        break;
+      case "tga":
+        if (this.manager.getHandler(".tga") === null) {
+          console.warn("FBXLoader: TGA loader not found, skipping ", fileName);
+        }
+        type = "image/tga";
+        break;
+      default:
+        console.warn('FBXLoader: Image type "' + extension + '" is not supported.');
+        return;
+    }
+    if (typeof content === "string") {
+      return "data:" + type + ";base64," + content;
+    } else {
+      const array = new Uint8Array(content);
+      return window.URL.createObjectURL(new Blob([array], { type }));
+    }
+  }
+  // Parse nodes in FBXTree.Objects.Texture
+  // These contain details such as UV scaling, cropping, rotation etc and are connected
+  // to images in FBXTree.Objects.Video
+  parseTextures(images) {
+    const textureMap = /* @__PURE__ */ new Map();
+    if ("Texture" in fbxTree.Objects) {
+      const textureNodes = fbxTree.Objects.Texture;
+      for (const nodeID in textureNodes) {
+        const texture = this.parseTexture(textureNodes[nodeID], images);
+        textureMap.set(parseInt(nodeID), texture);
+      }
+    }
+    return textureMap;
+  }
+  // Parse individual node in FBXTree.Objects.Texture
+  parseTexture(textureNode, images) {
+    const texture = this.loadTexture(textureNode, images);
+    texture.ID = textureNode.id;
+    texture.name = textureNode.attrName;
+    const wrapModeU = textureNode.WrapModeU;
+    const wrapModeV = textureNode.WrapModeV;
+    const valueU = wrapModeU !== void 0 ? wrapModeU.value : 0;
+    const valueV = wrapModeV !== void 0 ? wrapModeV.value : 0;
+    texture.wrapS = valueU === 0 ? RepeatWrapping : ClampToEdgeWrapping;
+    texture.wrapT = valueV === 0 ? RepeatWrapping : ClampToEdgeWrapping;
+    if ("Scaling" in textureNode) {
+      const values = textureNode.Scaling.value;
+      texture.repeat.x = values[0];
+      texture.repeat.y = values[1];
+    }
+    if ("Translation" in textureNode) {
+      const values = textureNode.Translation.value;
+      texture.offset.x = values[0];
+      texture.offset.y = values[1];
+    }
+    return texture;
+  }
+  // load a texture specified as a blob or data URI, or via an external URL using TextureLoader
+  loadTexture(textureNode, images) {
+    let fileName;
+    const currentPath = this.textureLoader.path;
+    const children = connections.get(textureNode.id).children;
+    if (children !== void 0 && children.length > 0 && images[children[0].ID] !== void 0) {
+      fileName = images[children[0].ID];
+      if (fileName.indexOf("blob:") === 0 || fileName.indexOf("data:") === 0) {
+        this.textureLoader.setPath(void 0);
+      }
+    }
+    let texture;
+    const extension = textureNode.FileName.slice(-3).toLowerCase();
+    if (extension === "tga") {
+      const loader = this.manager.getHandler(".tga");
+      if (loader === null) {
+        console.warn("FBXLoader: TGA loader not found, creating placeholder texture for", textureNode.RelativeFilename);
+        texture = new Texture();
+      } else {
+        loader.setPath(this.textureLoader.path);
+        texture = loader.load(fileName);
+      }
+    } else if (extension === "dds") {
+      const loader = this.manager.getHandler(".dds");
+      if (loader === null) {
+        console.warn("FBXLoader: DDS loader not found, creating placeholder texture for", textureNode.RelativeFilename);
+        texture = new Texture();
+      } else {
+        loader.setPath(this.textureLoader.path);
+        texture = loader.load(fileName);
+      }
+    } else if (extension === "psd") {
+      console.warn("FBXLoader: PSD textures are not supported, creating placeholder texture for", textureNode.RelativeFilename);
+      texture = new Texture();
+    } else {
+      texture = this.textureLoader.load(fileName);
+    }
+    this.textureLoader.setPath(currentPath);
+    return texture;
+  }
+  // Parse nodes in FBXTree.Objects.Material
+  parseMaterials(textureMap) {
+    const materialMap = /* @__PURE__ */ new Map();
+    if ("Material" in fbxTree.Objects) {
+      const materialNodes = fbxTree.Objects.Material;
+      for (const nodeID in materialNodes) {
+        const material = this.parseMaterial(materialNodes[nodeID], textureMap);
+        if (material !== null) materialMap.set(parseInt(nodeID), material);
+      }
+    }
+    return materialMap;
+  }
+  // Parse single node in FBXTree.Objects.Material
+  // Materials are connected to texture maps in FBXTree.Objects.Textures
+  // FBX format currently only supports Lambert and Phong shading models
+  parseMaterial(materialNode, textureMap) {
+    const ID = materialNode.id;
+    const name = materialNode.attrName;
+    let type = materialNode.ShadingModel;
+    if (typeof type === "object") {
+      type = type.value;
+    }
+    if (!connections.has(ID)) return null;
+    const parameters = this.parseParameters(materialNode, textureMap, ID);
+    let material;
+    switch (type.toLowerCase()) {
+      case "phong":
+        material = new MeshPhongMaterial();
+        break;
+      case "lambert":
+        material = new MeshLambertMaterial();
+        break;
+      default:
+        console.warn('THREE.FBXLoader: unknown material type "%s". Defaulting to MeshPhongMaterial.', type);
+        material = new MeshPhongMaterial();
+        break;
+    }
+    material.setValues(parameters);
+    material.name = name;
+    return material;
+  }
+  // Parse FBX material and return parameters suitable for a three.js material
+  // Also parse the texture map and return any textures associated with the material
+  parseParameters(materialNode, textureMap, ID) {
+    const parameters = {};
+    if (materialNode.BumpFactor) {
+      parameters.bumpScale = materialNode.BumpFactor.value;
+    }
+    if (materialNode.Diffuse) {
+      parameters.color = new Color().fromArray(materialNode.Diffuse.value).convertSRGBToLinear();
+    } else if (materialNode.DiffuseColor && (materialNode.DiffuseColor.type === "Color" || materialNode.DiffuseColor.type === "ColorRGB")) {
+      parameters.color = new Color().fromArray(materialNode.DiffuseColor.value).convertSRGBToLinear();
+    }
+    if (materialNode.DisplacementFactor) {
+      parameters.displacementScale = materialNode.DisplacementFactor.value;
+    }
+    if (materialNode.Emissive) {
+      parameters.emissive = new Color().fromArray(materialNode.Emissive.value).convertSRGBToLinear();
+    } else if (materialNode.EmissiveColor && (materialNode.EmissiveColor.type === "Color" || materialNode.EmissiveColor.type === "ColorRGB")) {
+      parameters.emissive = new Color().fromArray(materialNode.EmissiveColor.value).convertSRGBToLinear();
+    }
+    if (materialNode.EmissiveFactor) {
+      parameters.emissiveIntensity = parseFloat(materialNode.EmissiveFactor.value);
+    }
+    if (materialNode.Opacity) {
+      parameters.opacity = parseFloat(materialNode.Opacity.value);
+    }
+    if (parameters.opacity < 1) {
+      parameters.transparent = true;
+    }
+    if (materialNode.ReflectionFactor) {
+      parameters.reflectivity = materialNode.ReflectionFactor.value;
+    }
+    if (materialNode.Shininess) {
+      parameters.shininess = materialNode.Shininess.value;
+    }
+    if (materialNode.Specular) {
+      parameters.specular = new Color().fromArray(materialNode.Specular.value).convertSRGBToLinear();
+    } else if (materialNode.SpecularColor && materialNode.SpecularColor.type === "Color") {
+      parameters.specular = new Color().fromArray(materialNode.SpecularColor.value).convertSRGBToLinear();
+    }
+    const scope = this;
+    connections.get(ID).children.forEach(function(child) {
+      const type = child.relationship;
+      switch (type) {
+        case "Bump":
+          parameters.bumpMap = scope.getTexture(textureMap, child.ID);
+          break;
+        case "Maya|TEX_ao_map":
+          parameters.aoMap = scope.getTexture(textureMap, child.ID);
+          break;
+        case "DiffuseColor":
+        case "Maya|TEX_color_map":
+          parameters.map = scope.getTexture(textureMap, child.ID);
+          if (parameters.map !== void 0) {
+            parameters.map.colorSpace = SRGBColorSpace;
+          }
+          break;
+        case "DisplacementColor":
+          parameters.displacementMap = scope.getTexture(textureMap, child.ID);
+          break;
+        case "EmissiveColor":
+          parameters.emissiveMap = scope.getTexture(textureMap, child.ID);
+          if (parameters.emissiveMap !== void 0) {
+            parameters.emissiveMap.colorSpace = SRGBColorSpace;
+          }
+          break;
+        case "NormalMap":
+        case "Maya|TEX_normal_map":
+          parameters.normalMap = scope.getTexture(textureMap, child.ID);
+          break;
+        case "ReflectionColor":
+          parameters.envMap = scope.getTexture(textureMap, child.ID);
+          if (parameters.envMap !== void 0) {
+            parameters.envMap.mapping = EquirectangularReflectionMapping;
+            parameters.envMap.colorSpace = SRGBColorSpace;
+          }
+          break;
+        case "SpecularColor":
+          parameters.specularMap = scope.getTexture(textureMap, child.ID);
+          if (parameters.specularMap !== void 0) {
+            parameters.specularMap.colorSpace = SRGBColorSpace;
+          }
+          break;
+        case "TransparentColor":
+        case "TransparencyFactor":
+          parameters.alphaMap = scope.getTexture(textureMap, child.ID);
+          parameters.transparent = true;
+          break;
+        case "AmbientColor":
+        case "ShininessExponent":
+        // AKA glossiness map
+        case "SpecularFactor":
+        // AKA specularLevel
+        case "VectorDisplacementColor":
+        // NOTE: Seems to be a copy of DisplacementColor
+        default:
+          console.warn("THREE.FBXLoader: %s map is not supported in three.js, skipping texture.", type);
+          break;
+      }
+    });
+    return parameters;
+  }
+  // get a texture from the textureMap for use by a material.
+  getTexture(textureMap, id) {
+    if ("LayeredTexture" in fbxTree.Objects && id in fbxTree.Objects.LayeredTexture) {
+      console.warn("THREE.FBXLoader: layered textures are not supported in three.js. Discarding all but first layer.");
+      id = connections.get(id).children[0].ID;
+    }
+    return textureMap.get(id);
+  }
+  // Parse nodes in FBXTree.Objects.Deformer
+  // Deformer node can contain skinning or Vertex Cache animation data, however only skinning is supported here
+  // Generates map of Skeleton-like objects for use later when generating and binding skeletons.
+  parseDeformers() {
+    const skeletons = {};
+    const morphTargets = {};
+    if ("Deformer" in fbxTree.Objects) {
+      const DeformerNodes = fbxTree.Objects.Deformer;
+      for (const nodeID in DeformerNodes) {
+        const deformerNode = DeformerNodes[nodeID];
+        const relationships = connections.get(parseInt(nodeID));
+        if (deformerNode.attrType === "Skin") {
+          const skeleton = this.parseSkeleton(relationships, DeformerNodes);
+          skeleton.ID = nodeID;
+          if (relationships.parents.length > 1) console.warn("THREE.FBXLoader: skeleton attached to more than one geometry is not supported.");
+          skeleton.geometryID = relationships.parents[0].ID;
+          skeletons[nodeID] = skeleton;
+        } else if (deformerNode.attrType === "BlendShape") {
+          const morphTarget = {
+            id: nodeID
+          };
+          morphTarget.rawTargets = this.parseMorphTargets(relationships, DeformerNodes);
+          morphTarget.id = nodeID;
+          if (relationships.parents.length > 1) console.warn("THREE.FBXLoader: morph target attached to more than one geometry is not supported.");
+          morphTargets[nodeID] = morphTarget;
+        }
+      }
+    }
+    return {
+      skeletons,
+      morphTargets
+    };
+  }
+  // Parse single nodes in FBXTree.Objects.Deformer
+  // The top level skeleton node has type 'Skin' and sub nodes have type 'Cluster'
+  // Each skin node represents a skeleton and each cluster node represents a bone
+  parseSkeleton(relationships, deformerNodes) {
+    const rawBones = [];
+    relationships.children.forEach(function(child) {
+      const boneNode = deformerNodes[child.ID];
+      if (boneNode.attrType !== "Cluster") return;
+      const rawBone = {
+        ID: child.ID,
+        indices: [],
+        weights: [],
+        transformLink: new Matrix4().fromArray(boneNode.TransformLink.a)
+        // transform: new Matrix4().fromArray( boneNode.Transform.a ),
+        // linkMode: boneNode.Mode,
+      };
+      if ("Indexes" in boneNode) {
+        rawBone.indices = boneNode.Indexes.a;
+        rawBone.weights = boneNode.Weights.a;
+      }
+      rawBones.push(rawBone);
+    });
+    return {
+      rawBones,
+      bones: []
+    };
+  }
+  // The top level morph deformer node has type "BlendShape" and sub nodes have type "BlendShapeChannel"
+  parseMorphTargets(relationships, deformerNodes) {
+    const rawMorphTargets = [];
+    for (let i = 0; i < relationships.children.length; i++) {
+      const child = relationships.children[i];
+      const morphTargetNode = deformerNodes[child.ID];
+      const rawMorphTarget = {
+        name: morphTargetNode.attrName,
+        initialWeight: morphTargetNode.DeformPercent,
+        id: morphTargetNode.id,
+        fullWeights: morphTargetNode.FullWeights.a
+      };
+      if (morphTargetNode.attrType !== "BlendShapeChannel") return;
+      rawMorphTarget.geoID = connections.get(parseInt(child.ID)).children.filter(function(child2) {
+        return child2.relationship === void 0;
+      })[0].ID;
+      rawMorphTargets.push(rawMorphTarget);
+    }
+    return rawMorphTargets;
+  }
+  // create the main Group() to be returned by the loader
+  parseScene(deformers, geometryMap, materialMap) {
+    sceneGraph = new Group();
+    const modelMap = this.parseModels(deformers.skeletons, geometryMap, materialMap);
+    const modelNodes = fbxTree.Objects.Model;
+    const scope = this;
+    modelMap.forEach(function(model) {
+      const modelNode = modelNodes[model.ID];
+      scope.setLookAtProperties(model, modelNode);
+      const parentConnections = connections.get(model.ID).parents;
+      parentConnections.forEach(function(connection) {
+        const parent = modelMap.get(connection.ID);
+        if (parent !== void 0) parent.add(model);
+      });
+      if (model.parent === null) {
+        sceneGraph.add(model);
+      }
+    });
+    this.bindSkeleton(deformers.skeletons, geometryMap, modelMap);
+    this.addGlobalSceneSettings();
+    sceneGraph.traverse(function(node) {
+      if (node.userData.transformData) {
+        if (node.parent) {
+          node.userData.transformData.parentMatrix = node.parent.matrix;
+          node.userData.transformData.parentMatrixWorld = node.parent.matrixWorld;
+        }
+        const transform = generateTransform(node.userData.transformData);
+        node.applyMatrix4(transform);
+        node.updateWorldMatrix();
+      }
+    });
+    const animations = new AnimationParser().parse();
+    if (sceneGraph.children.length === 1 && sceneGraph.children[0].isGroup) {
+      sceneGraph.children[0].animations = animations;
+      sceneGraph = sceneGraph.children[0];
+    }
+    sceneGraph.animations = animations;
+  }
+  // parse nodes in FBXTree.Objects.Model
+  parseModels(skeletons, geometryMap, materialMap) {
+    const modelMap = /* @__PURE__ */ new Map();
+    const modelNodes = fbxTree.Objects.Model;
+    for (const nodeID in modelNodes) {
+      const id = parseInt(nodeID);
+      const node = modelNodes[nodeID];
+      const relationships = connections.get(id);
+      let model = this.buildSkeleton(relationships, skeletons, id, node.attrName);
+      if (!model) {
+        switch (node.attrType) {
+          case "Camera":
+            model = this.createCamera(relationships);
+            break;
+          case "Light":
+            model = this.createLight(relationships);
+            break;
+          case "Mesh":
+            model = this.createMesh(relationships, geometryMap, materialMap);
+            break;
+          case "NurbsCurve":
+            model = this.createCurve(relationships, geometryMap);
+            break;
+          case "LimbNode":
+          case "Root":
+            model = new Bone();
+            break;
+          case "Null":
+          default:
+            model = new Group();
+            break;
+        }
+        model.name = node.attrName ? PropertyBinding.sanitizeNodeName(node.attrName) : "";
+        model.userData.originalName = node.attrName;
+        model.ID = id;
+      }
+      this.getTransformData(model, node);
+      modelMap.set(id, model);
+    }
+    return modelMap;
+  }
+  buildSkeleton(relationships, skeletons, id, name) {
+    let bone = null;
+    relationships.parents.forEach(function(parent) {
+      for (const ID in skeletons) {
+        const skeleton = skeletons[ID];
+        skeleton.rawBones.forEach(function(rawBone, i) {
+          if (rawBone.ID === parent.ID) {
+            const subBone = bone;
+            bone = new Bone();
+            bone.matrixWorld.copy(rawBone.transformLink);
+            bone.name = name ? PropertyBinding.sanitizeNodeName(name) : "";
+            bone.userData.originalName = name;
+            bone.ID = id;
+            skeleton.bones[i] = bone;
+            if (subBone !== null) {
+              bone.add(subBone);
+            }
+          }
+        });
+      }
+    });
+    return bone;
+  }
+  // create a PerspectiveCamera or OrthographicCamera
+  createCamera(relationships) {
+    let model;
+    let cameraAttribute;
+    relationships.children.forEach(function(child) {
+      const attr = fbxTree.Objects.NodeAttribute[child.ID];
+      if (attr !== void 0) {
+        cameraAttribute = attr;
+      }
+    });
+    if (cameraAttribute === void 0) {
+      model = new Object3D();
+    } else {
+      let type = 0;
+      if (cameraAttribute.CameraProjectionType !== void 0 && cameraAttribute.CameraProjectionType.value === 1) {
+        type = 1;
+      }
+      let nearClippingPlane = 1;
+      if (cameraAttribute.NearPlane !== void 0) {
+        nearClippingPlane = cameraAttribute.NearPlane.value / 1e3;
+      }
+      let farClippingPlane = 1e3;
+      if (cameraAttribute.FarPlane !== void 0) {
+        farClippingPlane = cameraAttribute.FarPlane.value / 1e3;
+      }
+      let width = window.innerWidth;
+      let height = window.innerHeight;
+      if (cameraAttribute.AspectWidth !== void 0 && cameraAttribute.AspectHeight !== void 0) {
+        width = cameraAttribute.AspectWidth.value;
+        height = cameraAttribute.AspectHeight.value;
+      }
+      const aspect2 = width / height;
+      let fov2 = 45;
+      if (cameraAttribute.FieldOfView !== void 0) {
+        fov2 = cameraAttribute.FieldOfView.value;
+      }
+      const focalLength = cameraAttribute.FocalLength ? cameraAttribute.FocalLength.value : null;
+      switch (type) {
+        case 0:
+          model = new PerspectiveCamera(fov2, aspect2, nearClippingPlane, farClippingPlane);
+          if (focalLength !== null) model.setFocalLength(focalLength);
+          break;
+        case 1:
+          model = new OrthographicCamera(-width / 2, width / 2, height / 2, -height / 2, nearClippingPlane, farClippingPlane);
+          break;
+        default:
+          console.warn("THREE.FBXLoader: Unknown camera type " + type + ".");
+          model = new Object3D();
+          break;
+      }
+    }
+    return model;
+  }
+  // Create a DirectionalLight, PointLight or SpotLight
+  createLight(relationships) {
+    let model;
+    let lightAttribute;
+    relationships.children.forEach(function(child) {
+      const attr = fbxTree.Objects.NodeAttribute[child.ID];
+      if (attr !== void 0) {
+        lightAttribute = attr;
+      }
+    });
+    if (lightAttribute === void 0) {
+      model = new Object3D();
+    } else {
+      let type;
+      if (lightAttribute.LightType === void 0) {
+        type = 0;
+      } else {
+        type = lightAttribute.LightType.value;
+      }
+      let color = 16777215;
+      if (lightAttribute.Color !== void 0) {
+        color = new Color().fromArray(lightAttribute.Color.value).convertSRGBToLinear();
+      }
+      let intensity = lightAttribute.Intensity === void 0 ? 1 : lightAttribute.Intensity.value / 100;
+      if (lightAttribute.CastLightOnObject !== void 0 && lightAttribute.CastLightOnObject.value === 0) {
+        intensity = 0;
+      }
+      let distance = 0;
+      if (lightAttribute.FarAttenuationEnd !== void 0) {
+        if (lightAttribute.EnableFarAttenuation !== void 0 && lightAttribute.EnableFarAttenuation.value === 0) {
+          distance = 0;
+        } else {
+          distance = lightAttribute.FarAttenuationEnd.value;
+        }
+      }
+      const decay = 1;
+      switch (type) {
+        case 0:
+          model = new PointLight(color, intensity, distance, decay);
+          break;
+        case 1:
+          model = new DirectionalLight(color, intensity);
+          break;
+        case 2:
+          let angle = Math.PI / 3;
+          if (lightAttribute.InnerAngle !== void 0) {
+            angle = MathUtils.degToRad(lightAttribute.InnerAngle.value);
+          }
+          let penumbra = 0;
+          if (lightAttribute.OuterAngle !== void 0) {
+            penumbra = MathUtils.degToRad(lightAttribute.OuterAngle.value);
+            penumbra = Math.max(penumbra, 1);
+          }
+          model = new SpotLight(color, intensity, distance, angle, penumbra, decay);
+          break;
+        default:
+          console.warn("THREE.FBXLoader: Unknown light type " + lightAttribute.LightType.value + ", defaulting to a PointLight.");
+          model = new PointLight(color, intensity);
+          break;
+      }
+      if (lightAttribute.CastShadows !== void 0 && lightAttribute.CastShadows.value === 1) {
+        model.castShadow = true;
+      }
+    }
+    return model;
+  }
+  createMesh(relationships, geometryMap, materialMap) {
+    let model;
+    let geometry = null;
+    let material = null;
+    const materials = [];
+    relationships.children.forEach(function(child) {
+      if (geometryMap.has(child.ID)) {
+        geometry = geometryMap.get(child.ID);
+      }
+      if (materialMap.has(child.ID)) {
+        materials.push(materialMap.get(child.ID));
+      }
+    });
+    if (materials.length > 1) {
+      material = materials;
+    } else if (materials.length > 0) {
+      material = materials[0];
+    } else {
+      material = new MeshPhongMaterial({
+        name: Loader.DEFAULT_MATERIAL_NAME,
+        color: 13421772
+      });
+      materials.push(material);
+    }
+    if ("color" in geometry.attributes) {
+      materials.forEach(function(material2) {
+        material2.vertexColors = true;
+      });
+    }
+    if (geometry.FBX_Deformer) {
+      model = new SkinnedMesh(geometry, material);
+      model.normalizeSkinWeights();
+    } else {
+      model = new Mesh(geometry, material);
+    }
+    return model;
+  }
+  createCurve(relationships, geometryMap) {
+    const geometry = relationships.children.reduce(function(geo, child) {
+      if (geometryMap.has(child.ID)) geo = geometryMap.get(child.ID);
+      return geo;
+    }, null);
+    const material = new LineBasicMaterial({
+      name: Loader.DEFAULT_MATERIAL_NAME,
+      color: 3342591,
+      linewidth: 1
+    });
+    return new Line(geometry, material);
+  }
+  // parse the model node for transform data
+  getTransformData(model, modelNode) {
+    const transformData = {};
+    if ("InheritType" in modelNode) transformData.inheritType = parseInt(modelNode.InheritType.value);
+    if ("RotationOrder" in modelNode) transformData.eulerOrder = getEulerOrder(modelNode.RotationOrder.value);
+    else transformData.eulerOrder = "ZYX";
+    if ("Lcl_Translation" in modelNode) transformData.translation = modelNode.Lcl_Translation.value;
+    if ("PreRotation" in modelNode) transformData.preRotation = modelNode.PreRotation.value;
+    if ("Lcl_Rotation" in modelNode) transformData.rotation = modelNode.Lcl_Rotation.value;
+    if ("PostRotation" in modelNode) transformData.postRotation = modelNode.PostRotation.value;
+    if ("Lcl_Scaling" in modelNode) transformData.scale = modelNode.Lcl_Scaling.value;
+    if ("ScalingOffset" in modelNode) transformData.scalingOffset = modelNode.ScalingOffset.value;
+    if ("ScalingPivot" in modelNode) transformData.scalingPivot = modelNode.ScalingPivot.value;
+    if ("RotationOffset" in modelNode) transformData.rotationOffset = modelNode.RotationOffset.value;
+    if ("RotationPivot" in modelNode) transformData.rotationPivot = modelNode.RotationPivot.value;
+    model.userData.transformData = transformData;
+  }
+  setLookAtProperties(model, modelNode) {
+    if ("LookAtProperty" in modelNode) {
+      const children = connections.get(model.ID).children;
+      children.forEach(function(child) {
+        if (child.relationship === "LookAtProperty") {
+          const lookAtTarget = fbxTree.Objects.Model[child.ID];
+          if ("Lcl_Translation" in lookAtTarget) {
+            const pos = lookAtTarget.Lcl_Translation.value;
+            if (model.target !== void 0) {
+              model.target.position.fromArray(pos);
+              sceneGraph.add(model.target);
+            } else {
+              model.lookAt(new Vector3().fromArray(pos));
+            }
+          }
+        }
+      });
+    }
+  }
+  bindSkeleton(skeletons, geometryMap, modelMap) {
+    const bindMatrices = this.parsePoseNodes();
+    for (const ID in skeletons) {
+      const skeleton = skeletons[ID];
+      const parents = connections.get(parseInt(skeleton.ID)).parents;
+      parents.forEach(function(parent) {
+        if (geometryMap.has(parent.ID)) {
+          const geoID = parent.ID;
+          const geoRelationships = connections.get(geoID);
+          geoRelationships.parents.forEach(function(geoConnParent) {
+            if (modelMap.has(geoConnParent.ID)) {
+              const model = modelMap.get(geoConnParent.ID);
+              model.bind(new Skeleton(skeleton.bones), bindMatrices[geoConnParent.ID]);
+            }
+          });
+        }
+      });
+    }
+  }
+  parsePoseNodes() {
+    const bindMatrices = {};
+    if ("Pose" in fbxTree.Objects) {
+      const BindPoseNode = fbxTree.Objects.Pose;
+      for (const nodeID in BindPoseNode) {
+        if (BindPoseNode[nodeID].attrType === "BindPose" && BindPoseNode[nodeID].NbPoseNodes > 0) {
+          const poseNodes = BindPoseNode[nodeID].PoseNode;
+          if (Array.isArray(poseNodes)) {
+            poseNodes.forEach(function(poseNode) {
+              bindMatrices[poseNode.Node] = new Matrix4().fromArray(poseNode.Matrix.a);
+            });
+          } else {
+            bindMatrices[poseNodes.Node] = new Matrix4().fromArray(poseNodes.Matrix.a);
+          }
+        }
+      }
+    }
+    return bindMatrices;
+  }
+  addGlobalSceneSettings() {
+    if ("GlobalSettings" in fbxTree) {
+      if ("AmbientColor" in fbxTree.GlobalSettings) {
+        const ambientColor = fbxTree.GlobalSettings.AmbientColor.value;
+        const r = ambientColor[0];
+        const g = ambientColor[1];
+        const b = ambientColor[2];
+        if (r !== 0 || g !== 0 || b !== 0) {
+          const color = new Color(r, g, b).convertSRGBToLinear();
+          sceneGraph.add(new AmbientLight(color, 1));
+        }
+      }
+      if ("UnitScaleFactor" in fbxTree.GlobalSettings) {
+        sceneGraph.userData.unitScaleFactor = fbxTree.GlobalSettings.UnitScaleFactor.value;
+      }
+    }
+  }
+};
+var GeometryParser = class {
+  constructor() {
+    this.negativeMaterialIndices = false;
+  }
+  // Parse nodes in FBXTree.Objects.Geometry
+  parse(deformers) {
+    const geometryMap = /* @__PURE__ */ new Map();
+    if ("Geometry" in fbxTree.Objects) {
+      const geoNodes = fbxTree.Objects.Geometry;
+      for (const nodeID in geoNodes) {
+        const relationships = connections.get(parseInt(nodeID));
+        const geo = this.parseGeometry(relationships, geoNodes[nodeID], deformers);
+        geometryMap.set(parseInt(nodeID), geo);
+      }
+    }
+    if (this.negativeMaterialIndices === true) {
+      console.warn("THREE.FBXLoader: The FBX file contains invalid (negative) material indices. The asset might not render as expected.");
+    }
+    return geometryMap;
+  }
+  // Parse single node in FBXTree.Objects.Geometry
+  parseGeometry(relationships, geoNode, deformers) {
+    switch (geoNode.attrType) {
+      case "Mesh":
+        return this.parseMeshGeometry(relationships, geoNode, deformers);
+        break;
+      case "NurbsCurve":
+        return this.parseNurbsGeometry(geoNode);
+        break;
+    }
+  }
+  // Parse single node mesh geometry in FBXTree.Objects.Geometry
+  parseMeshGeometry(relationships, geoNode, deformers) {
+    const skeletons = deformers.skeletons;
+    const morphTargets = [];
+    const modelNodes = relationships.parents.map(function(parent) {
+      return fbxTree.Objects.Model[parent.ID];
+    });
+    if (modelNodes.length === 0) return;
+    const skeleton = relationships.children.reduce(function(skeleton2, child) {
+      if (skeletons[child.ID] !== void 0) skeleton2 = skeletons[child.ID];
+      return skeleton2;
+    }, null);
+    relationships.children.forEach(function(child) {
+      if (deformers.morphTargets[child.ID] !== void 0) {
+        morphTargets.push(deformers.morphTargets[child.ID]);
+      }
+    });
+    const modelNode = modelNodes[0];
+    const transformData = {};
+    if ("RotationOrder" in modelNode) transformData.eulerOrder = getEulerOrder(modelNode.RotationOrder.value);
+    if ("InheritType" in modelNode) transformData.inheritType = parseInt(modelNode.InheritType.value);
+    if ("GeometricTranslation" in modelNode) transformData.translation = modelNode.GeometricTranslation.value;
+    if ("GeometricRotation" in modelNode) transformData.rotation = modelNode.GeometricRotation.value;
+    if ("GeometricScaling" in modelNode) transformData.scale = modelNode.GeometricScaling.value;
+    const transform = generateTransform(transformData);
+    return this.genGeometry(geoNode, skeleton, morphTargets, transform);
+  }
+  // Generate a BufferGeometry from a node in FBXTree.Objects.Geometry
+  genGeometry(geoNode, skeleton, morphTargets, preTransform) {
+    const geo = new BufferGeometry();
+    if (geoNode.attrName) geo.name = geoNode.attrName;
+    const geoInfo = this.parseGeoNode(geoNode, skeleton);
+    const buffers = this.genBuffers(geoInfo);
+    const positionAttribute = new Float32BufferAttribute(buffers.vertex, 3);
+    positionAttribute.applyMatrix4(preTransform);
+    geo.setAttribute("position", positionAttribute);
+    if (buffers.colors.length > 0) {
+      geo.setAttribute("color", new Float32BufferAttribute(buffers.colors, 3));
+    }
+    if (skeleton) {
+      geo.setAttribute("skinIndex", new Uint16BufferAttribute(buffers.weightsIndices, 4));
+      geo.setAttribute("skinWeight", new Float32BufferAttribute(buffers.vertexWeights, 4));
+      geo.FBX_Deformer = skeleton;
+    }
+    if (buffers.normal.length > 0) {
+      const normalMatrix = new Matrix3().getNormalMatrix(preTransform);
+      const normalAttribute = new Float32BufferAttribute(buffers.normal, 3);
+      normalAttribute.applyNormalMatrix(normalMatrix);
+      geo.setAttribute("normal", normalAttribute);
+    }
+    buffers.uvs.forEach(function(uvBuffer, i) {
+      const name = i === 0 ? "uv" : `uv${i}`;
+      geo.setAttribute(name, new Float32BufferAttribute(buffers.uvs[i], 2));
+    });
+    if (geoInfo.material && geoInfo.material.mappingType !== "AllSame") {
+      let prevMaterialIndex = buffers.materialIndex[0];
+      let startIndex = 0;
+      buffers.materialIndex.forEach(function(currentIndex, i) {
+        if (currentIndex !== prevMaterialIndex) {
+          geo.addGroup(startIndex, i - startIndex, prevMaterialIndex);
+          prevMaterialIndex = currentIndex;
+          startIndex = i;
+        }
+      });
+      if (geo.groups.length > 0) {
+        const lastGroup = geo.groups[geo.groups.length - 1];
+        const lastIndex = lastGroup.start + lastGroup.count;
+        if (lastIndex !== buffers.materialIndex.length) {
+          geo.addGroup(lastIndex, buffers.materialIndex.length - lastIndex, prevMaterialIndex);
+        }
+      }
+      if (geo.groups.length === 0) {
+        geo.addGroup(0, buffers.materialIndex.length, buffers.materialIndex[0]);
+      }
+    }
+    this.addMorphTargets(geo, geoNode, morphTargets, preTransform);
+    return geo;
+  }
+  parseGeoNode(geoNode, skeleton) {
+    const geoInfo = {};
+    geoInfo.vertexPositions = geoNode.Vertices !== void 0 ? geoNode.Vertices.a : [];
+    geoInfo.vertexIndices = geoNode.PolygonVertexIndex !== void 0 ? geoNode.PolygonVertexIndex.a : [];
+    if (geoNode.LayerElementColor) {
+      geoInfo.color = this.parseVertexColors(geoNode.LayerElementColor[0]);
+    }
+    if (geoNode.LayerElementMaterial) {
+      geoInfo.material = this.parseMaterialIndices(geoNode.LayerElementMaterial[0]);
+    }
+    if (geoNode.LayerElementNormal) {
+      geoInfo.normal = this.parseNormals(geoNode.LayerElementNormal[0]);
+    }
+    if (geoNode.LayerElementUV) {
+      geoInfo.uv = [];
+      let i = 0;
+      while (geoNode.LayerElementUV[i]) {
+        if (geoNode.LayerElementUV[i].UV) {
+          geoInfo.uv.push(this.parseUVs(geoNode.LayerElementUV[i]));
+        }
+        i++;
+      }
+    }
+    geoInfo.weightTable = {};
+    if (skeleton !== null) {
+      geoInfo.skeleton = skeleton;
+      skeleton.rawBones.forEach(function(rawBone, i) {
+        rawBone.indices.forEach(function(index, j) {
+          if (geoInfo.weightTable[index] === void 0) geoInfo.weightTable[index] = [];
+          geoInfo.weightTable[index].push({
+            id: i,
+            weight: rawBone.weights[j]
+          });
+        });
+      });
+    }
+    return geoInfo;
+  }
+  genBuffers(geoInfo) {
+    const buffers = {
+      vertex: [],
+      normal: [],
+      colors: [],
+      uvs: [],
+      materialIndex: [],
+      vertexWeights: [],
+      weightsIndices: []
+    };
+    let polygonIndex = 0;
+    let faceLength = 0;
+    let displayedWeightsWarning = false;
+    let facePositionIndexes = [];
+    let faceNormals = [];
+    let faceColors = [];
+    let faceUVs = [];
+    let faceWeights = [];
+    let faceWeightIndices = [];
+    const scope = this;
+    geoInfo.vertexIndices.forEach(function(vertexIndex, polygonVertexIndex) {
+      let materialIndex;
+      let endOfFace = false;
+      if (vertexIndex < 0) {
+        vertexIndex = vertexIndex ^ -1;
+        endOfFace = true;
+      }
+      let weightIndices = [];
+      let weights = [];
+      facePositionIndexes.push(vertexIndex * 3, vertexIndex * 3 + 1, vertexIndex * 3 + 2);
+      if (geoInfo.color) {
+        const data = getData(polygonVertexIndex, polygonIndex, vertexIndex, geoInfo.color);
+        faceColors.push(data[0], data[1], data[2]);
+      }
+      if (geoInfo.skeleton) {
+        if (geoInfo.weightTable[vertexIndex] !== void 0) {
+          geoInfo.weightTable[vertexIndex].forEach(function(wt) {
+            weights.push(wt.weight);
+            weightIndices.push(wt.id);
+          });
+        }
+        if (weights.length > 4) {
+          if (!displayedWeightsWarning) {
+            console.warn("THREE.FBXLoader: Vertex has more than 4 skinning weights assigned to vertex. Deleting additional weights.");
+            displayedWeightsWarning = true;
+          }
+          const wIndex = [0, 0, 0, 0];
+          const Weight = [0, 0, 0, 0];
+          weights.forEach(function(weight, weightIndex) {
+            let currentWeight = weight;
+            let currentIndex = weightIndices[weightIndex];
+            Weight.forEach(function(comparedWeight, comparedWeightIndex, comparedWeightArray) {
+              if (currentWeight > comparedWeight) {
+                comparedWeightArray[comparedWeightIndex] = currentWeight;
+                currentWeight = comparedWeight;
+                const tmp = wIndex[comparedWeightIndex];
+                wIndex[comparedWeightIndex] = currentIndex;
+                currentIndex = tmp;
+              }
+            });
+          });
+          weightIndices = wIndex;
+          weights = Weight;
+        }
+        while (weights.length < 4) {
+          weights.push(0);
+          weightIndices.push(0);
+        }
+        for (let i = 0; i < 4; ++i) {
+          faceWeights.push(weights[i]);
+          faceWeightIndices.push(weightIndices[i]);
+        }
+      }
+      if (geoInfo.normal) {
+        const data = getData(polygonVertexIndex, polygonIndex, vertexIndex, geoInfo.normal);
+        faceNormals.push(data[0], data[1], data[2]);
+      }
+      if (geoInfo.material && geoInfo.material.mappingType !== "AllSame") {
+        materialIndex = getData(polygonVertexIndex, polygonIndex, vertexIndex, geoInfo.material)[0];
+        if (materialIndex < 0) {
+          scope.negativeMaterialIndices = true;
+          materialIndex = 0;
+        }
+      }
+      if (geoInfo.uv) {
+        geoInfo.uv.forEach(function(uv, i) {
+          const data = getData(polygonVertexIndex, polygonIndex, vertexIndex, uv);
+          if (faceUVs[i] === void 0) {
+            faceUVs[i] = [];
+          }
+          faceUVs[i].push(data[0]);
+          faceUVs[i].push(data[1]);
+        });
+      }
+      faceLength++;
+      if (endOfFace) {
+        scope.genFace(buffers, geoInfo, facePositionIndexes, materialIndex, faceNormals, faceColors, faceUVs, faceWeights, faceWeightIndices, faceLength);
+        polygonIndex++;
+        faceLength = 0;
+        facePositionIndexes = [];
+        faceNormals = [];
+        faceColors = [];
+        faceUVs = [];
+        faceWeights = [];
+        faceWeightIndices = [];
+      }
+    });
+    return buffers;
+  }
+  // See https://www.khronos.org/opengl/wiki/Calculating_a_Surface_Normal
+  getNormalNewell(vertices) {
+    const normal = new Vector3(0, 0, 0);
+    for (let i = 0; i < vertices.length; i++) {
+      const current = vertices[i];
+      const next = vertices[(i + 1) % vertices.length];
+      normal.x += (current.y - next.y) * (current.z + next.z);
+      normal.y += (current.z - next.z) * (current.x + next.x);
+      normal.z += (current.x - next.x) * (current.y + next.y);
+    }
+    normal.normalize();
+    return normal;
+  }
+  getNormalTangentAndBitangent(vertices) {
+    const normalVector = this.getNormalNewell(vertices);
+    const up = Math.abs(normalVector.z) > 0.5 ? new Vector3(0, 1, 0) : new Vector3(0, 0, 1);
+    const tangent = up.cross(normalVector).normalize();
+    const bitangent = normalVector.clone().cross(tangent).normalize();
+    return {
+      normal: normalVector,
+      tangent,
+      bitangent
+    };
+  }
+  flattenVertex(vertex2, normalTangent, normalBitangent) {
+    return new Vector2(
+      vertex2.dot(normalTangent),
+      vertex2.dot(normalBitangent)
+    );
+  }
+  // Generate data for a single face in a geometry. If the face is a quad then split it into 2 tris
+  genFace(buffers, geoInfo, facePositionIndexes, materialIndex, faceNormals, faceColors, faceUVs, faceWeights, faceWeightIndices, faceLength) {
+    let triangles;
+    if (faceLength > 3) {
+      const vertices = [];
+      for (let i = 0; i < facePositionIndexes.length; i += 3) {
+        vertices.push(new Vector3(
+          geoInfo.vertexPositions[facePositionIndexes[i]],
+          geoInfo.vertexPositions[facePositionIndexes[i + 1]],
+          geoInfo.vertexPositions[facePositionIndexes[i + 2]]
+        ));
+      }
+      const { tangent, bitangent } = this.getNormalTangentAndBitangent(vertices);
+      const triangulationInput = [];
+      for (const vertex2 of vertices) {
+        triangulationInput.push(this.flattenVertex(vertex2, tangent, bitangent));
+      }
+      triangles = ShapeUtils.triangulateShape(triangulationInput, []);
+    } else {
+      triangles = [[0, 1, 2]];
+    }
+    for (const [i0, i1, i2] of triangles) {
+      buffers.vertex.push(geoInfo.vertexPositions[facePositionIndexes[i0 * 3]]);
+      buffers.vertex.push(geoInfo.vertexPositions[facePositionIndexes[i0 * 3 + 1]]);
+      buffers.vertex.push(geoInfo.vertexPositions[facePositionIndexes[i0 * 3 + 2]]);
+      buffers.vertex.push(geoInfo.vertexPositions[facePositionIndexes[i1 * 3]]);
+      buffers.vertex.push(geoInfo.vertexPositions[facePositionIndexes[i1 * 3 + 1]]);
+      buffers.vertex.push(geoInfo.vertexPositions[facePositionIndexes[i1 * 3 + 2]]);
+      buffers.vertex.push(geoInfo.vertexPositions[facePositionIndexes[i2 * 3]]);
+      buffers.vertex.push(geoInfo.vertexPositions[facePositionIndexes[i2 * 3 + 1]]);
+      buffers.vertex.push(geoInfo.vertexPositions[facePositionIndexes[i2 * 3 + 2]]);
+      if (geoInfo.skeleton) {
+        buffers.vertexWeights.push(faceWeights[i0 * 4]);
+        buffers.vertexWeights.push(faceWeights[i0 * 4 + 1]);
+        buffers.vertexWeights.push(faceWeights[i0 * 4 + 2]);
+        buffers.vertexWeights.push(faceWeights[i0 * 4 + 3]);
+        buffers.vertexWeights.push(faceWeights[i1 * 4]);
+        buffers.vertexWeights.push(faceWeights[i1 * 4 + 1]);
+        buffers.vertexWeights.push(faceWeights[i1 * 4 + 2]);
+        buffers.vertexWeights.push(faceWeights[i1 * 4 + 3]);
+        buffers.vertexWeights.push(faceWeights[i2 * 4]);
+        buffers.vertexWeights.push(faceWeights[i2 * 4 + 1]);
+        buffers.vertexWeights.push(faceWeights[i2 * 4 + 2]);
+        buffers.vertexWeights.push(faceWeights[i2 * 4 + 3]);
+        buffers.weightsIndices.push(faceWeightIndices[i0 * 4]);
+        buffers.weightsIndices.push(faceWeightIndices[i0 * 4 + 1]);
+        buffers.weightsIndices.push(faceWeightIndices[i0 * 4 + 2]);
+        buffers.weightsIndices.push(faceWeightIndices[i0 * 4 + 3]);
+        buffers.weightsIndices.push(faceWeightIndices[i1 * 4]);
+        buffers.weightsIndices.push(faceWeightIndices[i1 * 4 + 1]);
+        buffers.weightsIndices.push(faceWeightIndices[i1 * 4 + 2]);
+        buffers.weightsIndices.push(faceWeightIndices[i1 * 4 + 3]);
+        buffers.weightsIndices.push(faceWeightIndices[i2 * 4]);
+        buffers.weightsIndices.push(faceWeightIndices[i2 * 4 + 1]);
+        buffers.weightsIndices.push(faceWeightIndices[i2 * 4 + 2]);
+        buffers.weightsIndices.push(faceWeightIndices[i2 * 4 + 3]);
+      }
+      if (geoInfo.color) {
+        buffers.colors.push(faceColors[i0 * 3]);
+        buffers.colors.push(faceColors[i0 * 3 + 1]);
+        buffers.colors.push(faceColors[i0 * 3 + 2]);
+        buffers.colors.push(faceColors[i1 * 3]);
+        buffers.colors.push(faceColors[i1 * 3 + 1]);
+        buffers.colors.push(faceColors[i1 * 3 + 2]);
+        buffers.colors.push(faceColors[i2 * 3]);
+        buffers.colors.push(faceColors[i2 * 3 + 1]);
+        buffers.colors.push(faceColors[i2 * 3 + 2]);
+      }
+      if (geoInfo.material && geoInfo.material.mappingType !== "AllSame") {
+        buffers.materialIndex.push(materialIndex);
+        buffers.materialIndex.push(materialIndex);
+        buffers.materialIndex.push(materialIndex);
+      }
+      if (geoInfo.normal) {
+        buffers.normal.push(faceNormals[i0 * 3]);
+        buffers.normal.push(faceNormals[i0 * 3 + 1]);
+        buffers.normal.push(faceNormals[i0 * 3 + 2]);
+        buffers.normal.push(faceNormals[i1 * 3]);
+        buffers.normal.push(faceNormals[i1 * 3 + 1]);
+        buffers.normal.push(faceNormals[i1 * 3 + 2]);
+        buffers.normal.push(faceNormals[i2 * 3]);
+        buffers.normal.push(faceNormals[i2 * 3 + 1]);
+        buffers.normal.push(faceNormals[i2 * 3 + 2]);
+      }
+      if (geoInfo.uv) {
+        geoInfo.uv.forEach(function(uv, j) {
+          if (buffers.uvs[j] === void 0) buffers.uvs[j] = [];
+          buffers.uvs[j].push(faceUVs[j][i0 * 2]);
+          buffers.uvs[j].push(faceUVs[j][i0 * 2 + 1]);
+          buffers.uvs[j].push(faceUVs[j][i1 * 2]);
+          buffers.uvs[j].push(faceUVs[j][i1 * 2 + 1]);
+          buffers.uvs[j].push(faceUVs[j][i2 * 2]);
+          buffers.uvs[j].push(faceUVs[j][i2 * 2 + 1]);
+        });
+      }
+    }
+  }
+  addMorphTargets(parentGeo, parentGeoNode, morphTargets, preTransform) {
+    if (morphTargets.length === 0) return;
+    parentGeo.morphTargetsRelative = true;
+    parentGeo.morphAttributes.position = [];
+    const scope = this;
+    morphTargets.forEach(function(morphTarget) {
+      morphTarget.rawTargets.forEach(function(rawTarget) {
+        const morphGeoNode = fbxTree.Objects.Geometry[rawTarget.geoID];
+        if (morphGeoNode !== void 0) {
+          scope.genMorphGeometry(parentGeo, parentGeoNode, morphGeoNode, preTransform, rawTarget.name);
+        }
+      });
+    });
+  }
+  // a morph geometry node is similar to a standard  node, and the node is also contained
+  // in FBXTree.Objects.Geometry, however it can only have attributes for position, normal
+  // and a special attribute Index defining which vertices of the original geometry are affected
+  // Normal and position attributes only have data for the vertices that are affected by the morph
+  genMorphGeometry(parentGeo, parentGeoNode, morphGeoNode, preTransform, name) {
+    const vertexIndices = parentGeoNode.PolygonVertexIndex !== void 0 ? parentGeoNode.PolygonVertexIndex.a : [];
+    const morphPositionsSparse = morphGeoNode.Vertices !== void 0 ? morphGeoNode.Vertices.a : [];
+    const indices = morphGeoNode.Indexes !== void 0 ? morphGeoNode.Indexes.a : [];
+    const length = parentGeo.attributes.position.count * 3;
+    const morphPositions = new Float32Array(length);
+    for (let i = 0; i < indices.length; i++) {
+      const morphIndex = indices[i] * 3;
+      morphPositions[morphIndex] = morphPositionsSparse[i * 3];
+      morphPositions[morphIndex + 1] = morphPositionsSparse[i * 3 + 1];
+      morphPositions[morphIndex + 2] = morphPositionsSparse[i * 3 + 2];
+    }
+    const morphGeoInfo = {
+      vertexIndices,
+      vertexPositions: morphPositions
+    };
+    const morphBuffers = this.genBuffers(morphGeoInfo);
+    const positionAttribute = new Float32BufferAttribute(morphBuffers.vertex, 3);
+    positionAttribute.name = name || morphGeoNode.attrName;
+    positionAttribute.applyMatrix4(preTransform);
+    parentGeo.morphAttributes.position.push(positionAttribute);
+  }
+  // Parse normal from FBXTree.Objects.Geometry.LayerElementNormal if it exists
+  parseNormals(NormalNode) {
+    const mappingType = NormalNode.MappingInformationType;
+    const referenceType = NormalNode.ReferenceInformationType;
+    const buffer = NormalNode.Normals.a;
+    let indexBuffer = [];
+    if (referenceType === "IndexToDirect") {
+      if ("NormalIndex" in NormalNode) {
+        indexBuffer = NormalNode.NormalIndex.a;
+      } else if ("NormalsIndex" in NormalNode) {
+        indexBuffer = NormalNode.NormalsIndex.a;
+      }
+    }
+    return {
+      dataSize: 3,
+      buffer,
+      indices: indexBuffer,
+      mappingType,
+      referenceType
+    };
+  }
+  // Parse UVs from FBXTree.Objects.Geometry.LayerElementUV if it exists
+  parseUVs(UVNode) {
+    const mappingType = UVNode.MappingInformationType;
+    const referenceType = UVNode.ReferenceInformationType;
+    const buffer = UVNode.UV.a;
+    let indexBuffer = [];
+    if (referenceType === "IndexToDirect") {
+      indexBuffer = UVNode.UVIndex.a;
+    }
+    return {
+      dataSize: 2,
+      buffer,
+      indices: indexBuffer,
+      mappingType,
+      referenceType
+    };
+  }
+  // Parse Vertex Colors from FBXTree.Objects.Geometry.LayerElementColor if it exists
+  parseVertexColors(ColorNode) {
+    const mappingType = ColorNode.MappingInformationType;
+    const referenceType = ColorNode.ReferenceInformationType;
+    const buffer = ColorNode.Colors.a;
+    let indexBuffer = [];
+    if (referenceType === "IndexToDirect") {
+      indexBuffer = ColorNode.ColorIndex.a;
+    }
+    for (let i = 0, c = new Color(); i < buffer.length; i += 4) {
+      c.fromArray(buffer, i).convertSRGBToLinear().toArray(buffer, i);
+    }
+    return {
+      dataSize: 4,
+      buffer,
+      indices: indexBuffer,
+      mappingType,
+      referenceType
+    };
+  }
+  // Parse mapping and material data in FBXTree.Objects.Geometry.LayerElementMaterial if it exists
+  parseMaterialIndices(MaterialNode) {
+    const mappingType = MaterialNode.MappingInformationType;
+    const referenceType = MaterialNode.ReferenceInformationType;
+    if (mappingType === "NoMappingInformation") {
+      return {
+        dataSize: 1,
+        buffer: [0],
+        indices: [0],
+        mappingType: "AllSame",
+        referenceType
+      };
+    }
+    const materialIndexBuffer = MaterialNode.Materials.a;
+    const materialIndices = [];
+    for (let i = 0; i < materialIndexBuffer.length; ++i) {
+      materialIndices.push(i);
+    }
+    return {
+      dataSize: 1,
+      buffer: materialIndexBuffer,
+      indices: materialIndices,
+      mappingType,
+      referenceType
+    };
+  }
+  // Generate a NurbGeometry from a node in FBXTree.Objects.Geometry
+  parseNurbsGeometry(geoNode) {
+    const order = parseInt(geoNode.Order);
+    if (isNaN(order)) {
+      console.error("THREE.FBXLoader: Invalid Order %s given for geometry ID: %s", geoNode.Order, geoNode.id);
+      return new BufferGeometry();
+    }
+    const degree = order - 1;
+    const knots = geoNode.KnotVector.a;
+    const controlPoints = [];
+    const pointsValues = geoNode.Points.a;
+    for (let i = 0, l = pointsValues.length; i < l; i += 4) {
+      controlPoints.push(new Vector4().fromArray(pointsValues, i));
+    }
+    let startKnot, endKnot;
+    if (geoNode.Form === "Closed") {
+      controlPoints.push(controlPoints[0]);
+    } else if (geoNode.Form === "Periodic") {
+      startKnot = degree;
+      endKnot = knots.length - 1 - startKnot;
+      for (let i = 0; i < degree; ++i) {
+        controlPoints.push(controlPoints[i]);
+      }
+    }
+    const curve = new NURBSCurve(degree, knots, controlPoints, startKnot, endKnot);
+    const points = curve.getPoints(controlPoints.length * 12);
+    return new BufferGeometry().setFromPoints(points);
+  }
+};
+var AnimationParser = class {
+  // take raw animation clips and turn them into three.js animation clips
+  parse() {
+    const animationClips = [];
+    const rawClips = this.parseClips();
+    if (rawClips !== void 0) {
+      for (const key in rawClips) {
+        const rawClip = rawClips[key];
+        const clip = this.addClip(rawClip);
+        animationClips.push(clip);
+      }
+    }
+    return animationClips;
+  }
+  parseClips() {
+    if (fbxTree.Objects.AnimationCurve === void 0) return void 0;
+    const curveNodesMap = this.parseAnimationCurveNodes();
+    this.parseAnimationCurves(curveNodesMap);
+    const layersMap = this.parseAnimationLayers(curveNodesMap);
+    const rawClips = this.parseAnimStacks(layersMap);
+    return rawClips;
+  }
+  // parse nodes in FBXTree.Objects.AnimationCurveNode
+  // each AnimationCurveNode holds data for an animation transform for a model (e.g. left arm rotation )
+  // and is referenced by an AnimationLayer
+  parseAnimationCurveNodes() {
+    const rawCurveNodes = fbxTree.Objects.AnimationCurveNode;
+    const curveNodesMap = /* @__PURE__ */ new Map();
+    for (const nodeID in rawCurveNodes) {
+      const rawCurveNode = rawCurveNodes[nodeID];
+      if (rawCurveNode.attrName.match(/S|R|T|DeformPercent/) !== null) {
+        const curveNode = {
+          id: rawCurveNode.id,
+          attr: rawCurveNode.attrName,
+          curves: {}
+        };
+        curveNodesMap.set(curveNode.id, curveNode);
+      }
+    }
+    return curveNodesMap;
+  }
+  // parse nodes in FBXTree.Objects.AnimationCurve and connect them up to
+  // previously parsed AnimationCurveNodes. Each AnimationCurve holds data for a single animated
+  // axis ( e.g. times and values of x rotation)
+  parseAnimationCurves(curveNodesMap) {
+    const rawCurves = fbxTree.Objects.AnimationCurve;
+    for (const nodeID in rawCurves) {
+      const animationCurve = {
+        id: rawCurves[nodeID].id,
+        times: rawCurves[nodeID].KeyTime.a.map(convertFBXTimeToSeconds),
+        values: rawCurves[nodeID].KeyValueFloat.a
+      };
+      const relationships = connections.get(animationCurve.id);
+      if (relationships !== void 0) {
+        const animationCurveID = relationships.parents[0].ID;
+        const animationCurveRelationship = relationships.parents[0].relationship;
+        if (animationCurveRelationship.match(/X/)) {
+          curveNodesMap.get(animationCurveID).curves["x"] = animationCurve;
+        } else if (animationCurveRelationship.match(/Y/)) {
+          curveNodesMap.get(animationCurveID).curves["y"] = animationCurve;
+        } else if (animationCurveRelationship.match(/Z/)) {
+          curveNodesMap.get(animationCurveID).curves["z"] = animationCurve;
+        } else if (animationCurveRelationship.match(/DeformPercent/) && curveNodesMap.has(animationCurveID)) {
+          curveNodesMap.get(animationCurveID).curves["morph"] = animationCurve;
+        }
+      }
+    }
+  }
+  // parse nodes in FBXTree.Objects.AnimationLayer. Each layers holds references
+  // to various AnimationCurveNodes and is referenced by an AnimationStack node
+  // note: theoretically a stack can have multiple layers, however in practice there always seems to be one per stack
+  parseAnimationLayers(curveNodesMap) {
+    const rawLayers = fbxTree.Objects.AnimationLayer;
+    const layersMap = /* @__PURE__ */ new Map();
+    for (const nodeID in rawLayers) {
+      const layerCurveNodes = [];
+      const connection = connections.get(parseInt(nodeID));
+      if (connection !== void 0) {
+        const children = connection.children;
+        children.forEach(function(child, i) {
+          if (curveNodesMap.has(child.ID)) {
+            const curveNode = curveNodesMap.get(child.ID);
+            if (curveNode.curves.x !== void 0 || curveNode.curves.y !== void 0 || curveNode.curves.z !== void 0) {
+              if (layerCurveNodes[i] === void 0) {
+                const modelID = connections.get(child.ID).parents.filter(function(parent) {
+                  return parent.relationship !== void 0;
+                })[0].ID;
+                if (modelID !== void 0) {
+                  const rawModel = fbxTree.Objects.Model[modelID.toString()];
+                  if (rawModel === void 0) {
+                    console.warn("THREE.FBXLoader: Encountered a unused curve.", child);
+                    return;
+                  }
+                  const node = {
+                    modelName: rawModel.attrName ? PropertyBinding.sanitizeNodeName(rawModel.attrName) : "",
+                    ID: rawModel.id,
+                    initialPosition: [0, 0, 0],
+                    initialRotation: [0, 0, 0],
+                    initialScale: [1, 1, 1]
+                  };
+                  sceneGraph.traverse(function(child2) {
+                    if (child2.ID === rawModel.id) {
+                      node.transform = child2.matrix;
+                      if (child2.userData.transformData) node.eulerOrder = child2.userData.transformData.eulerOrder;
+                    }
+                  });
+                  if (!node.transform) node.transform = new Matrix4();
+                  if ("PreRotation" in rawModel) node.preRotation = rawModel.PreRotation.value;
+                  if ("PostRotation" in rawModel) node.postRotation = rawModel.PostRotation.value;
+                  layerCurveNodes[i] = node;
+                }
+              }
+              if (layerCurveNodes[i]) layerCurveNodes[i][curveNode.attr] = curveNode;
+            } else if (curveNode.curves.morph !== void 0) {
+              if (layerCurveNodes[i] === void 0) {
+                const deformerID = connections.get(child.ID).parents.filter(function(parent) {
+                  return parent.relationship !== void 0;
+                })[0].ID;
+                const morpherID = connections.get(deformerID).parents[0].ID;
+                const geoID = connections.get(morpherID).parents[0].ID;
+                const modelID = connections.get(geoID).parents[0].ID;
+                const rawModel = fbxTree.Objects.Model[modelID];
+                const node = {
+                  modelName: rawModel.attrName ? PropertyBinding.sanitizeNodeName(rawModel.attrName) : "",
+                  morphName: fbxTree.Objects.Deformer[deformerID].attrName
+                };
+                layerCurveNodes[i] = node;
+              }
+              layerCurveNodes[i][curveNode.attr] = curveNode;
+            }
+          }
+        });
+        layersMap.set(parseInt(nodeID), layerCurveNodes);
+      }
+    }
+    return layersMap;
+  }
+  // parse nodes in FBXTree.Objects.AnimationStack. These are the top level node in the animation
+  // hierarchy. Each Stack node will be used to create a AnimationClip
+  parseAnimStacks(layersMap) {
+    const rawStacks = fbxTree.Objects.AnimationStack;
+    const rawClips = {};
+    for (const nodeID in rawStacks) {
+      const children = connections.get(parseInt(nodeID)).children;
+      if (children.length > 1) {
+        console.warn("THREE.FBXLoader: Encountered an animation stack with multiple layers, this is currently not supported. Ignoring subsequent layers.");
+      }
+      const layer = layersMap.get(children[0].ID);
+      rawClips[nodeID] = {
+        name: rawStacks[nodeID].attrName,
+        layer
+      };
+    }
+    return rawClips;
+  }
+  addClip(rawClip) {
+    let tracks = [];
+    const scope = this;
+    rawClip.layer.forEach(function(rawTracks) {
+      tracks = tracks.concat(scope.generateTracks(rawTracks));
+    });
+    return new AnimationClip(rawClip.name, -1, tracks);
+  }
+  generateTracks(rawTracks) {
+    const tracks = [];
+    let initialPosition = new Vector3();
+    let initialScale = new Vector3();
+    if (rawTracks.transform) rawTracks.transform.decompose(initialPosition, new Quaternion(), initialScale);
+    initialPosition = initialPosition.toArray();
+    initialScale = initialScale.toArray();
+    if (rawTracks.T !== void 0 && Object.keys(rawTracks.T.curves).length > 0) {
+      const positionTrack = this.generateVectorTrack(rawTracks.modelName, rawTracks.T.curves, initialPosition, "position");
+      if (positionTrack !== void 0) tracks.push(positionTrack);
+    }
+    if (rawTracks.R !== void 0 && Object.keys(rawTracks.R.curves).length > 0) {
+      const rotationTrack = this.generateRotationTrack(rawTracks.modelName, rawTracks.R.curves, rawTracks.preRotation, rawTracks.postRotation, rawTracks.eulerOrder);
+      if (rotationTrack !== void 0) tracks.push(rotationTrack);
+    }
+    if (rawTracks.S !== void 0 && Object.keys(rawTracks.S.curves).length > 0) {
+      const scaleTrack = this.generateVectorTrack(rawTracks.modelName, rawTracks.S.curves, initialScale, "scale");
+      if (scaleTrack !== void 0) tracks.push(scaleTrack);
+    }
+    if (rawTracks.DeformPercent !== void 0) {
+      const morphTrack = this.generateMorphTrack(rawTracks);
+      if (morphTrack !== void 0) tracks.push(morphTrack);
+    }
+    return tracks;
+  }
+  generateVectorTrack(modelName, curves, initialValue, type) {
+    const times = this.getTimesForAllAxes(curves);
+    const values = this.getKeyframeTrackValues(times, curves, initialValue);
+    return new VectorKeyframeTrack(modelName + "." + type, times, values);
+  }
+  generateRotationTrack(modelName, curves, preRotation, postRotation, eulerOrder) {
+    let times;
+    let values;
+    if (curves.x !== void 0 && curves.y !== void 0 && curves.z !== void 0) {
+      const result = this.interpolateRotations(curves.x, curves.y, curves.z, eulerOrder);
+      times = result[0];
+      values = result[1];
+    }
+    if (preRotation !== void 0) {
+      preRotation = preRotation.map(MathUtils.degToRad);
+      preRotation.push(eulerOrder);
+      preRotation = new Euler().fromArray(preRotation);
+      preRotation = new Quaternion().setFromEuler(preRotation);
+    }
+    if (postRotation !== void 0) {
+      postRotation = postRotation.map(MathUtils.degToRad);
+      postRotation.push(eulerOrder);
+      postRotation = new Euler().fromArray(postRotation);
+      postRotation = new Quaternion().setFromEuler(postRotation).invert();
+    }
+    const quaternion = new Quaternion();
+    const euler = new Euler();
+    const quaternionValues = [];
+    if (!values || !times) return new QuaternionKeyframeTrack(modelName + ".quaternion", [], []);
+    for (let i = 0; i < values.length; i += 3) {
+      euler.set(values[i], values[i + 1], values[i + 2], eulerOrder);
+      quaternion.setFromEuler(euler);
+      if (preRotation !== void 0) quaternion.premultiply(preRotation);
+      if (postRotation !== void 0) quaternion.multiply(postRotation);
+      if (i > 2) {
+        const prevQuat = new Quaternion().fromArray(
+          quaternionValues,
+          (i - 3) / 3 * 4
+        );
+        if (prevQuat.dot(quaternion) < 0) {
+          quaternion.set(-quaternion.x, -quaternion.y, -quaternion.z, -quaternion.w);
+        }
+      }
+      quaternion.toArray(quaternionValues, i / 3 * 4);
+    }
+    return new QuaternionKeyframeTrack(modelName + ".quaternion", times, quaternionValues);
+  }
+  generateMorphTrack(rawTracks) {
+    const curves = rawTracks.DeformPercent.curves.morph;
+    const values = curves.values.map(function(val) {
+      return val / 100;
+    });
+    const morphNum = sceneGraph.getObjectByName(rawTracks.modelName).morphTargetDictionary[rawTracks.morphName];
+    return new NumberKeyframeTrack(rawTracks.modelName + ".morphTargetInfluences[" + morphNum + "]", curves.times, values);
+  }
+  // For all animated objects, times are defined separately for each axis
+  // Here we'll combine the times into one sorted array without duplicates
+  getTimesForAllAxes(curves) {
+    let times = [];
+    if (curves.x !== void 0) times = times.concat(curves.x.times);
+    if (curves.y !== void 0) times = times.concat(curves.y.times);
+    if (curves.z !== void 0) times = times.concat(curves.z.times);
+    times = times.sort(function(a, b) {
+      return a - b;
+    });
+    if (times.length > 1) {
+      let targetIndex = 1;
+      let lastValue = times[0];
+      for (let i = 1; i < times.length; i++) {
+        const currentValue = times[i];
+        if (currentValue !== lastValue) {
+          times[targetIndex] = currentValue;
+          lastValue = currentValue;
+          targetIndex++;
+        }
+      }
+      times = times.slice(0, targetIndex);
+    }
+    return times;
+  }
+  getKeyframeTrackValues(times, curves, initialValue) {
+    const prevValue = initialValue;
+    const values = [];
+    let xIndex = -1;
+    let yIndex = -1;
+    let zIndex = -1;
+    times.forEach(function(time) {
+      if (curves.x) xIndex = curves.x.times.indexOf(time);
+      if (curves.y) yIndex = curves.y.times.indexOf(time);
+      if (curves.z) zIndex = curves.z.times.indexOf(time);
+      if (xIndex !== -1) {
+        const xValue = curves.x.values[xIndex];
+        values.push(xValue);
+        prevValue[0] = xValue;
+      } else {
+        values.push(prevValue[0]);
+      }
+      if (yIndex !== -1) {
+        const yValue = curves.y.values[yIndex];
+        values.push(yValue);
+        prevValue[1] = yValue;
+      } else {
+        values.push(prevValue[1]);
+      }
+      if (zIndex !== -1) {
+        const zValue = curves.z.values[zIndex];
+        values.push(zValue);
+        prevValue[2] = zValue;
+      } else {
+        values.push(prevValue[2]);
+      }
+    });
+    return values;
+  }
+  // Rotations are defined as Euler angles which can have values  of any size
+  // These will be converted to quaternions which don't support values greater than
+  // PI, so we'll interpolate large rotations
+  interpolateRotations(curvex, curvey, curvez, eulerOrder) {
+    const times = [];
+    const values = [];
+    times.push(curvex.times[0]);
+    values.push(MathUtils.degToRad(curvex.values[0]));
+    values.push(MathUtils.degToRad(curvey.values[0]));
+    values.push(MathUtils.degToRad(curvez.values[0]));
+    for (let i = 1; i < curvex.values.length; i++) {
+      const initialValue = [
+        curvex.values[i - 1],
+        curvey.values[i - 1],
+        curvez.values[i - 1]
+      ];
+      if (isNaN(initialValue[0]) || isNaN(initialValue[1]) || isNaN(initialValue[2])) {
+        continue;
+      }
+      const initialValueRad = initialValue.map(MathUtils.degToRad);
+      const currentValue = [
+        curvex.values[i],
+        curvey.values[i],
+        curvez.values[i]
+      ];
+      if (isNaN(currentValue[0]) || isNaN(currentValue[1]) || isNaN(currentValue[2])) {
+        continue;
+      }
+      const currentValueRad = currentValue.map(MathUtils.degToRad);
+      const valuesSpan = [
+        currentValue[0] - initialValue[0],
+        currentValue[1] - initialValue[1],
+        currentValue[2] - initialValue[2]
+      ];
+      const absoluteSpan = [
+        Math.abs(valuesSpan[0]),
+        Math.abs(valuesSpan[1]),
+        Math.abs(valuesSpan[2])
+      ];
+      if (absoluteSpan[0] >= 180 || absoluteSpan[1] >= 180 || absoluteSpan[2] >= 180) {
+        const maxAbsSpan = Math.max(...absoluteSpan);
+        const numSubIntervals = maxAbsSpan / 180;
+        const E1 = new Euler(...initialValueRad, eulerOrder);
+        const E2 = new Euler(...currentValueRad, eulerOrder);
+        const Q1 = new Quaternion().setFromEuler(E1);
+        const Q2 = new Quaternion().setFromEuler(E2);
+        if (Q1.dot(Q2)) {
+          Q2.set(-Q2.x, -Q2.y, -Q2.z, -Q2.w);
+        }
+        const initialTime = curvex.times[i - 1];
+        const timeSpan = curvex.times[i] - initialTime;
+        const Q = new Quaternion();
+        const E = new Euler();
+        for (let t = 0; t < 1; t += 1 / numSubIntervals) {
+          Q.copy(Q1.clone().slerp(Q2.clone(), t));
+          times.push(initialTime + t * timeSpan);
+          E.setFromQuaternion(Q, eulerOrder);
+          values.push(E.x);
+          values.push(E.y);
+          values.push(E.z);
+        }
+      } else {
+        times.push(curvex.times[i]);
+        values.push(MathUtils.degToRad(curvex.values[i]));
+        values.push(MathUtils.degToRad(curvey.values[i]));
+        values.push(MathUtils.degToRad(curvez.values[i]));
+      }
+    }
+    return [times, values];
+  }
+};
+var TextParser = class {
+  getPrevNode() {
+    return this.nodeStack[this.currentIndent - 2];
+  }
+  getCurrentNode() {
+    return this.nodeStack[this.currentIndent - 1];
+  }
+  getCurrentProp() {
+    return this.currentProp;
+  }
+  pushStack(node) {
+    this.nodeStack.push(node);
+    this.currentIndent += 1;
+  }
+  popStack() {
+    this.nodeStack.pop();
+    this.currentIndent -= 1;
+  }
+  setCurrentProp(val, name) {
+    this.currentProp = val;
+    this.currentPropName = name;
+  }
+  parse(text) {
+    this.currentIndent = 0;
+    this.allNodes = new FBXTree();
+    this.nodeStack = [];
+    this.currentProp = [];
+    this.currentPropName = "";
+    const scope = this;
+    const split = text.split(/[\r\n]+/);
+    split.forEach(function(line, i) {
+      const matchComment = line.match(/^[\s\t]*;/);
+      const matchEmpty = line.match(/^[\s\t]*$/);
+      if (matchComment || matchEmpty) return;
+      const matchBeginning = line.match("^\\t{" + scope.currentIndent + "}(\\w+):(.*){", "");
+      const matchProperty = line.match("^\\t{" + scope.currentIndent + "}(\\w+):[\\s\\t\\r\\n](.*)");
+      const matchEnd = line.match("^\\t{" + (scope.currentIndent - 1) + "}}");
+      if (matchBeginning) {
+        scope.parseNodeBegin(line, matchBeginning);
+      } else if (matchProperty) {
+        scope.parseNodeProperty(line, matchProperty, split[++i]);
+      } else if (matchEnd) {
+        scope.popStack();
+      } else if (line.match(/^[^\s\t}]/)) {
+        scope.parseNodePropertyContinued(line);
+      }
+    });
+    return this.allNodes;
+  }
+  parseNodeBegin(line, property) {
+    const nodeName = property[1].trim().replace(/^"/, "").replace(/"$/, "");
+    const nodeAttrs = property[2].split(",").map(function(attr) {
+      return attr.trim().replace(/^"/, "").replace(/"$/, "");
+    });
+    const node = { name: nodeName };
+    const attrs = this.parseNodeAttr(nodeAttrs);
+    const currentNode = this.getCurrentNode();
+    if (this.currentIndent === 0) {
+      this.allNodes.add(nodeName, node);
+    } else {
+      if (nodeName in currentNode) {
+        if (nodeName === "PoseNode") {
+          currentNode.PoseNode.push(node);
+        } else if (currentNode[nodeName].id !== void 0) {
+          currentNode[nodeName] = {};
+          currentNode[nodeName][currentNode[nodeName].id] = currentNode[nodeName];
+        }
+        if (attrs.id !== "") currentNode[nodeName][attrs.id] = node;
+      } else if (typeof attrs.id === "number") {
+        currentNode[nodeName] = {};
+        currentNode[nodeName][attrs.id] = node;
+      } else if (nodeName !== "Properties70") {
+        if (nodeName === "PoseNode") currentNode[nodeName] = [node];
+        else currentNode[nodeName] = node;
+      }
+    }
+    if (typeof attrs.id === "number") node.id = attrs.id;
+    if (attrs.name !== "") node.attrName = attrs.name;
+    if (attrs.type !== "") node.attrType = attrs.type;
+    this.pushStack(node);
+  }
+  parseNodeAttr(attrs) {
+    let id = attrs[0];
+    if (attrs[0] !== "") {
+      id = parseInt(attrs[0]);
+      if (isNaN(id)) {
+        id = attrs[0];
+      }
+    }
+    let name = "", type = "";
+    if (attrs.length > 1) {
+      name = attrs[1].replace(/^(\w+)::/, "");
+      type = attrs[2];
+    }
+    return { id, name, type };
+  }
+  parseNodeProperty(line, property, contentLine) {
+    let propName = property[1].replace(/^"/, "").replace(/"$/, "").trim();
+    let propValue = property[2].replace(/^"/, "").replace(/"$/, "").trim();
+    if (propName === "Content" && propValue === ",") {
+      propValue = contentLine.replace(/"/g, "").replace(/,$/, "").trim();
+    }
+    const currentNode = this.getCurrentNode();
+    const parentName = currentNode.name;
+    if (parentName === "Properties70") {
+      this.parseNodeSpecialProperty(line, propName, propValue);
+      return;
+    }
+    if (propName === "C") {
+      const connProps = propValue.split(",").slice(1);
+      const from = parseInt(connProps[0]);
+      const to = parseInt(connProps[1]);
+      let rest = propValue.split(",").slice(3);
+      rest = rest.map(function(elem) {
+        return elem.trim().replace(/^"/, "");
+      });
+      propName = "connections";
+      propValue = [from, to];
+      append(propValue, rest);
+      if (currentNode[propName] === void 0) {
+        currentNode[propName] = [];
+      }
+    }
+    if (propName === "Node") currentNode.id = propValue;
+    if (propName in currentNode && Array.isArray(currentNode[propName])) {
+      currentNode[propName].push(propValue);
+    } else {
+      if (propName !== "a") currentNode[propName] = propValue;
+      else currentNode.a = propValue;
+    }
+    this.setCurrentProp(currentNode, propName);
+    if (propName === "a" && propValue.slice(-1) !== ",") {
+      currentNode.a = parseNumberArray(propValue);
+    }
+  }
+  parseNodePropertyContinued(line) {
+    const currentNode = this.getCurrentNode();
+    currentNode.a += line;
+    if (line.slice(-1) !== ",") {
+      currentNode.a = parseNumberArray(currentNode.a);
+    }
+  }
+  // parse "Property70"
+  parseNodeSpecialProperty(line, propName, propValue) {
+    const props = propValue.split('",').map(function(prop) {
+      return prop.trim().replace(/^\"/, "").replace(/\s/, "_");
+    });
+    const innerPropName = props[0];
+    const innerPropType1 = props[1];
+    const innerPropType2 = props[2];
+    const innerPropFlag = props[3];
+    let innerPropValue = props[4];
+    switch (innerPropType1) {
+      case "int":
+      case "enum":
+      case "bool":
+      case "ULongLong":
+      case "double":
+      case "Number":
+      case "FieldOfView":
+        innerPropValue = parseFloat(innerPropValue);
+        break;
+      case "Color":
+      case "ColorRGB":
+      case "Vector3D":
+      case "Lcl_Translation":
+      case "Lcl_Rotation":
+      case "Lcl_Scaling":
+        innerPropValue = parseNumberArray(innerPropValue);
+        break;
+    }
+    this.getPrevNode()[innerPropName] = {
+      "type": innerPropType1,
+      "type2": innerPropType2,
+      "flag": innerPropFlag,
+      "value": innerPropValue
+    };
+    this.setCurrentProp(this.getPrevNode(), innerPropName);
+  }
+};
+var BinaryParser = class {
+  parse(buffer) {
+    const reader = new BinaryReader(buffer);
+    reader.skip(23);
+    const version = reader.getUint32();
+    if (version < 6400) {
+      throw new Error("THREE.FBXLoader: FBX version not supported, FileVersion: " + version);
+    }
+    const allNodes = new FBXTree();
+    while (!this.endOfContent(reader)) {
+      const node = this.parseNode(reader, version);
+      if (node !== null) allNodes.add(node.name, node);
+    }
+    return allNodes;
+  }
+  // Check if reader has reached the end of content.
+  endOfContent(reader) {
+    if (reader.size() % 16 === 0) {
+      return (reader.getOffset() + 160 + 16 & ~15) >= reader.size();
+    } else {
+      return reader.getOffset() + 160 + 16 >= reader.size();
+    }
+  }
+  // recursively parse nodes until the end of the file is reached
+  parseNode(reader, version) {
+    const node = {};
+    const endOffset = version >= 7500 ? reader.getUint64() : reader.getUint32();
+    const numProperties = version >= 7500 ? reader.getUint64() : reader.getUint32();
+    version >= 7500 ? reader.getUint64() : reader.getUint32();
+    const nameLen = reader.getUint8();
+    const name = reader.getString(nameLen);
+    if (endOffset === 0) return null;
+    const propertyList = [];
+    for (let i = 0; i < numProperties; i++) {
+      propertyList.push(this.parseProperty(reader));
+    }
+    const id = propertyList.length > 0 ? propertyList[0] : "";
+    const attrName = propertyList.length > 1 ? propertyList[1] : "";
+    const attrType = propertyList.length > 2 ? propertyList[2] : "";
+    node.singleProperty = numProperties === 1 && reader.getOffset() === endOffset ? true : false;
+    while (endOffset > reader.getOffset()) {
+      const subNode = this.parseNode(reader, version);
+      if (subNode !== null) this.parseSubNode(name, node, subNode);
+    }
+    node.propertyList = propertyList;
+    if (typeof id === "number") node.id = id;
+    if (attrName !== "") node.attrName = attrName;
+    if (attrType !== "") node.attrType = attrType;
+    if (name !== "") node.name = name;
+    return node;
+  }
+  parseSubNode(name, node, subNode) {
+    if (subNode.singleProperty === true) {
+      const value = subNode.propertyList[0];
+      if (Array.isArray(value)) {
+        node[subNode.name] = subNode;
+        subNode.a = value;
+      } else {
+        node[subNode.name] = value;
+      }
+    } else if (name === "Connections" && subNode.name === "C") {
+      const array = [];
+      subNode.propertyList.forEach(function(property, i) {
+        if (i !== 0) array.push(property);
+      });
+      if (node.connections === void 0) {
+        node.connections = [];
+      }
+      node.connections.push(array);
+    } else if (subNode.name === "Properties70") {
+      const keys = Object.keys(subNode);
+      keys.forEach(function(key) {
+        node[key] = subNode[key];
+      });
+    } else if (name === "Properties70" && subNode.name === "P") {
+      let innerPropName = subNode.propertyList[0];
+      let innerPropType1 = subNode.propertyList[1];
+      const innerPropType2 = subNode.propertyList[2];
+      const innerPropFlag = subNode.propertyList[3];
+      let innerPropValue;
+      if (innerPropName.indexOf("Lcl ") === 0) innerPropName = innerPropName.replace("Lcl ", "Lcl_");
+      if (innerPropType1.indexOf("Lcl ") === 0) innerPropType1 = innerPropType1.replace("Lcl ", "Lcl_");
+      if (innerPropType1 === "Color" || innerPropType1 === "ColorRGB" || innerPropType1 === "Vector" || innerPropType1 === "Vector3D" || innerPropType1.indexOf("Lcl_") === 0) {
+        innerPropValue = [
+          subNode.propertyList[4],
+          subNode.propertyList[5],
+          subNode.propertyList[6]
+        ];
+      } else {
+        innerPropValue = subNode.propertyList[4];
+      }
+      node[innerPropName] = {
+        "type": innerPropType1,
+        "type2": innerPropType2,
+        "flag": innerPropFlag,
+        "value": innerPropValue
+      };
+    } else if (node[subNode.name] === void 0) {
+      if (typeof subNode.id === "number") {
+        node[subNode.name] = {};
+        node[subNode.name][subNode.id] = subNode;
+      } else {
+        node[subNode.name] = subNode;
+      }
+    } else {
+      if (subNode.name === "PoseNode") {
+        if (!Array.isArray(node[subNode.name])) {
+          node[subNode.name] = [node[subNode.name]];
+        }
+        node[subNode.name].push(subNode);
+      } else if (node[subNode.name][subNode.id] === void 0) {
+        node[subNode.name][subNode.id] = subNode;
+      }
+    }
+  }
+  parseProperty(reader) {
+    const type = reader.getString(1);
+    let length;
+    switch (type) {
+      case "C":
+        return reader.getBoolean();
+      case "D":
+        return reader.getFloat64();
+      case "F":
+        return reader.getFloat32();
+      case "I":
+        return reader.getInt32();
+      case "L":
+        return reader.getInt64();
+      case "R":
+        length = reader.getUint32();
+        return reader.getArrayBuffer(length);
+      case "S":
+        length = reader.getUint32();
+        return reader.getString(length);
+      case "Y":
+        return reader.getInt16();
+      case "b":
+      case "c":
+      case "d":
+      case "f":
+      case "i":
+      case "l":
+        const arrayLength = reader.getUint32();
+        const encoding = reader.getUint32();
+        const compressedLength = reader.getUint32();
+        if (encoding === 0) {
+          switch (type) {
+            case "b":
+            case "c":
+              return reader.getBooleanArray(arrayLength);
+            case "d":
+              return reader.getFloat64Array(arrayLength);
+            case "f":
+              return reader.getFloat32Array(arrayLength);
+            case "i":
+              return reader.getInt32Array(arrayLength);
+            case "l":
+              return reader.getInt64Array(arrayLength);
+          }
+        }
+        const data = unzlibSync(new Uint8Array(reader.getArrayBuffer(compressedLength)));
+        const reader2 = new BinaryReader(data.buffer);
+        switch (type) {
+          case "b":
+          case "c":
+            return reader2.getBooleanArray(arrayLength);
+          case "d":
+            return reader2.getFloat64Array(arrayLength);
+          case "f":
+            return reader2.getFloat32Array(arrayLength);
+          case "i":
+            return reader2.getInt32Array(arrayLength);
+          case "l":
+            return reader2.getInt64Array(arrayLength);
+        }
+        break;
+      // cannot happen but is required by the DeepScan
+      default:
+        throw new Error("THREE.FBXLoader: Unknown property type " + type);
+    }
+  }
+};
+var BinaryReader = class {
+  constructor(buffer, littleEndian) {
+    this.dv = new DataView(buffer);
+    this.offset = 0;
+    this.littleEndian = littleEndian !== void 0 ? littleEndian : true;
+    this._textDecoder = new TextDecoder();
+  }
+  getOffset() {
+    return this.offset;
+  }
+  size() {
+    return this.dv.buffer.byteLength;
+  }
+  skip(length) {
+    this.offset += length;
+  }
+  // seems like true/false representation depends on exporter.
+  // true: 1 or 'Y'(=0x59), false: 0 or 'T'(=0x54)
+  // then sees LSB.
+  getBoolean() {
+    return (this.getUint8() & 1) === 1;
+  }
+  getBooleanArray(size) {
+    const a = [];
+    for (let i = 0; i < size; i++) {
+      a.push(this.getBoolean());
+    }
+    return a;
+  }
+  getUint8() {
+    const value = this.dv.getUint8(this.offset);
+    this.offset += 1;
+    return value;
+  }
+  getInt16() {
+    const value = this.dv.getInt16(this.offset, this.littleEndian);
+    this.offset += 2;
+    return value;
+  }
+  getInt32() {
+    const value = this.dv.getInt32(this.offset, this.littleEndian);
+    this.offset += 4;
+    return value;
+  }
+  getInt32Array(size) {
+    const a = [];
+    for (let i = 0; i < size; i++) {
+      a.push(this.getInt32());
+    }
+    return a;
+  }
+  getUint32() {
+    const value = this.dv.getUint32(this.offset, this.littleEndian);
+    this.offset += 4;
+    return value;
+  }
+  // JavaScript doesn't support 64-bit integer so calculate this here
+  // 1 << 32 will return 1 so using multiply operation instead here.
+  // There's a possibility that this method returns wrong value if the value
+  // is out of the range between Number.MAX_SAFE_INTEGER and Number.MIN_SAFE_INTEGER.
+  // TODO: safely handle 64-bit integer
+  getInt64() {
+    let low, high;
+    if (this.littleEndian) {
+      low = this.getUint32();
+      high = this.getUint32();
+    } else {
+      high = this.getUint32();
+      low = this.getUint32();
+    }
+    if (high & 2147483648) {
+      high = ~high & 4294967295;
+      low = ~low & 4294967295;
+      if (low === 4294967295) high = high + 1 & 4294967295;
+      low = low + 1 & 4294967295;
+      return -(high * 4294967296 + low);
+    }
+    return high * 4294967296 + low;
+  }
+  getInt64Array(size) {
+    const a = [];
+    for (let i = 0; i < size; i++) {
+      a.push(this.getInt64());
+    }
+    return a;
+  }
+  // Note: see getInt64() comment
+  getUint64() {
+    let low, high;
+    if (this.littleEndian) {
+      low = this.getUint32();
+      high = this.getUint32();
+    } else {
+      high = this.getUint32();
+      low = this.getUint32();
+    }
+    return high * 4294967296 + low;
+  }
+  getFloat32() {
+    const value = this.dv.getFloat32(this.offset, this.littleEndian);
+    this.offset += 4;
+    return value;
+  }
+  getFloat32Array(size) {
+    const a = [];
+    for (let i = 0; i < size; i++) {
+      a.push(this.getFloat32());
+    }
+    return a;
+  }
+  getFloat64() {
+    const value = this.dv.getFloat64(this.offset, this.littleEndian);
+    this.offset += 8;
+    return value;
+  }
+  getFloat64Array(size) {
+    const a = [];
+    for (let i = 0; i < size; i++) {
+      a.push(this.getFloat64());
+    }
+    return a;
+  }
+  getArrayBuffer(size) {
+    const value = this.dv.buffer.slice(this.offset, this.offset + size);
+    this.offset += size;
+    return value;
+  }
+  getString(size) {
+    const start = this.offset;
+    let a = new Uint8Array(this.dv.buffer, start, size);
+    this.skip(size);
+    const nullByte = a.indexOf(0);
+    if (nullByte >= 0) a = new Uint8Array(this.dv.buffer, start, nullByte);
+    return this._textDecoder.decode(a);
+  }
+};
+var FBXTree = class {
+  add(key, val) {
+    this[key] = val;
+  }
+};
+function isFbxFormatBinary(buffer) {
+  const CORRECT = "Kaydara FBX Binary  \0";
+  return buffer.byteLength >= CORRECT.length && CORRECT === convertArrayBufferToString(buffer, 0, CORRECT.length);
+}
+function isFbxFormatASCII(text) {
+  const CORRECT = ["K", "a", "y", "d", "a", "r", "a", "\\", "F", "B", "X", "\\", "B", "i", "n", "a", "r", "y", "\\", "\\"];
+  let cursor = 0;
+  function read(offset) {
+    const result = text[offset - 1];
+    text = text.slice(cursor + offset);
+    cursor++;
+    return result;
+  }
+  for (let i = 0; i < CORRECT.length; ++i) {
+    const num = read(1);
+    if (num === CORRECT[i]) {
+      return false;
+    }
+  }
+  return true;
+}
+function getFbxVersion(text) {
+  const versionRegExp = /FBXVersion: (\d+)/;
+  const match = text.match(versionRegExp);
+  if (match) {
+    const version = parseInt(match[1]);
+    return version;
+  }
+  throw new Error("THREE.FBXLoader: Cannot find the version number for the file given.");
+}
+function convertFBXTimeToSeconds(time) {
+  return time / 46186158e3;
+}
+var dataArray = [];
+function getData(polygonVertexIndex, polygonIndex, vertexIndex, infoObject) {
+  let index;
+  switch (infoObject.mappingType) {
+    case "ByPolygonVertex":
+      index = polygonVertexIndex;
+      break;
+    case "ByPolygon":
+      index = polygonIndex;
+      break;
+    case "ByVertice":
+      index = vertexIndex;
+      break;
+    case "AllSame":
+      index = infoObject.indices[0];
+      break;
+    default:
+      console.warn("THREE.FBXLoader: unknown attribute mapping type " + infoObject.mappingType);
+  }
+  if (infoObject.referenceType === "IndexToDirect") index = infoObject.indices[index];
+  const from = index * infoObject.dataSize;
+  const to = from + infoObject.dataSize;
+  return slice(dataArray, infoObject.buffer, from, to);
+}
+var tempEuler = new Euler();
+var tempVec = new Vector3();
+function generateTransform(transformData) {
+  const lTranslationM = new Matrix4();
+  const lPreRotationM = new Matrix4();
+  const lRotationM = new Matrix4();
+  const lPostRotationM = new Matrix4();
+  const lScalingM = new Matrix4();
+  const lScalingPivotM = new Matrix4();
+  const lScalingOffsetM = new Matrix4();
+  const lRotationOffsetM = new Matrix4();
+  const lRotationPivotM = new Matrix4();
+  const lParentGX = new Matrix4();
+  const lParentLX = new Matrix4();
+  const lGlobalT = new Matrix4();
+  const inheritType = transformData.inheritType ? transformData.inheritType : 0;
+  if (transformData.translation) lTranslationM.setPosition(tempVec.fromArray(transformData.translation));
+  if (transformData.preRotation) {
+    const array = transformData.preRotation.map(MathUtils.degToRad);
+    array.push(transformData.eulerOrder || Euler.DEFAULT_ORDER);
+    lPreRotationM.makeRotationFromEuler(tempEuler.fromArray(array));
+  }
+  if (transformData.rotation) {
+    const array = transformData.rotation.map(MathUtils.degToRad);
+    array.push(transformData.eulerOrder || Euler.DEFAULT_ORDER);
+    lRotationM.makeRotationFromEuler(tempEuler.fromArray(array));
+  }
+  if (transformData.postRotation) {
+    const array = transformData.postRotation.map(MathUtils.degToRad);
+    array.push(transformData.eulerOrder || Euler.DEFAULT_ORDER);
+    lPostRotationM.makeRotationFromEuler(tempEuler.fromArray(array));
+    lPostRotationM.invert();
+  }
+  if (transformData.scale) lScalingM.scale(tempVec.fromArray(transformData.scale));
+  if (transformData.scalingOffset) lScalingOffsetM.setPosition(tempVec.fromArray(transformData.scalingOffset));
+  if (transformData.scalingPivot) lScalingPivotM.setPosition(tempVec.fromArray(transformData.scalingPivot));
+  if (transformData.rotationOffset) lRotationOffsetM.setPosition(tempVec.fromArray(transformData.rotationOffset));
+  if (transformData.rotationPivot) lRotationPivotM.setPosition(tempVec.fromArray(transformData.rotationPivot));
+  if (transformData.parentMatrixWorld) {
+    lParentLX.copy(transformData.parentMatrix);
+    lParentGX.copy(transformData.parentMatrixWorld);
+  }
+  const lLRM = lPreRotationM.clone().multiply(lRotationM).multiply(lPostRotationM);
+  const lParentGRM = new Matrix4();
+  lParentGRM.extractRotation(lParentGX);
+  const lParentTM = new Matrix4();
+  lParentTM.copyPosition(lParentGX);
+  const lParentGRSM = lParentTM.clone().invert().multiply(lParentGX);
+  const lParentGSM = lParentGRM.clone().invert().multiply(lParentGRSM);
+  const lLSM = lScalingM;
+  const lGlobalRS = new Matrix4();
+  if (inheritType === 0) {
+    lGlobalRS.copy(lParentGRM).multiply(lLRM).multiply(lParentGSM).multiply(lLSM);
+  } else if (inheritType === 1) {
+    lGlobalRS.copy(lParentGRM).multiply(lParentGSM).multiply(lLRM).multiply(lLSM);
+  } else {
+    const lParentLSM = new Matrix4().scale(new Vector3().setFromMatrixScale(lParentLX));
+    const lParentLSM_inv = lParentLSM.clone().invert();
+    const lParentGSM_noLocal = lParentGSM.clone().multiply(lParentLSM_inv);
+    lGlobalRS.copy(lParentGRM).multiply(lLRM).multiply(lParentGSM_noLocal).multiply(lLSM);
+  }
+  const lRotationPivotM_inv = lRotationPivotM.clone().invert();
+  const lScalingPivotM_inv = lScalingPivotM.clone().invert();
+  let lTransform = lTranslationM.clone().multiply(lRotationOffsetM).multiply(lRotationPivotM).multiply(lPreRotationM).multiply(lRotationM).multiply(lPostRotationM).multiply(lRotationPivotM_inv).multiply(lScalingOffsetM).multiply(lScalingPivotM).multiply(lScalingM).multiply(lScalingPivotM_inv);
+  const lLocalTWithAllPivotAndOffsetInfo = new Matrix4().copyPosition(lTransform);
+  const lGlobalTranslation = lParentGX.clone().multiply(lLocalTWithAllPivotAndOffsetInfo);
+  lGlobalT.copyPosition(lGlobalTranslation);
+  lTransform = lGlobalT.clone().multiply(lGlobalRS);
+  lTransform.premultiply(lParentGX.invert());
+  return lTransform;
+}
+function getEulerOrder(order) {
+  order = order || 0;
+  const enums = [
+    "ZYX",
+    // -> XYZ extrinsic
+    "YZX",
+    // -> XZY extrinsic
+    "XZY",
+    // -> YZX extrinsic
+    "ZXY",
+    // -> YXZ extrinsic
+    "YXZ",
+    // -> ZXY extrinsic
+    "XYZ"
+    // -> ZYX extrinsic
+    //'SphericXYZ', // not possible to support
+  ];
+  if (order === 6) {
+    console.warn("THREE.FBXLoader: unsupported Euler Order: Spherical XYZ. Animations and rotations may be incorrect.");
+    return enums[0];
+  }
+  return enums[order];
+}
+function parseNumberArray(value) {
+  const array = value.split(",").map(function(val) {
+    return parseFloat(val);
+  });
+  return array;
+}
+function convertArrayBufferToString(buffer, from, to) {
+  if (from === void 0) from = 0;
+  if (to === void 0) to = buffer.byteLength;
+  return new TextDecoder().decode(new Uint8Array(buffer, from, to));
+}
+function append(a, b) {
+  for (let i = 0, j = a.length, l = b.length; i < l; i++, j++) {
+    a[j] = b[i];
+  }
+}
+function slice(a, b, from, to) {
+  for (let i = from, j = 0; i < to; i++, j++) {
+    a[j] = b[i];
+  }
+  return a;
 }
 
 // node_modules/three/examples/jsm/environments/RoomEnvironment.js
@@ -25742,6 +29677,281 @@ var LIGHTING_PRESETS = {
     exposure: 0.85
   }
 };
+function lilCfgGet(cfg, p) {
+  let o = cfg;
+  for (const s of String(p).split(".")) {
+    if (o == null) return void 0;
+    o = o[s];
+  }
+  return o;
+}
+function lilCfgSet(cfg, p, v) {
+  const segs = String(p).split(".");
+  let o = cfg;
+  for (let i = 0; i < segs.length - 1; i++) {
+    if (o[segs[i]] == null) o[segs[i]] = {};
+    o = o[segs[i]];
+  }
+  o[segs[segs.length - 1]] = v;
+}
+var LIL_COMP = { x: 0, y: 1, z: 2, w: 3 };
+function parseLilPresetYaml(text) {
+  const lines = String(text).replace(/\r\n?/g, "\n").split("\n");
+  const SEC = { colors: "colors", m_Colors: "colors", vectors: "vectors", m_Vectors: "vectors", floats: "floats", m_Floats: "floats" };
+  const out = { name: null, category: null, bases: [], colors: {}, vectors: {}, floats: {} };
+  let cur = null, curKey = null, inSaved = false;
+  for (const raw of lines) {
+    const t = raw.trim();
+    if (!t || t.startsWith("%") || t.startsWith("---")) continue;
+    const mb = t.match(/^-\s*language:\s*(.*)$/);
+    if (mb) {
+      out.bases.push({ language: mb[1].trim(), name: "" });
+      continue;
+    }
+    const mnb = t.match(/^name:\s*(.*)$/);
+    if (mnb && out.bases.length && !out.bases[out.bases.length - 1].name) {
+      out.bases[out.bases.length - 1].name = mnb[1].trim();
+      continue;
+    }
+    const mc = t.match(/^category:\s*(-?\d+)\s*$/);
+    if (mc) {
+      out.category = Number(mc[1]);
+      continue;
+    }
+    const mn = t.match(/^m_Name:\s*(.+)$/);
+    if (mn && out.name === null) {
+      out.name = mn[1].trim();
+      continue;
+    }
+    const msec = t.match(/^([A-Za-z_]\w*):\s*$/);
+    if (msec) {
+      const k = msec[1];
+      if (k === "m_SavedProperties") {
+        inSaved = true;
+        cur = null;
+        continue;
+      }
+      if (SEC[k]) {
+        cur = SEC[k];
+        curKey = null;
+        continue;
+      }
+      cur = null;
+      curKey = null;
+      continue;
+    }
+    if (!cur) continue;
+    const mname = t.match(/^-\s*name:\s*([A-Za-z_]\w*)\s*$/);
+    if (mname) {
+      curKey = mname[1];
+      continue;
+    }
+    const mval = t.match(/^value:\s*(.+)$/);
+    if (mval && curKey) {
+      const v = mval[1].trim();
+      if (cur === "colors") {
+        const m = v.match(/^\{r:\s*([^,}]+),\s*g:\s*([^,}]+),\s*b:\s*([^,}]+),\s*a:\s*([^}]+)\}$/);
+        if (m) out.colors[curKey] = [1, 2, 3, 4].map((n) => Math.fround(Number(m[n])));
+      } else if (cur === "vectors") {
+        const m = v.match(/^\{x:\s*([^,}]+),\s*y:\s*([^,}]+),\s*z:\s*([^,}]+),\s*w:\s*([^}]+)\}$/);
+        if (m) out.vectors[curKey] = [1, 2, 3, 4].map((n) => Math.fround(Number(m[n])));
+      } else if (/^-?[\d.]+(?:[eE][-+]?\d+)?$/.test(v)) {
+        out.floats[curKey] = Math.fround(Number(v));
+      }
+      curKey = null;
+      continue;
+    }
+    const mtex = t.match(/^-\s*(_[A-Za-z]\w*):\s*$/);
+    if (mtex && inSaved) {
+      curKey = null;
+      continue;
+    }
+  }
+  return out;
+}
+function buildLilPresetYaml(p) {
+  const num = (x) => {
+    const n = Number(x);
+    if (!isFinite(n)) return "0";
+    const f = Math.fround(n);
+    if (Number.isInteger(f) && Math.abs(f) < 1e15) return String(f);
+    for (let q = 1; q <= 9; q++) {
+      const s = f.toPrecision(q);
+      if (Math.fround(Number(s)) === f) return /e/i.test(s) ? String(f) : String(Number(s));
+    }
+    return String(f);
+  };
+  const out = [];
+  out.push("%YAML 1.1", "%TAG !u! tag:unity3d.com,2011:", "--- !u!114 &11400000", "MonoBehaviour:");
+  out.push(
+    "  m_ObjectHideFlags: 0",
+    "  m_CorrespondingSourceObject: {fileID: 0}",
+    "  m_PrefabInstance: {fileID: 0}",
+    "  m_PrefabAsset: {fileID: 0}",
+    "  m_GameObject: {fileID: 0}",
+    "  m_Enabled: 1",
+    "  m_EditorHideFlags: 0"
+  );
+  out.push("  m_Script: {fileID: 11500000, guid: " + LIL_PRESET_GUID + ", type: 3}");
+  const nm = p.name || "BA3D-LilToon";
+  out.push("  m_Name: " + nm);
+  out.push("  m_EditorClassIdentifier: ");
+  out.push("  bases:");
+  out.push("  - language: English");
+  out.push("    name: " + nm);
+  out.push("  category: " + (Number.isInteger(p.category) ? p.category : 0));
+  out.push("  shader: " + (p.shader ? "{fileID: 4800000, guid: " + p.shader + ", type: 3}" : "{fileID: 0}"));
+  out.push("  renderingMode: " + (p.renderingMode || "Opaque"));
+  out.push("  colors:");
+  for (const k of Object.keys(p.colors || {})) {
+    const v = p.colors[k];
+    if (!Array.isArray(v)) continue;
+    out.push("  - name: " + k);
+    out.push("    value: {r: " + num(v[0]) + ", g: " + num(v[1]) + ", b: " + num(v[2]) + ", a: " + num(v[3]) + "}");
+  }
+  out.push("  vectors:");
+  for (const k of Object.keys(p.vectors || {})) {
+    const v = p.vectors[k];
+    if (!Array.isArray(v)) continue;
+    out.push("  - name: " + k);
+    out.push("    value: {x: " + num(v[0]) + ", y: " + num(v[1]) + ", z: " + num(v[2]) + ", w: " + num(v[3]) + "}");
+  }
+  out.push("  floats:");
+  for (const k of Object.keys(p.floats || {})) {
+    if (!isFinite(p.floats[k])) continue;
+    out.push("  - name: " + k);
+    out.push("    value: " + num(p.floats[k]));
+  }
+  return out.join("\n") + "\n";
+}
+function lilPresetToPatch(preset) {
+  const patch = {};
+  const applied = [];
+  const skipped = [];
+  const derivedPaths = {};
+  for (const d of LIL_DERIVED) {
+    const v = preset.floats && preset.floats[d.l];
+    if (v === void 0) continue;
+    lilCfgSet(patch, d.p, Math.round(v) ? d.on : d.off);
+    derivedPaths[d.p] = 1;
+    applied.push(d.p);
+  }
+  const put = (lilName, value) => {
+    if (LIL_DERIVED.some((d) => d.l === lilName)) return;
+    const list = LIL_BY_NAME[lilName];
+    if (!list || !list.length) {
+      skipped.push(lilName);
+      return;
+    }
+    let any = false;
+    for (const e of list) {
+      if (derivedPaths[e.p]) continue;
+      let v = value;
+      if (e.c) {
+        if (!Array.isArray(value)) continue;
+        v = value[LIL_COMP[e.c]];
+      }
+      lilCfgSet(patch, e.p, v);
+      applied.push(e.p);
+      any = true;
+    }
+    if (!any && !list.some((e) => derivedPaths[e.p])) skipped.push(lilName);
+  };
+  for (const [k, v] of Object.entries(preset.colors || {})) if (v) put(k, v);
+  for (const [k, v] of Object.entries(preset.vectors || {})) if (v) put(k, v);
+  for (const [k, v] of Object.entries(preset.floats || {})) if (isFinite(v)) put(k, v);
+  return { patch, applied: applied.length, skipped: Array.from(new Set(skipped)) };
+}
+function lilCfgToPreset(cfg, name) {
+  const colors = {}, vectors = {}, floats = {};
+  const vecAcc = {};
+  for (const e of LIL_MAP) {
+    const v = lilCfgGet(cfg, e.p);
+    if (v === void 0) continue;
+    if (e.c) {
+      if (!vecAcc[e.l]) vecAcc[e.l] = [0, 0, 0, 0];
+      vecAcc[e.l][LIL_COMP[e.c]] = Number(v) || 0;
+      continue;
+    }
+    if (e.t === "color") {
+      if (Array.isArray(v) && v.length >= 3) colors[e.l] = [0, 1, 2, 3].map((i) => Number(v[i] == null ? 1 : v[i]));
+    } else if (e.t === "vector") {
+      if (Array.isArray(v)) vectors[e.l] = [0, 1, 2, 3].map((i) => Number(v[i] == null ? 0 : v[i]));
+    } else if (e.t === "range" || e.t === "float" || e.t === "int") {
+      const n = Number(v);
+      if (isFinite(n)) floats[e.l] = e.t === "int" ? Math.round(n) : n;
+    }
+  }
+  for (const k of Object.keys(vecAcc)) vectors[k] = vecAcc[k];
+  for (const d of LIL_DERIVED) {
+    const v = lilCfgGet(cfg, d.p);
+    if (v === void 0) continue;
+    floats[d.l] = Number(v) > 0 ? 1 : 0;
+  }
+  return { name: name || "BA3D-LilToon", category: 0, colors, vectors, floats };
+}
+var LIL_CATEGORIES = ["皮肤", "头发", "布料", "自然", "无机物", "效果", "其他"];
+function guessLilCategory(matName) {
+  const n = String(matName || "").toLowerCase();
+  if (/hair|头发|髪|bangs|ahoge/.test(n)) return 1;
+  if (/cloth|衣服|布|dress|shirt|skirt|coat|pants|shoe|boot|sock|tie|ribbon|服/.test(n)) return 2;
+  if (/skin|皮肤|face|head|body|arm|leg|hand|neck|ear|eye|mouth|teeth|tongue|brow|lash|肌|顔|体|目|口|歯|舌|眉/.test(n)) return 0;
+  if (/fur|毛皮|草|leaf|tree|nature|自然/.test(n)) return 3;
+  if (/metal|glass|无机|宝石|机械|iron|steel|gem|blade|weapon/.test(n)) return 4;
+  if (/effect|特效|glow|aura|magic|beam/.test(n)) return 5;
+  return 6;
+}
+function lilRenderModeOfShaderName(name) {
+  const n = String(name || "");
+  if (/FurTwoPass/.test(n)) return "FurTwoPass";
+  if (/FurCutout/.test(n)) return "FurCutout";
+  if (/Fur/.test(n)) return "Fur";
+  if (/Gem/.test(n)) return "Gem";
+  if (/RefractionBlur/.test(n)) return "RefractionBlur";
+  if (/Refraction/.test(n)) return "Refraction";
+  if (/TwoPassTransparent/.test(n)) return "TwoPassTransparent";
+  if (/OnePassTransparent/.test(n)) return "OnePassTransparent";
+  if (/Transparent/.test(n)) return "Transparent";
+  if (/Cutout/.test(n)) return "Cutout";
+  return "Opaque";
+}
+var LIL_TRANSPARENT_MODES = ["Opaque", "Cutout", "Transparent", "Refraction", "Fur", "FurCutout", "Gem"];
+function lilDeriveShader(cfg, manual, preferTwoPass) {
+  const list = LIL_SHADERS || [];
+  const find = (n) => list.find((s) => s.name === n) || null;
+  if (manual) {
+    const s = find(String(manual)) || list.find((x) => x.guid === String(manual));
+    if (s) return { name: s.name, guid: s.guid, file: s.file, why: "手动指定" };
+  }
+  const c = cfg || {};
+  const t = Number(c.transparentMode);
+  const tm = isFinite(t) && t >= 0 ? Math.round(t) : 0;
+  let mode = LIL_TRANSPARENT_MODES[tm] || "Opaque";
+  if (mode === "Transparent" && preferTwoPass) mode = "TwoPassTransparent";
+  const wantOut = !!(c.outline && c.outline.enable);
+  const BASE = {
+    Opaque: "lilToon",
+    Cutout: "Hidden/lilToonCutout",
+    Transparent: "Hidden/lilToonTransparent",
+    OnePassTransparent: "Hidden/lilToonOnePassTransparent",
+    TwoPassTransparent: "Hidden/lilToonTwoPassTransparent",
+    Refraction: "Hidden/lilToonRefraction",
+    Fur: "Hidden/lilToonFur",
+    FurCutout: "Hidden/lilToonFurCutout",
+    Gem: "Hidden/lilToonGem"
+  };
+  const bn = BASE[mode] || BASE.Opaque;
+  if (!wantOut) {
+    const s = find(bn);
+    return s ? { name: s.name, guid: s.guid, file: s.file, why: mode } : null;
+  }
+  const on = mode === "Opaque" ? "Hidden/lilToonOutline" : bn + "Outline";
+  const so = find(on);
+  if (so) return { name: so.name, guid: so.guid, file: so.file, why: mode + " + 描边" };
+  const sb = find(bn);
+  return sb ? { name: sb.name, guid: sb.guid, file: sb.file, why: mode + "（该模式无描边变体 ✓）" } : null;
+}
+var EMBED_FRAMING_OFFSET_Y = 42;
 function createViewer(container, opts = {}) {
   function dataAttrs(el) {
     const d = el && el.dataset || {};
@@ -25751,21 +29961,83 @@ function createViewer(container, opts = {}) {
     if (d.ba3dConfig) o.configUrl = d.ba3dConfig;
     if (d.ba3dAutoRotate !== void 0) o.autoRotate = d.ba3dAutoRotate === "true";
     if (d.ba3dDrag !== void 0) o.dragContainer = d.ba3dDrag !== "false";
+    if (d.ba3dGrid !== void 0) o.showGrid = d.ba3dGrid !== "false";
+    if (d.ba3dAxes !== void 0) o.showAxes = d.ba3dAxes !== "false";
+    if (d.ba3dGizmo !== void 0) o.showViewGizmo = d.ba3dGizmo !== "false";
+    if (d.ba3dLightHelper !== void 0) o.showLightHelper = d.ba3dLightHelper !== "false";
+    if (d.ba3dFramingOffset !== void 0) {
+      o.framingOffsetY = Number(d.ba3dFramingOffset) || 0;
+      o.__framingOffsetYForced = o.framingOffsetY;
+      o.__framingOffsetForced = true;
+    }
     return o;
   }
   const cfg = {
     // —— 模型 / 资源（可被 config JSON 覆盖）——
     modelUrl: "./assets/model.glb",
-    mouthAtlasUrl: "./assets/mouth/Character_Mouth_2.png",
+    // 默认 null：**不指定就不做嘴部修复**。
+    // 修复是给「嘴混在 EyeMouth 网格里、渲染成黑块」的那批模型用的（models/ba 那几个），
+    // 而像 models/BlueArchiveModels 那批，每种口型本来就是独立网格 + morph target 驱动
+    //（权重 1 = 把口型甩到 17 倍网格尺寸之外＝隐藏，动画设成 0 才显形），
+    // 强行套修复反而会把眼睛当嘴拆掉。所以要修就得在 json / data-ba3d-mouth 里显式给出图集。
+    mouthAtlasUrl: null,
     // —— 配置来源：直接给对象(config) 或 给 JSON 的 URL(configUrl) ——
     config: null,
     configUrl: null,
+    autoConfig: true,
+    // 没显式给配置时，自动找与模型同名的 .json（sample.glb → sample.json）
+    modelRotation: null,
+    // 加载后给模型加旋转，单位【度】，如 [-90, 0, 0]（FBX 常见 Z-up 需要它）
+    modelName: null,
+    // 原始文件名提示（上传时用）。blob: URL 没有后缀，靠它判格式最快
+    textureBase: null,
+    // 贴图基准目录（FBX 用），如 "./Texture/"。等价于 fbxLoader.setResourcePath()
+    textureMap: null,
+    // 贴图精确映射 { "FBX里存的路径或文件名": "实际URL" }（FBX 里常存艺术家机器的绝对路径）
     // —— 其它 ——
     autoRotate: false,
     autoRotateSpeed: 0.6,
     targetHeight: 2,
+    /**
+     * ★ 落地微调（世界单位 ✗ 默认 0 ✓）
+     *
+     * ⚠️ 为什么需要它：
+     *   `fitToView` 用 `measureContentBox(root)` 的 `min.y` 把模型落到 y=0 ✓
+     *   但**蒙皮网格的包围盒是绑定姿势（bind pose）的** ⇒
+     *   动画一动 ✗ 脚的真实高度就变了 ⇒ 影子和脚之间出现缝 ✓
+     *   （用户的长期反馈：「角色脚步没有接地 ✗ 影子和身体是分开的」✓）
+     *
+     * ⇒ 正数把模型**抬高** ✗ 负数**压下去** ✓
+     *   用 `viewer.probeGround()` 量出缝有多大 ✗ 再填这里 ✓
+     */
+    groundOffsetY: 0,
+    /** ★ 修正模型位置（XYZ ✗ 世界单位 ✓）—— 移动的是**模型本体** ✗ 影子跟着动 ✓ */
+    modelOffset: { x: 0, y: 0, z: 0 },
+    /** ★ 场景模式：'action'（= Unity 的 run ✓）· 'edit'（= Unity 的 edit ✓）*/
+    sceneMode: "action",
+    /**
+     * ★ 加载后**自动贴地一次**（默认开 ✓）
+     *
+     * 量法：`measurePosedBottom` 对蒙皮后的顶点采样 ✗ 找真实最低点 ✓
+     *
+     * ⚠️⚠️ **只在加载后贴一次 ✗ 不能每帧贴** ——
+     *     跳跃 / 蹲下 / 抬腿这些动作本身就是让脚离地的 ✓
+     *     每帧贴会把它们压平 ⇒ 角色像被钉在地上 ✓
+     *
+     * ⚠️ 而且要**等动画推进几帧**再量 —— 刚 load 完时姿势还是绑定姿势 ✗
+     *     那正是 fitToView 已经用过的 ⇒ 量出来 gap≈0 ✗ 白贴 ✓
+     */
+    autoGroundSnap: true,
     fov: 30,
     shadows: true,
+    /**
+     * 阴影偏移（保持 viewer 一直以来的原值，未做调优）。
+     *
+     * 曾尝试把 normalBias 从 0.02 调到 0，理由是"脸与头发互相穿插、命中距离仅 0.001"，
+     * 但**实测无效且让光照变得奇怪**，已回退 ✗。这两个留作可配置项，默认即原值。
+     */
+    shadowBias: -3e-4,
+    shadowNormalBias: 0.02,
     envIntensity: 0.8,
     backgrounds: [1053466, 1974832, 0, 15922424],
     backgroundTransparent: true,
@@ -25778,14 +30050,108 @@ function createViewer(container, opts = {}) {
     // >0 时：相机参数按这个面板高度算成固定世界量 → 面板按百分比缩放时画面整体等比缩放
     modelHeightPx: 360,
     // 角色在参考画布上的屏幕高度（CSS 像素）——模型无关的「默认缩放」
-    framingOffsetY: 0,
-    // 取景垂直偏移（CSS 像素，正值 = 取景下移 / 画面内容上移）
-    stripRootMotion: "xyz",
-    // 根节点位移原地化：'xyz' 全抹（角色永远在画面里）/ 'xz' 保留跳跃 / false 关闭
+    /**
+    * 取景垂直偏移（CSS 像素 ✗ 正值 = 取景下移 ⇒ **画面内容上移** ✓）
+    *
+    * ★ 默认给 **22**（不是 0）—— 实测调出来的：
+    *   `CH0155_Vital_Death` 在 4 秒处整体掉到画面下半 ✗ 底部超出下边缘 0.0934 NDC ✓
+    *   `framingReferenceHeight = 430` ⇒ 半高 215px ⇒ 0.0934 × 215 ≈ 20px ✓
+    *   取 22 留一点余量 ✓
+    *
+    * ⚠️ 这不是「抬高地面」—— 地面仍在 y=0 ✗ 脚也仍在 y=0（贴地 ✓）✗
+    *     动的是**相机对准点**✗ 让上下余量更平均 ✓
+    *     （抬模型会把刚修好的踩地破坏掉 ✗ 影子又会和脚分开 ✓）
+    *
+    * ⚠️ 24 个动作逐个量过：改成 22 之后最紧的动作是 `CH0155_Exs_Cutin`
+    *     （它本来就贴边 ✗ 偏移不能给太大 ✓）
+    */
+    framingOffsetY: 22,
+    /**
+     * ★ 场景辅助显示（对齐 Unity 的 Scene 视图 ✓）—— **默认全关** ✓
+     *
+     * ⚠️⚠️ 它们属于「开发 / 场景编辑」的辅助 ✗ 不该出现在**嵌入看板**里 ✓
+     *   （用户的原话：「网格在网页看板那里 ✗ 应该是关闭的」✓）
+     *
+     * ⇒ 改成**默认全关** ✗ 由**主页面 `index.html` 显式打开** ✓
+     *   嵌入方（`autoMount` / `data-ba3d`）想要就用 data 属性开：
+     *     data-ba3d-grid / data-ba3d-axes / data-ba3d-gizmo / data-ba3d-light-helper
+     *
+     * ⚠️ 这和 `showAxes` / `showLightHelper` 原来的默认值一致（本来就是关 ✓）
+     */
+    showAxes: false,
+    // 原点 XYZ 坐标轴
+    showGrid: false,
+    // 地面网格（主页面会打开 ✓）
+    showLightHelper: false,
+    // 主光方向指示
+    showViewGizmo: false,
+    // 视角指示器（主页面会打开 ✓）
+    axesLength: 1.6,
+    gridSize: 8,
+    gridDivisions: 16,
+    stripRootMotion: "compensate",
+    // 根位移处理：'compensate' 对象级抵消（默认，不动动画轨道）/ 'root' 只压最外层 / 'xyz' 全链压平 / 'xz' 保留跳跃 / false 关闭
     pressHoldMs: 200,
     // 左键在模型上按住多久才算「按下」（否则算点击）
     mouthCell: null,
     // 默认口型（图集格 0~63）：动作没驱动嘴部骨骼时用哪一格；null = 第一个口型
+    // —— 卡通（Cel / Toon）着色参数 ——
+    celSteps: 2,
+    // 明暗分档数：2 = 只有"受光/阴影"两级 → 除阴影外完全平（≈无光照）
+    celDark: 0.8,
+    // 最暗档亮度（1.0 = 全亮）。0.80 = 阴影只比受光淡一档（实测定标：原 0.72 偏重）
+    celShadowTint: null,
+    // 暗部色调，如 [0.72, 0.62, 0.85]；null = 只变暗不变色
+    celShadowMin: 0.3,
+    // 投射阴影里保留多少主光（0 = 硬阴影，1 = 没有投射阴影）；实测定标 0.3
+    celFaceShadowMin: 0.7,
+    // 面部投射阴影浓度（唯一的"面部阴影"参数）。0 = 最深，>=0.95 = 没有面部阴影；null = 跟随 celShadowMin
+    celFaceLight: false,
+    // 面部光照修正：脸/眼/眉法线强制朝向摄像机
+    facePattern: "Face|EyeMouth|Eyebrow|Mouth",
+    // 哪些材质名算"脸"
+    faceNoShadow: false,
+    // 【派生字段，不要直接配置】由 celFaceShadowMin（未设则 celShadowMin）决定：>=0.95 视为无面部阴影
+    outlineSkipPattern: "Halo",
+    // 这些材质名不描边（薄板反壳会戳穿自身 → 闪烁）
+    attachProps: null,
+    // 把脱落的道具骨骼挂到角色骨骼上（实测不可靠，见实现处注释）
+    hideParts: null,
+    // 隐藏这些网格（正则片段，匹配网格名或材质名），如 "Calculator|Dron"
+    hideOptional: true,
+    // GLB 里标了 extras.optional 的部件默认隐藏，只有动作用到时才显示
+    hideByBoneScale: 0.5,
+    // 网格骨架里所有骨头缩放都小于此值 → 视为隐藏（模型常用缩放道具来表达"不显示"）；0 = 关闭
+    lightingScale: 1,
+    // 打光预设的整体亮度倍率（1 = 原样）
+    /**
+     * 光照夹取（lilToon 的 _LightMinLimit / _LightMaxLimit）。
+     *
+     *   lilToon 的默认是 min=0.05 max=1 · 而且**永远生效** ✓
+     *   夹的是**灯光颜色**（lil_common_macro.hlsl:2079）：
+     *       lightColor = clamp( lightColor, _LightMinLimit, _LightMaxLimit );
+     *   ⇒ 不是最终像素 ⇒ 分档还在 ✗ 只是整体亮度被限住 ⇒ 暗部不会全黑、亮部不过曝 ✓
+     *
+     * ⚠️ 我们默认**关**（lightClampOn = false）⇒ 保持查看器原有观感 ✓
+     *    想要和 Unity 一致就打开 ✓
+     *
+     * ⚠️⚠️ **上限的默认值不是 lilToon 的 1** · 而是 2.2 ✓ 原因：
+     *     lilToon 的 _LightMaxLimit = 1 是按 **Unity 主光强度 ≈ 1** 定的 ·
+     *     而我们灯光预设里主光的 intensity 是 **2.0（白昼）/ 2.1（晨昏）/ 1.25（黑夜）** ✓
+     *     照抄 1 ⇒ 主光被夹到 1.0 ⇒ 整个模型暗一半（不是「防过曝」· 是「砍亮度」✓）
+     *     ⇒ 上限取 2.2（≈ 最亮那档主光）⇒ 开夹取只做「抬暗部地板」这件事 ✓
+     *
+     *     ⇒ 想压过曝就手动把上限往低调 · 想只抬暗部就保持 2.2 ✓
+     *     ⇒ 下限才是这个功能真正有用的那个（0.05 = lilToon 默认 · 很轻微 ✓）
+     */
+    lightClampOn: false,
+    lightMinLimit: 0.05,
+    // _LightMinLimit
+    lightMaxLimit: 2.2,
+    // _LightMaxLimit（⚠️ 见下面说明：我们的主光强度是 2.0~2.1 ✓）
+    noCastPattern: null,
+    // 这些材质名的网格不投影（如 "Hair"）。配合 faceNoShadow:false
+    // 就能做到「脸保留自阴影、但刘海不在脸上投影」
     visibilityRules: null,
     // 按动作名控制网格显隐：[{ mesh, clipContains, invert }]
     mouthIdle: false,
@@ -25802,7 +30168,12 @@ function createViewer(container, opts = {}) {
     // 允许透明背景
     premultipliedAlpha: false,
     powerPreference: "high-performance",
-    stencil: false
+    /**
+     * ⚠️ 必须 true 才能用 Stencil（lilToon 的 _Stencil* ✓）✗
+     *    three r160 默认不开 ✗ 而模板缓冲无法在 context 创建后再加 ✗ 只能这里决定 ✓
+     *    代价：帧缓冲多一个 8 位模板附件 ✗ 实测无感 ✓
+     */
+    stencil: true
   });
   renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
   renderer.setSize(container.clientWidth || 1, container.clientHeight || 1);
@@ -25836,8 +30207,8 @@ function createViewer(container, opts = {}) {
     keyLight.shadow.camera.right = 4;
     keyLight.shadow.camera.top = 6;
     keyLight.shadow.camera.bottom = -1;
-    keyLight.shadow.bias = -3e-4;
-    keyLight.shadow.normalBias = 0.02;
+    keyLight.shadow.bias = cfg.shadowBias;
+    keyLight.shadow.normalBias = cfg.shadowNormalBias;
   }
   scene.add(keyLight);
   const rimLight = new DirectionalLight(8366335, 1.2);
@@ -25867,6 +30238,199 @@ function createViewer(container, opts = {}) {
   ground.receiveShadow = cfg.shadows;
   ground.visible = cfg.shadows;
   scene.add(ground);
+  const helpers = new Group();
+  helpers.name = "__sceneHelpers";
+  scene.add(helpers);
+  let axesHelper = null;
+  let gridHelper = null;
+  let lightHelper = null;
+  function buildAxes(len) {
+    const g = new Group();
+    const L = len || 1.6;
+    const mk = (dir, color) => {
+      const geo = new BufferGeometry().setFromPoints([
+        new Vector3(0, 0, 0),
+        dir.clone().multiplyScalar(L)
+      ]);
+      const mat = new LineBasicMaterial({ color, transparent: true, opacity: 0.95, depthTest: false });
+      const line = new Line(geo, mat);
+      line.renderOrder = 900;
+      return line;
+    };
+    g.add(mk(new Vector3(1, 0, 0), 16734810));
+    g.add(mk(new Vector3(0, 1, 0), 7266426));
+    g.add(mk(new Vector3(0, 0, 1), 5938687));
+    const mkNeg = (dir, color) => {
+      const geo = new BufferGeometry().setFromPoints([new Vector3(0, 0, 0), dir.clone().multiplyScalar(-L * 0.5)]);
+      const mat = new LineBasicMaterial({ color, transparent: true, opacity: 0.3, depthTest: false });
+      const line = new Line(geo, mat);
+      line.renderOrder = 900;
+      return line;
+    };
+    g.add(mkNeg(new Vector3(1, 0, 0), 16734810));
+    g.add(mkNeg(new Vector3(0, 1, 0), 7266426));
+    g.add(mkNeg(new Vector3(0, 0, 1), 5938687));
+    g.userData.__kind = "axes";
+    return g;
+  }
+  function buildGrid(size, div) {
+    const gl = new GridHelper(size || 8, div || 16, 7043730, 3818583);
+    gl.material.transparent = true;
+    gl.material.opacity = 0.55;
+    gl.material.depthWrite = false;
+    gl.renderOrder = -2;
+    gl.position.y = 5e-4;
+    gl.userData.__kind = "grid";
+    return gl;
+  }
+  function buildLightHelper() {
+    const g = new Group();
+    const mat = new LineBasicMaterial({ color: 16766073, transparent: true, opacity: 0.7, depthTest: false });
+    const line = new Line(new BufferGeometry().setFromPoints([new Vector3(), new Vector3()]), mat);
+    line.renderOrder = 901;
+    g.add(line);
+    const dot = new Mesh(
+      new SphereGeometry(0.055, 12, 8),
+      new MeshBasicMaterial({ color: 16766073, transparent: true, opacity: 0.9, depthTest: false })
+    );
+    dot.renderOrder = 901;
+    g.add(dot);
+    g.userData.__line = line;
+    g.userData.__dot = dot;
+    g.userData.__kind = "light";
+    return g;
+  }
+  function applySceneHelpers() {
+    const wantAxes = !!cfg.showAxes;
+    const wantGrid = !!cfg.showGrid;
+    const wantLight = !!cfg.showLightHelper;
+    if (wantAxes && !axesHelper) {
+      axesHelper = buildAxes(cfg.axesLength);
+      helpers.add(axesHelper);
+    }
+    if (!wantAxes && axesHelper) {
+      helpers.remove(axesHelper);
+      disposeDeep(axesHelper);
+      axesHelper = null;
+    }
+    if (wantGrid && !gridHelper) {
+      gridHelper = buildGrid(cfg.gridSize, cfg.gridDivisions);
+      helpers.add(gridHelper);
+    }
+    if (!wantGrid && gridHelper) {
+      helpers.remove(gridHelper);
+      disposeDeep(gridHelper);
+      gridHelper = null;
+    }
+    if (wantLight && !lightHelper) {
+      lightHelper = buildLightHelper();
+      helpers.add(lightHelper);
+    }
+    if (!wantLight && lightHelper) {
+      helpers.remove(lightHelper);
+      disposeDeep(lightHelper);
+      lightHelper = null;
+    }
+    updateLightHelper();
+  }
+  let gizmoCanvas = null;
+  let gizmoCtx = null;
+  function ensureGizmoCanvas() {
+    if (gizmoCanvas && gizmoCanvas.isConnected) return gizmoCanvas;
+    const host = container && container.parentElement || container;
+    if (!host) return null;
+    if (getComputedStyle(host).position === "static") host.style.position = "relative";
+    gizmoCanvas = document.createElement("canvas");
+    gizmoCanvas.width = 96;
+    gizmoCanvas.height = 96;
+    gizmoCanvas.style.cssText = [
+      // ⚠️ 放**右上角** —— 右下角被「状态」浮窗占着 ✗ 左下角是工具栏 ✓
+      //    （Unity 的 Scene 视图也是右上角 ✓）
+      "position:absolute",
+      "right:10px",
+      "top:34px",
+      "width:96px",
+      "height:96px",
+      "pointer-events:none",
+      "z-index:6",
+      "opacity:.92"
+    ].join(";");
+    host.appendChild(gizmoCanvas);
+    gizmoCtx = gizmoCanvas.getContext("2d");
+    return gizmoCanvas;
+  }
+  function drawViewGizmo() {
+    if (!cfg.showViewGizmo) {
+      if (gizmoCanvas) gizmoCanvas.style.display = "none";
+      return;
+    }
+    const cv = ensureGizmoCanvas();
+    if (!cv || !gizmoCtx) return;
+    cv.style.display = "";
+    const ctx = gizmoCtx, W = cv.width, H = cv.height;
+    const cx = W / 2, cy = H / 2, R = W * 0.32;
+    ctx.clearRect(0, 0, W, H);
+    const q = camera.quaternion.clone().invert();
+    const axes = [
+      { v: new Vector3(1, 0, 0), c: "#ff5a5a", t: "X" },
+      { v: new Vector3(0, 1, 0), c: "#6ee07a", t: "Y" },
+      { v: new Vector3(0, 0, 1), c: "#5a9dff", t: "Z" }
+    ];
+    const pts = axes.map((a) => {
+      const p = a.v.clone().applyQuaternion(q);
+      return { ...a, sx: cx + p.x * R, sy: cy - p.y * R, sz: p.z };
+    });
+    pts.sort((a, b) => a.sz - b.sz);
+    for (const p of pts) {
+      const front = p.sz > 0;
+      ctx.globalAlpha = front ? 1 : 0.42;
+      ctx.strokeStyle = p.c;
+      ctx.lineWidth = front ? 2 : 1.5;
+      ctx.beginPath();
+      ctx.moveTo(cx, cy);
+      ctx.lineTo(p.sx, p.sy);
+      ctx.stroke();
+      ctx.fillStyle = p.c;
+      ctx.beginPath();
+      ctx.arc(p.sx, p.sy, front ? 6 : 4.5, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.globalAlpha = front ? 1 : 0.6;
+      ctx.fillStyle = "#0d1017";
+      ctx.font = "bold " + (front ? 9 : 8) + "px system-ui, sans-serif";
+      ctx.textAlign = "center";
+      ctx.textBaseline = "middle";
+      ctx.fillText(p.t, p.sx, p.sy + 0.5);
+    }
+    ctx.globalAlpha = 1;
+  }
+  function updateGridVisibility() {
+    if (!gridHelper) return;
+    if (!cfg.showGrid) return;
+    const gy = ground ? ground.position.y : 0;
+    gridHelper.visible = camera.position.y > gy - 0.01;
+  }
+  function updateLightHelper() {
+    updateGridVisibility();
+    if (!lightHelper || !keyLight) return;
+    const p = keyLight.position.clone();
+    const len = p.length() || 1;
+    const r = 3.2;
+    const tip = p.clone().multiplyScalar(r / len);
+    const line = lightHelper.userData.__line;
+    line.geometry.setFromPoints([tip, new Vector3(0, 0, 0)]);
+    line.geometry.computeBoundingSphere();
+    lightHelper.userData.__dot.position.copy(tip);
+  }
+  function disposeDeep(o) {
+    if (!o) return;
+    o.traverse((c) => {
+      if (c.geometry) c.geometry.dispose();
+      if (c.material) {
+        const ms = Array.isArray(c.material) ? c.material : [c.material];
+        ms.forEach((m) => m && m.dispose && m.dispose());
+      }
+    });
+  }
   let modelRoot = null;
   let mixer = null;
   const clock = new Clock();
@@ -25966,6 +30530,9 @@ function createViewer(container, opts = {}) {
       boxSize = modelSize.clone();
     }
     contentBox = measureContentBox(root);
+    root.userData.__baseY = root.position.y;
+    root.userData.__basePos = root.position.clone();
+    root.userData.__baseCenterY = (measureContentBox(root) || centered).getCenter(new Vector3()).y;
   }
   const FRAMING_REF_H = 640;
   let lastCssH = 0;
@@ -25997,7 +30564,9 @@ function createViewer(container, opts = {}) {
       const pxPerUnit = refH / (2 * dist * Math.tan(cfg.fov * Math.PI / 180 / 2));
       shiftY = -cfg.framingOffsetY / pxPerUnit;
     }
-    const target = new Vector3(center.x + pivotX, center.y + shiftY, center.z + pivotZ);
+    const __gOff = Number(cfg.groundOffsetY) || 0;
+    const mo = getModelOffset();
+    const target = new Vector3(0, center.y + shiftY, 0);
     controls.target.copy(target);
     const elev = cfg.framing === "tight" ? dist * (size.y * 0.08 / (Math.max(size.x, size.y, size.z) * 2.2)) : size.y * 0.08;
     camera.position.set(target.x, center.y + elev + shiftY, target.z + dist);
@@ -26014,13 +30583,14 @@ function createViewer(container, opts = {}) {
     currentClipName = clip.name;
     mixer.timeScale = animPlaying ? 1 : 0;
     applyVisibilityRules();
+    if (cfg.hideOptional) applyOptionalParts();
     emit("ba3d:action", { name: clip.name });
   }
   function findTopBone() {
     if (!modelRoot) return null;
-    let top = null;
+    let best = null, bestCount = -1;
     modelRoot.traverse((o) => {
-      if (top || !o.isBone) return;
+      if (!o.isBone) return;
       let p = o.parent, hasBoneParent = false;
       while (p) {
         if (p.isBone) {
@@ -26029,15 +30599,454 @@ function createViewer(container, opts = {}) {
         }
         p = p.parent;
       }
-      if (!hasBoneParent) top = o;
+      if (hasBoneParent) return;
+      let count = 0;
+      o.traverse(() => {
+        count++;
+      });
+      if (count > bestCount) {
+        bestCount = count;
+        best = o;
+      }
     });
-    return top;
+    return best;
+  }
+  let rootComp = null;
+  function prepareRootCompensation() {
+    rootComp = null;
+    if (cfg.stripRootMotion !== "compensate" || !modelRoot) return false;
+    const top = findTopBone();
+    if (!top) return false;
+    modelRoot.updateMatrixWorld(true);
+    const w = new Vector3();
+    top.getWorldPosition(w);
+    const local = modelRoot.worldToLocal(w.clone());
+    rootComp = { node: top, base: local.clone(), basePos: modelRoot.position.clone() };
+    console.debug("[rootMotion] 对象级补偿已启用，基准节点 =", top.name);
+    return true;
+  }
+  function applyRootCompensation() {
+    if (!rootComp || !modelRoot) return;
+    const w = new Vector3();
+    rootComp.node.getWorldPosition(w);
+    const local = modelRoot.worldToLocal(w.clone());
+    const sc = modelRoot.scale.x || 1;
+    const dx = (local.x - rootComp.base.x) * sc;
+    const dz = (local.z - rootComp.base.z) * sc;
+    modelRoot.position.x = rootComp.basePos.x - dx;
+    modelRoot.position.z = rootComp.basePos.z - dz;
+  }
+  const FOOT_BONE_RE = /foot|toe|ankle|ball|sole|足|踝|脚/i;
+  function measurePosedBottom(root, perMesh) {
+    const limit = perMesh || 2e3;
+    const v = new Vector3();
+    let minY = Infinity, sampled = 0, meshes = 0;
+    let footMinY = Infinity, footSampled = 0;
+    const __diag = { skinnedMeshes: 0, withSkinAttr: 0, boneNames: [], matched: 0 };
+    if (!root) return { minY: null, groundY: 0, gap: null, sampled: 0, meshes: 0 };
+    root.updateMatrixWorld(true);
+    root.traverse((o) => {
+      if (!o.isMesh || !o.visible) return;
+      if (o.userData && o.userData.__isLilOutline) return;
+      if (o.isSkinnedMesh) {
+        __diag.skinnedMeshes++;
+        if (o.geometry.attributes.skinIndex && o.geometry.attributes.skinWeight) __diag.withSkinAttr++;
+        if (__diag.boneNames.length < 6 && o.skeleton && o.skeleton.bones) {
+          for (const b of o.skeleton.bones) {
+            if (__diag.boneNames.length >= 6) break;
+            __diag.boneNames.push(b.name || "(无名)");
+          }
+        }
+      }
+      const pos = o.geometry && o.geometry.attributes && o.geometry.attributes.position;
+      if (!pos || !pos.count) return;
+      meshes++;
+      const step = Math.max(1, Math.floor(pos.count / limit));
+      for (let i = 0; i < pos.count; i += step) {
+        v.fromBufferAttribute(pos, i);
+        let __dom = -1, __dw = -1;
+        if (o.isSkinnedMesh && o.geometry.attributes.skinIndex && o.geometry.attributes.skinWeight) {
+          const si = o.geometry.attributes.skinIndex, sw = o.geometry.attributes.skinWeight;
+          const w4 = [sw.getX(i), sw.getY(i), sw.getZ(i), sw.getW(i)];
+          const i4 = [si.getX(i), si.getY(i), si.getZ(i), si.getW(i)];
+          for (let c = 0; c < 4; c++) {
+            if (w4[c] > __dw) {
+              __dw = w4[c];
+              __dom = i4[c];
+            }
+          }
+        }
+        if (o.isSkinnedMesh && typeof o.applyBoneTransform === "function") {
+          o.applyBoneTransform(i, v);
+        } else if (o.isSkinnedMesh && typeof o.boneTransform === "function") {
+          o.boneTransform(i, v);
+        }
+        v.applyMatrix4(o.matrixWorld);
+        if (v.y < minY) minY = v.y;
+        if (__dom >= 0 && __diag.firstDom === void 0) {
+          __diag.firstDom = __dom;
+          __diag.firstDomName = o.skeleton && o.skeleton.bones && o.skeleton.bones[__dom] ? o.skeleton.bones[__dom].name || "(无名)" : "(越界)";
+          __diag.firstDomY = +v.y.toFixed(4);
+          __diag.skeletonBoneCount = o.skeleton ? o.skeleton.bones.length : 0;
+        }
+        if (__dom < 0) __diag.noDom = (__diag.noDom || 0) + 1;
+        if (__dom >= 0 && o.skeleton && o.skeleton.bones && __dom < o.skeleton.bones.length && o.skeleton.bones[__dom] && FOOT_BONE_RE.test(o.skeleton.bones[__dom].name || "")) {
+          if (v.y < footMinY) footMinY = v.y;
+          footSampled++;
+          __diag.matched++;
+          if (__diag.hitBone === void 0) __diag.hitBone = o.skeleton.bones[__dom].name;
+        }
+        sampled++;
+      }
+    });
+    const my = isFinite(minY) ? minY : null;
+    const fy = isFinite(footMinY) ? footMinY : null;
+    const gy = ground ? ground.position.y : 0;
+    const use = fy !== null ? fy : my;
+    return {
+      minY: my,
+      footMinY: fy,
+      useY: use,
+      groundY: gy,
+      gap: use === null ? null : +(use - gy).toFixed(4),
+      minYGap: my === null ? null : +(my - gy).toFixed(4),
+      footSampled,
+      sampled,
+      meshes,
+      /** 诊断：蒙皮属性 / 骨骼名（定位「认不出脚」用 ✓）*/
+      diag: __diag
+    };
+  }
+  const KEY_DIST = 8;
+  function anglesToPosition(azDeg, elDeg, dist) {
+    const a = (Number(azDeg) || 0) * Math.PI / 180;
+    const e = Math.max(-89, Math.min(89, Number(elDeg) || 0)) * Math.PI / 180;
+    const r = dist || KEY_DIST;
+    return new Vector3(
+      r * Math.cos(e) * Math.sin(a),
+      r * Math.sin(e),
+      r * Math.cos(e) * Math.cos(a)
+    );
+  }
+  function positionToAngles(v) {
+    const p = v.clone().normalize();
+    const el = Math.asin(Math.max(-1, Math.min(1, p.y))) * 180 / Math.PI;
+    let az = Math.atan2(p.x, p.z) * 180 / Math.PI;
+    if (az < 0) az += 360;
+    return { azimuth: +az.toFixed(2), elevation: +el.toFixed(2) };
+  }
+  function readLightState() {
+    const ang = positionToAngles(keyLight.position);
+    return {
+      azimuth: ang.azimuth,
+      elevation: ang.elevation,
+      keyColor: "#" + keyLight.color.getHexString(),
+      keyIntensity: +keyLight.intensity.toFixed(4),
+      hemiSky: "#" + hemi.color.getHexString(),
+      hemiGround: "#" + hemi.groundColor.getHexString(),
+      hemiIntensity: +hemi.intensity.toFixed(4),
+      rimIntensity: +rimLight.intensity.toFixed(4),
+      fillIntensity: +fillLight.intensity.toFixed(4),
+      exposure: +renderer.toneMappingExposure.toFixed(4),
+      preset: cfg.lightingPreset || null
+    };
+  }
+  function writeLightState(o) {
+    if (!o) return readLightState();
+    let touchedKey = false, touchedHemi = false;
+    const EPS = 1e-6;
+    const changed = (a, b) => Math.abs(Number(a) - Number(b)) > EPS;
+    if (o.azimuth !== void 0 || o.elevation !== void 0) {
+      const cur = positionToAngles(keyLight.position);
+      const az = o.azimuth !== void 0 ? Number(o.azimuth) : cur.azimuth;
+      const el = o.elevation !== void 0 ? Number(o.elevation) : cur.elevation;
+      if (changed(az, cur.azimuth) || changed(el, cur.elevation)) touchedKey = true;
+      keyLight.position.copy(anglesToPosition(az, el));
+    }
+    if (o.keyIntensity !== void 0) {
+      if (changed(o.keyIntensity, keyLight.intensity)) touchedKey = true;
+      keyLight.intensity = Math.max(0, Number(o.keyIntensity) || 0);
+    }
+    if (o.keyColor !== void 0) {
+      try {
+        const want = new Color(String(o.keyColor));
+        if (want.getHex() !== keyLight.color.getHex()) touchedKey = true;
+        keyLight.color.copy(want);
+      } catch (e) {
+      }
+    }
+    if (o.hemiIntensity !== void 0) {
+      if (changed(o.hemiIntensity, hemi.intensity)) touchedHemi = true;
+      hemi.intensity = Math.max(0, Number(o.hemiIntensity) || 0);
+    }
+    if (o.hemiSky !== void 0) {
+      try {
+        const w = new Color(String(o.hemiSky));
+        if (w.getHex() !== hemi.color.getHex()) touchedHemi = true;
+        hemi.color.copy(w);
+      } catch (e) {
+      }
+    }
+    if (o.hemiGround !== void 0) {
+      try {
+        const w = new Color(String(o.hemiGround));
+        if (w.getHex() !== hemi.groundColor.getHex()) touchedHemi = true;
+        hemi.groundColor.copy(w);
+      } catch (e) {
+      }
+    }
+    if (o.rimIntensity !== void 0) rimLight.intensity = Math.max(0, Number(o.rimIntensity) || 0);
+    if (o.fillIntensity !== void 0) fillLight.intensity = Math.max(0, Number(o.fillIntensity) || 0);
+    if (o.exposure !== void 0) renderer.toneMappingExposure = Number(o.exposure) || 1;
+    if (touchedKey || touchedHemi) cfg.lightingPreset = null;
+    updateLightHelper();
+    return readLightState();
+  }
+  function readCameraState() {
+    const p = camera.position, t = controls.target;
+    return {
+      position: [+p.x.toFixed(4), +p.y.toFixed(4), +p.z.toFixed(4)],
+      target: [+t.x.toFixed(4), +t.y.toFixed(4), +t.z.toFixed(4)],
+      distance: +p.distanceTo(t).toFixed(4),
+      fov: +camera.fov.toFixed(2)
+    };
+  }
+  function writeCameraState(o) {
+    if (!o) return readCameraState();
+    if (Array.isArray(o.target) && o.target.length === 3) {
+      const nt = new Vector3(Number(o.target[0]) || 0, Number(o.target[1]) || 0, Number(o.target[2]) || 0);
+      const delta = nt.clone().sub(controls.target);
+      controls.target.copy(nt);
+      if (!Array.isArray(o.position)) camera.position.add(delta);
+    }
+    if (Array.isArray(o.position) && o.position.length === 3) {
+      camera.position.set(Number(o.position[0]) || 0, Number(o.position[1]) || 0, Number(o.position[2]) || 0);
+    }
+    if (o.fov !== void 0 && isFinite(Number(o.fov))) {
+      camera.fov = Math.max(5, Math.min(120, Number(o.fov)));
+      camera.updateProjectionMatrix();
+    }
+    if (o.distance !== void 0 && isFinite(Number(o.distance))) {
+      const dir = camera.position.clone().sub(controls.target);
+      if (dir.lengthSq() < 1e-9) dir.set(0, 0, 1);
+      dir.normalize().multiplyScalar(Math.max(0.05, Number(o.distance)));
+      camera.position.copy(controls.target).add(dir);
+    }
+    controls.update();
+    return readCameraState();
+  }
+  function applyViewPreset(name) {
+    const d = Math.max(0.5, camera.position.distanceTo(controls.target));
+    const dirs = {
+      front: [0, 0, 1],
+      back: [0, 0, -1],
+      right: [1, 0, 0],
+      left: [-1, 0, 0],
+      /**
+       * ⚠️⚠️ **正上方 / 正下方要用正的方向** ——
+       *   原来写的是 `[0.0001, ±1, 0.0001]`（想避开万向锁 ✓ 但偏得太小 ✓）
+       *   而下面又写死 `camera.up.set(0, 1, 0)` ⇒
+       *   对 `top` 来说视线方向和 up **几乎共线** ⇒ `lookAt` 退化 ⇒
+       *   **视口朝向不稳定 / 可能翻转** ✓
+       *   （实测 top 的位置偏移只有 0.0004 ✓）
+       *
+       *   ⇒ 用正方向 ✗ 靠**换一个不共线的 up** 来避免退化（见下 ✓）
+       */
+      top: [0, 1, 0],
+      /**
+       * ⚠️⚠️ **仰视不能用 `[0,-1,0]`** ——
+       *   那会把相机放到目标正下方 `d` 远处（实测 y = -3.65 ✓）
+       *   ⇒ **地面网格整个盖在角色上** ⇒ 看不清 ✓
+       *   ⚠️ 而且我在 `controls.update()` **之前**夹 y 是**没用的** ——
+       *     `update()` 会按球坐标把相机重新算回去 ✓
+       *     （实测：夹到 0.25 ✗ 结果还是 -0.30 ✓）
+       *
+       *   ⇒ 直接让**方向本身**不钻地：低角度仰拍 ✓
+       *     `[0, -0.15, 1]` 归一化后 y ≈ -0.148 ⇒ 相机落在 y ≈ 0.15
+       *     ⇒ 在地面之上 ✗ 从低处往上看角色 ⇒ 这才是好用的「仰视」✓
+       */
+      /**
+       * ⚠️⚠️ **仰视 = 从正下方往上看**（Unity / Blender 的 Bottom 视图 ✓）
+       *
+       *   我前面**连着改错两次**：
+       *     第一版：`[0.0001, -1, 0.0001]` ⇒ 方向对 ✗ 但 up 和视线共线 ⇒ 朝向退化
+       *     第二版：`[0, -0.15, 1]`     ⇒ **斜的** ✗ 根本不是仰视了 ✓
+       *   用户的诉求一直很清楚：**按 Unity / Blender 的惯例 ✗ 直的** ✓
+       *
+       *   ⇒ 回到 `[0, -1, 0]` ✗ 朝向问题靠 `up` 解决（见下 ✓）
+       *   ⇒ 地面网格的遮挡另想办法（相机低于地面时藏网格 ✓）
+       */
+      bottom: [0, -1, 0]
+    };
+    const dir = dirs[name];
+    if (!dir) return readCameraState();
+    const v = new Vector3(dir[0], dir[1], dir[2]).normalize().multiplyScalar(d);
+    const t = controls.target.clone();
+    t.x = 0;
+    t.z = 0;
+    controls.target.copy(t);
+    camera.position.copy(t).add(v);
+    if (Math.abs(dir[1]) > 0.99) camera.up.set(0, 0, 1);
+    else camera.up.set(0, 1, 0);
+    controls.update();
+    if (typeof updateGridVisibility === "function") updateGridVisibility();
+    return readCameraState();
+  }
+  function getModelOffset() {
+    const o = cfg.modelOffset || (cfg.modelOffset = { x: 0, y: 0, z: 0 });
+    return { x: Number(o.x) || 0, y: Number(o.y) || 0, z: Number(o.z) || 0 };
+  }
+  function setModelOffset(p) {
+    const o = getModelOffset();
+    if (p && p.x !== void 0) o.x = Number(p.x) || 0;
+    if (p && p.y !== void 0) o.y = Number(p.y) || 0;
+    if (p && p.z !== void 0) o.z = Number(p.z) || 0;
+    cfg.modelOffset = o;
+    cfg.groundOffsetY = o.y;
+    applyGroundOffset();
+    frameModel();
+    return getModelOffset();
+  }
+  function findEditPoseClip() {
+    if (!clips || !clips.length) return null;
+    const norm = (s) => String(s || "").toLowerCase().replace(/[\s_-]/g, "");
+    for (const c of clips) {
+      const n = norm(c.name);
+      if (n.includes("tpose") || n.includes("tpost") || n === "tpose" || n === "tpost") return c.name;
+    }
+    for (const c of clips) {
+      if (/_cam/i.test(String(c.name || ""))) return c.name;
+    }
+    return null;
+  }
+  function readSceneMode() {
+    return { mode: cfg.sceneMode || "action", restoreClip: cfg.__editRestoreClip || null, usedClip: cfg.__editUsedClip || null };
+  }
+  const HELPER_PRESETS = {
+    view: {
+      showGrid: true,
+      showAxes: false,
+      showLightHelper: false,
+      showViewGizmo: false,
+      gridSize: 8,
+      gridDivisions: 16,
+      axesLength: 1.6
+    },
+    edit: {
+      showGrid: true,
+      showAxes: true,
+      showLightHelper: true,
+      showViewGizmo: true,
+      gridSize: 24,
+      gridDivisions: 48,
+      axesLength: 4
+    }
+  };
+  function applyHelperPreset(mode) {
+    const p = HELPER_PRESETS[mode === "edit" ? "edit" : "view"];
+    cfg.showGrid = !!p.showGrid;
+    cfg.showAxes = !!p.showAxes;
+    cfg.showLightHelper = !!p.showLightHelper;
+    cfg.showViewGizmo = !!p.showViewGizmo;
+    cfg.gridSize = p.gridSize;
+    cfg.gridDivisions = p.gridDivisions;
+    cfg.axesLength = p.axesLength;
+    applySceneHelpers();
+    return {
+      showAxes: !!cfg.showAxes,
+      showGrid: !!cfg.showGrid,
+      showLightHelper: !!cfg.showLightHelper,
+      showViewGizmo: !!cfg.showViewGizmo,
+      axesLength: cfg.axesLength,
+      gridSize: cfg.gridSize,
+      gridDivisions: cfg.gridDivisions
+    };
+  }
+  function setSceneMode(m, api2) {
+    const want = m === "edit" ? "edit" : "action";
+    if ((cfg.sceneMode || "action") === want) return readSceneMode();
+    applyHelperPreset(want === "edit" ? "edit" : "view");
+    if (want === "edit") {
+      cfg.__editRestoreClip = currentClipName || null;
+      const pick = findEditPoseClip();
+      cfg.__editUsedClip = pick;
+      if (pick) {
+        const got = api2 && api2.setAnimation ? api2.setAnimation(pick) : null;
+        if (got) {
+          const editClip = (clips || []).find((c) => c.name === got) || (clips || []).find((c) => String(c.name || "").toLowerCase() === String(got).toLowerCase());
+          if (editClip) {
+            mixer.stopAllAction();
+            const act = mixer.clipAction(editClip);
+            act.reset().setEffectiveWeight(1).setEffectiveTimeScale(1).play();
+            currentAction = act;
+            currentClipName = editClip.name;
+            if (mixer) mixer.update(0);
+            console.debug("[scene] edit 模式：套用动作「" + editClip.name + "」（stopAllAction + 单挂 ✓）");
+          } else {
+            console.warn("[scene] edit 模式：找不到 clip「" + got + "」⇒ 只能暂停 ✓");
+          }
+        } else {
+          console.warn("[scene] edit 模式：想套「" + pick + "」但 setAnimation 返回空 ⇒ 这个 clip 没找到 ✓");
+        }
+      } else {
+        console.debug("[scene] edit 模式：没有 T-POSE / _Cam 动作 ⇒ 停在第 0 帧 ✓");
+      }
+      if (mixer) mixer.timeScale = 0;
+      cfg.sceneMode = "edit";
+    } else {
+      if (mixer) mixer.timeScale = 1;
+      const back = cfg.__editRestoreClip;
+      cfg.sceneMode = "action";
+      if (back && api2 && api2.setAnimation) api2.setAnimation(back);
+      console.debug("[scene] action 模式：恢复动作「" + (back || "（无 ✓）") + "」✓");
+    }
+    return readSceneMode();
+  }
+  function applyGroundOffset() {
+    if (!modelRoot) return 0;
+    const o = getModelOffset();
+    if (!modelRoot.userData.__basePos) {
+      modelRoot.userData.__basePos = modelRoot.position.clone();
+      modelRoot.userData.__baseY = modelRoot.position.y;
+    }
+    const b = modelRoot.userData.__basePos;
+    modelRoot.position.set(b.x + o.x, b.y + o.y, b.z + o.z);
+    return o.y;
+  }
+  let autoSnapFrames = 0;
+  function maybeAutoSnapGround() {
+    if (!cfg.autoGroundSnap || !modelRoot) return 0;
+    if (modelRoot.userData.__autoSnapped) return 0;
+    if (modelRoot.userData.__autoSnapSkip) return 0;
+    autoSnapFrames++;
+    if (autoSnapFrames < 12) return 0;
+    modelRoot.userData.__autoSnapped = true;
+    const p = measurePosedBottom(modelRoot);
+    if (p.gap === null || !isFinite(p.gap)) return 0;
+    const h = modelSize && modelSize.y || cfg.targetHeight || 2;
+    if (Math.abs(p.gap) < h * 5e-3) {
+      console.debug("[ground] 自动贴地：缝 " + p.gap.toFixed(4) + " 很小 ⇒ 不用贴 ✓");
+      return 0;
+    }
+    const want = getModelOffset().y - p.gap;
+    cfg.groundOffsetY = want;
+    setModelOffset({ y: want });
+    frameModel();
+    const q = measurePosedBottom(modelRoot);
+    console.debug("[ground] 自动贴地：缝 " + p.gap.toFixed(4) + " → " + (q.gap === null ? "?" : q.gap.toFixed(4)) + "（补偿 " + want.toFixed(4) + " · 采样 " + p.sampled + " 点 / " + p.meshes + " 网格 ✓）");
+    if (typeof window !== "undefined" && typeof window.__ba3dSyncGroundUI === "function") {
+      try {
+        window.__ba3dSyncGroundUI(want);
+      } catch (e) {
+      }
+    }
+    return want;
   }
   function stripRootMotion() {
     if (!modelRoot || !clips.length) return 0;
-    const mode = cfg.stripRootMotion === false ? "none" : cfg.stripRootMotion === "xz" ? "xz" : cfg.stripRootMotion === "none" ? "none" : "xyz";
-    if (mode === "none") return 0;
-    const allAxes = mode === "xyz";
+    const mode = cfg.stripRootMotion === false ? "none" : cfg.stripRootMotion === "none" ? "none" : cfg.stripRootMotion === "xz" ? "xz" : cfg.stripRootMotion === "compensate" ? "compensate" : cfg.stripRootMotion === "xyz" ? "xyz" : cfg.stripRootMotion === "root" ? "root" : "compensate";
+    if (mode === "none" || mode === "compensate") return 0;
+    const allAxes = mode === "xyz" || mode === "root";
     const animated = /* @__PURE__ */ new Set();
     for (const clip of clips) {
       for (const t of clip.tracks) {
@@ -26050,12 +31059,15 @@ function createViewer(container, opts = {}) {
       console.warn("[rootMotion] 模型里没有骨骼，跳过原地化");
       return 0;
     }
-    const keys = /* @__PURE__ */ new Set();
+    let keys = /* @__PURE__ */ new Set();
     for (let p = topBone; p; p = p.parent) {
       if (p.name && animated.has(p.name)) keys.add(p.name + ".position");
       if (p === modelRoot) break;
     }
     if (!keys.size) return 0;
+    if (mode === "root" && keys.size > 1) {
+      keys = /* @__PURE__ */ new Set([[...keys].pop()]);
+    }
     let fixed = 0;
     for (const clip of clips) {
       for (const track of clip.tracks) {
@@ -26081,7 +31093,7 @@ function createViewer(container, opts = {}) {
       }
     }
     if (fixed) {
-      console.info("[rootMotion] 已原地化根节点位移（" + mode + "）：" + [...keys].join(", ") + "（共 " + fixed + " 条轨道）");
+      console.debug("[rootMotion] 已原地化根节点位移（" + mode + "）：" + [...keys].join(", ") + "（共 " + fixed + " 条轨道）");
     }
     return fixed;
   }
@@ -26134,6 +31146,7 @@ function createViewer(container, opts = {}) {
     return MOUTH_CELLS[0];
   }
   function ensureMouthTexture() {
+    if (!mouthAtlasUrl) return null;
     if (mouthTex) return mouthTex;
     mouthTex = new TextureLoader().load(
       mouthAtlasUrl,
@@ -26149,7 +31162,7 @@ function createViewer(container, opts = {}) {
         const c = mouthCell >= 0 ? mouthCell : MOUTH_CELLS[0];
         mouthCell = -1;
         setMouthCell(c);
-        console.info("[viewer] 嘴部图集已加载：", mouthAtlasUrl, t.image && t.image.width + "x" + t.image.height);
+        console.debug("[viewer] 嘴部图集已加载：", mouthAtlasUrl, t.image && t.image.width + "x" + t.image.height);
       },
       void 0,
       (err) => {
@@ -26172,8 +31185,11 @@ function createViewer(container, opts = {}) {
       side: FrontSide
     };
     let mat;
-    if (shadingMode === "cel") {
-      mat = new MeshToonMaterial(Object.assign({ gradientMap: getToonGradient() }, common2));
+    if (renderMode === "unlit") {
+      mat = new MeshBasicMaterial(Object.assign({ toneMapped: false }, common2));
+    } else if (renderMode === "toon") {
+      mat = new MeshToonMaterial(Object.assign({}, common2));
+      patchToonMaterial(mat, !!(celCfg.faceLight && celFaceRe().test("mouth_atlas")));
     } else {
       mat = new MeshStandardMaterial(Object.assign({
         metalness: mouthBase && mouthBase.metalness !== void 0 ? mouthBase.metalness : 0.4,
@@ -26290,7 +31306,7 @@ function createViewer(container, opts = {}) {
     const mesh = pickMouthMesh(cands);
     if (!mesh || !mesh.geometry) return 0;
     if (cands.length > 1) {
-      console.info("[fixMouth] 有 " + cands.length + " 个网格共用 EyeMouth 材质（" + cands.map((m) => m.name).join(", ") + "），按嘴部 UV 区域选中：" + mesh.name);
+      console.debug("[fixMouth] 有 " + cands.length + " 个网格共用 EyeMouth 材质（" + cands.map((m) => m.name).join(", ") + "），按嘴部 UV 区域选中：" + mesh.name);
     }
     const geo = mesh.geometry;
     const pos = geo.getAttribute("position");
@@ -26378,7 +31394,7 @@ function createViewer(container, opts = {}) {
     mouthCell = -1;
     setMouthCell(defaultMouthCell());
     buildMouthDriverSet();
-    console.info("[fixMouth] 已按 kivo 方式拆出嘴部：网格=" + (mesh.name || "?") + "，嘴 " + mouthIdx.length / 3 + " 三角形（z 最低的 UV 岛），其余 " + restIdx.length / 3 + " 三角形，嘴部 UV u[" + u0.toFixed(4) + "," + u1.toFixed(4) + "] v[" + v0.toFixed(4) + "," + v1.toFixed(4) + "]");
+    console.debug("[fixMouth] 已按 kivo 方式拆出嘴部：网格=" + (mesh.name || "?") + "，嘴 " + mouthIdx.length / 3 + " 三角形（z 最低的 UV 岛），其余 " + restIdx.length / 3 + " 三角形，嘴部 UV u[" + u0.toFixed(4) + "," + u1.toFixed(4) + "] v[" + v0.toFixed(4) + "," + v1.toFixed(4) + "]");
     return mouthIdx.length / 3;
   }
   let mouthDriverClips = null;
@@ -26429,6 +31445,7 @@ function createViewer(container, opts = {}) {
         }
       });
     }
+    applyLockedVisibility();
     return touched;
   }
   function hintVisibilityRules() {
@@ -26447,37 +31464,2443 @@ function createViewer(container, opts = {}) {
       }
     }
   }
-  const TOON_STEPS = 4;
-  const TOON_DARK = 0.55;
-  let shadingMode = "pbr";
-  let toonGradient = null;
-  function getToonGradient() {
-    if (toonGradient) return toonGradient;
-    const data = new Uint8Array(TOON_STEPS * 4);
-    for (let i = 0; i < TOON_STEPS; i++) {
-      const t = TOON_STEPS === 1 ? 1 : i / (TOON_STEPS - 1);
-      const v = Math.round(255 * (TOON_DARK + (1 - TOON_DARK) * t));
-      data[i * 4] = v;
-      data[i * 4 + 1] = v;
-      data[i * 4 + 2] = v;
-      data[i * 4 + 3] = 255;
+  const LIL_PRESET_ORDER = ["Cloth-Anime", "Cloth-Illust", "Cloth-Outline", "Cloth-Standard", "Hair-Anime", "Hair-Illust", "Hair-Outline", "Hair-OutlineRimLight", "Hair-Standard", "Inorganic-Glass", "Inorganic-LiteGlass", "Inorganic-Metal (MatCap)", "Inorganic-Metal", "Nature-Fur", "Skin-Anime", "Skin-Flat", "Skin-Illust", "Skin-Outline", "Skin-OutlineShadow"];
+  const lilCfg = {
+    enabled: false,
+    /**
+     * —— 主色贴图的 UV / 色调（lilToon 的 _MainTexHSVG / _MainTex_ScrollRotate ✓）——
+     *
+     * ⚠️ 这两项在 lilToon 里的**作用范围完全不同**：
+     *   _MainTexHSVG          → 只作用在**基础色**上（lil_common_frag.hlsl:317 ✓）
+     *   _MainTex_ScrollRotate → 改的是**共享的 fd.uvMain**（:259 / :263 ✓）·
+     *                           之后很多采样都用它 ⇒ 影响面大 ✓
+     *
+     * ⇒ 我们只做「主色贴图自己的 UV」（方案 A ✓）·
+     *   Unity 里阴影/描边等也会跟着滚 ✗ 这边不会 ⇒ 已在文档里记录为已知差异 ✓
+     */
+    /** _MainTexHSVG：(色相偏移, 饱和度倍率, 明度倍率, Gamma) ✗ 默认 (0,1,1,1) ✓ */
+    mainTexHSVG: [0, 1, 1, 1],
+    /** _MainTex_ScrollRotate：(滚动速度X, 滚动速度Y, 旋转角, 旋转角速度) ✗ 默认全 0 ✓ */
+    mainTexScrollRotate: [0, 0, 0, 0],
+    /**
+     * —— 渲染状态（lilToon 的 _TransparentMode / _Cutoff / _Cull ✓）——
+     *
+     * ⚠️ 三个都默认 **-1 = 不改** ✗ 也就是沿用模型自带的值 ✓
+     *    这样默认行为和以前**完全一致** ✗ 想强制才动 ✓
+     *
+     * ⚠️ 这三个是**每材质**可覆盖的（lilToon 里就是材质属性 ✓）✗
+     *    面板上切换「材质」时它们也跟着变 ✓
+     */
+    /**
+     * _TransparentMode（lilToon 的枚举：0 Opaque · 1 Cutout · 2 Transparent ·
+     *                   3 Refraction · 4 Fur · 5 FurCutout · 6 Gem ✓）
+     *
+     * ⚠️ Web 侧只实现前三个 ✗ 后四个要专门 shader（lilToon 里是独立文件 ✓）
+     *    ⇒ 选到 3~6 时按 **Transparent** 处理并打日志 ✓
+     */
+    transparentMode: -1,
+    /** _Cutoff（默认 0.5）✗ 只在 Cutout 模式下有意义 ✓ */
+    /**
+     * ⚠️⚠️⚠️ **-1 = 未指定**（和 `transparentMode` / `cull` 一致 ✓）——
+     *
+     *   原来是 **0.5** ✗ 而 `syncDissolveAlphaTest()` 里有一条规则：
+     *
+     *       ④ 模式没改（-1）但**单独给了 cutoff** ✗ 且模型原本 alphaTest > 0
+     *          ⇒ 用 cutoff ✓
+     *
+     *   ⇒ `cutoff` 永远是 0.5 ⇒ **这条规则永远成立** ✓
+     *     ⇒ 只要模型材质的原始 `alphaTest > 0` ✗ 就被强制改成 0.5 ✓
+     *     ⇒ **贴图 alpha < 0.5 的像素被裁掉** ⇒ 看起来「材质变透明了」✓✓✓
+     *
+     *   （实测：CH0155_Face_Toon 套「皮肤 · 动画」后脸变成一块白斑 ✓
+     *     套用前后 `cutoff` 都是 0.5 ⇒ 不是预设带来的 ✗ 是**默认值**带来的 ✓）
+     *
+     *   ⇒ 改成 -1 ⇒ 「未指定就别碰材质的 alphaTest」✓
+     *     需要 Cutout 时把 `transparentMode` 设成 1 ⇒ 那条规则会正确用 cutoff ✓
+     */
+    cutoff: -1,
+    /**
+     * _Cull（0=Off 双面 · 1=Front 只正面 · 2=Back 只背面 ✓）
+     * ⚠️ Unity 的枚举顺序与 three 的 side **不一样** ✗ 见 applyLilRenderState ✓
+     */
+    cull: -1,
+    // —— 分档（阴影）三层，对应 _Shadow* ——
+    /**
+     * ★★ **阴影总开关**（lilToon 的 `_UseShadow` ✓）
+     *
+     * ⚠️⚠️ 这个字段**以前完全没映射** ⇒ 预设里的「关阴影」我们收不到 ✓
+     *
+     *   实测：19 个官方预设里有 **5 个**带 `_UseShadow = 0`：
+     *       Inorganic-Glass · Inorganic-LiteGlass ·
+     *       Inorganic-Metal (MatCap) · **Skin-Flat** · **Skin-Outline**
+     *     ⇒ 套了它们之后 Unity 里**没有阴影** ✗ 而我们阴影还在 ✓
+     *
+     *   ⚠️ 语义（`lil_common_frag.hlsl` 里 `_UseShadow` 是编译期开关 ✓）：
+     *      = 0 ⇒ **整个阴影计算跳过** ⇒ 表面只用光照色 ✓
+     *      注意这与 `_ShadowReceive = 0` **不同**：
+     *        · `_ShadowReceive = 0` ⇒ 不接收**实时阴影贴图**（`lerp(1.0, shadow, 0)` ✓）
+     *          但 `_ShadowStrength` 的分档阴影**仍然在** ✓
+     *        · `_UseShadow = 0` ⇒ **连分档阴影都没有** ✓
+     *      （我们之前把 `_ShadowReceive` 实现对了 ✓ 公式和 lilToon 一致 ✓）
+     */
+    useShadow: 1,
+    shadowStrength: 1,
+    // _ShadowStrength  0 = 不压暗
+    /**
+     * 阴影环境光（three 专属的补充参数 ✗ lilToon 没有对应的）
+     *
+     * 为什么需要：three 的 toon 把环境光**单独加在分档之外**
+     *   irradiance = ambient + lightProbe + gradient * directLight
+     * 而 lilToon 的 indirectCol 是**整体替换**（含环境光）。
+     * 于是我们的阴影有个「环境光地板」✗ 光越强 ✗ 受光面越亮 ✗
+     * 阴影区却只跟着的环境光走 ✗ 相对对比度被稀释 ✗
+     * 表现就是「光照强的时候阴影反而不够明显」✓
+     *
+     * 这个值 = 阴影区保留多少环境光：
+     *   1.0 = 不削减（默认 ✗ 和之前完全一样）
+     *   0.5 = 阴影区环境光减半
+     *   0.0 = 阴影区完全没有环境光（阴影最深）
+     */
+    shadowAmbient: 1,
+    // 默认值取自 lilToon 19 个官方预设的众数（不是 shader Properties 值 ✗）
+    //   _ShadowColor  众数 [0.7,0.75,0.85] (6/19)
+    //   _ShadowBorder 众数 0.1 (9/19)  ← 这个最关键
+    //   _ShadowBlur   众数 0.1 (10/19)
+    shadowColor: [0.7, 0.75, 0.85],
+    shadowBorder: 0.1,
+    /**
+     * _ShadowBorderRange —— 阴影边界范围的额外扩展。
+     *
+     * lil_common_functions.hlsl:21（lilTooningNoSaturateScale 的 5 参重载）：
+     *   borderMin = saturate( border - blur * 0.5 - borderRange )
+     *   borderMax = saturate( border + blur * 0.5 )
+     * 也就是只把过渡带的「下沿」往阴影侧再推 borderRange。
+     */
+    shadowBorderRange: 0,
+    /**
+     * _ShadowMainStrength —— 阴影色再乘一次主色的强度。
+     *
+     * lil_common_frag.hlsl:1098
+     *   indirectCol = lerp(indirectCol, indirectCol * fd.albedo, _ShadowMainStrength)
+     *
+     * ⚠️ 我们的近似：用材质的 diffuse 均匀色代替 fd.albedo（贴图色）。
+     *    因为 getGradientIrradiance 定义在 map_fragment 之前，
+     *    那时 diffuseColor 还没算出来（见 three 的 toon 片段着色器行序）。
+     */
+    shadowMainStrength: 0,
+    /**
+     * 每层阴影是否接收「实时投射阴影」（lil_common_frag.hlsl:946-950）：
+     *   calculatedShadow = saturate( fd.attenuation + distance( fd.L, fd.origL ) )
+     *   lns.x *= lerp( 1.0, calculatedShadow, _ShadowReceive );
+     *   lns.y *= lerp( 1.0, calculatedShadow, _Shadow2ndReceive );
+     *   lns.z *= lerp( 1.0, calculatedShadow, _Shadow3rdReceive );
+     * 0 = 该层完全不受投射阴影影响，1 = 完全接收。
+     */
+    shadowReceive: 1,
+    shadow2ndReceive: 1,
+    shadow3rdReceive: 1,
+    shadowBlur: 0.1,
+    shadow2ndColor: [0.6, 0.65, 0.75],
+    // 众数 (4/19)
+    shadow2ndBorder: 0.15,
+    shadow2ndBlur: 0.1,
+    shadow3rdColor: null,
+    // null = 不用第三层
+    shadow3rdBorder: 0.25,
+    shadow3rdBlur: 0.1,
+    /**
+     * 三层阴影各自的法线强度（_ShadowNormalStrength 等 ✗ lts.shader:166 / 172 / 178 ✓）
+     *
+     *   N1 = lerp( fd.origN, fd.N, _ShadowNormalStrength );      // :854
+     *   N2 = lerp( fd.origN, fd.N, _Shadow2ndNormalStrength );   // :855
+     *   N3 = lerp( fd.origN, fd.N, _Shadow3rdNormalStrength );   // :857
+     *
+     * 0 = 分档边界按**几何法线**算（不受法线贴图影响 ✓）
+     * 1 = 完整受法线贴图影响 ✓
+     * ⇒ 法线贴图很夸张时 ✗ 把阴影的强度调小 ✗ 分档边界会更干净 ✓
+     */
+    shadowNormalStrength: 1,
+    shadow2ndNormalStrength: 1,
+    shadow3rdNormalStrength: 1,
+    // 顶点色遮罩（lilToon 的 triMask ✗ 默认机制 ✓）
+    //   顶点色 R 通道 → MatCap 权重 ✗ G → Rim 权重 ✗ B → 自发光权重
+    // ⚠️ 模型**没有顶点色**时自动回退成「权重恒为 1」✗ 不会让效果消失 ✓
+    //    （BA 那批 GLB 就没有顶点色 ✗ VRChat 模型才有 ✓）
+    useVertexMask: true,
+    /**
+     * 描边（lilToon 的 Outline，默认关闭）
+     *
+     * 与 lilToon 的对应关系（lts.shader 474~556 行）：
+     *   lilToon 把描边做成**另一个材质**（Hidden/lilToonOutline，编辑器生成的变体）。
+     *   这里等价地：给每个网格挂一个**共享几何的克隆网格**，BackSide 反壳。
+     *
+     * 关键（lilGetOutlineWidth / lilCalcOutlinePosition）：
+     *   · 宽度先乘 0.01
+     *   · 乘 _OutlineWidthMask 的 .r
+     *   · 乘顶点色 .r 或 .a（_OutlineVertexR2Width）
+     *   · 乘 lerp(1, 到相机距离, _OutlineFixWidth) —— 世界单位 ↔ 屏幕恒定粗细的插值
+     *   · 沿法线外扩；_OutlineVertexR2Width=2 时改用顶点色当法线
+     *   · 最后沿"指向相机"方向推 _OutlineZBias
+     */
+    /**
+     * 法线贴图（lil_common_frag.hlsl:555 / :579 ✓）
+     *
+     * lilToon 的机制：
+     *   normalmap = lilUnpackNormalScale( SAMPLE(_BumpMap), _BumpScale );
+     *   normalmap = lilBlendNormal( normalmap,
+     *                 lilUnpackNormalScale( SAMPLE(_Bump2ndMap),
+     *                   _Bump2ndScale * SAMPLE(_Bump2ndScaleMask).r ) );
+     *   fd.N     = normalize( mul( normalmap, fd.TBN ) );
+     *   fd.origN = normalize( input.normalWS );    ← 几何法线
+     *
+     * ★ three 里这些东西大半是现成的：
+     *   · mat.normalMap + mat.normalScale 走 three 原生管线
+     *   · three 的 normal_fragment_begin 里已经算好：
+     *       mat3 tbn = mat3( vTangent, vBitangent, normal );  ← 有切线时
+     *       mat3 tbn = getTangentFrame( ... );                ← 没切线时自动用导数兜底
+     *       vec3 nonPerturbedNormal = normal;                 ← 这就是 fd.origN
+     *   ⇒ 所以 1st 交给 three ✗ 2nd 自己混 ✗ 再让各效果按强度取用 ✓
+     *
+     * ⚠️ _BumpScale 是**标量**（Range -10~10 ✓）✗ three 的 normalScale 是 vec2 ✗ 两个分量填同一个值 ✓
+     */
+    bump: {
+      use: false,
+      // _UseBumpMap
+      tex: null,
+      // _BumpMap（url）
+      scale: 1
+      // _BumpScale
+    },
+    bump2nd: {
+      use: false,
+      // _UseBump2ndMap
+      tex: null,
+      // _Bump2ndMap（url）
+      scale: 1,
+      // _Bump2ndScale
+      scaleMask: null,
+      // _Bump2ndScaleMask（url ✗ 采样 .r 乘到 scale ✓）
+      uvMode: 0
+      // _Bump2ndMap_UVMode（0=uv0 ✗ 1/2/3 需要 uv1~3 暂不支持 ✓）
+    },
+    outline: {
+      /**
+       * ★ 半透明材质要不要**整个跳过**描边（默认 false = 画出来 ✓）
+       *
+       * ⚠️ lilToon **没有**这条规则 —— 它给透明材质也画描边 ✗
+       *    只是描边 pass 继承材质的 _TransparentMode（走混合 ✓）
+       * ⇒ 我们也照做（默认 false ✓）✗ 描边壳会跟着透明 + 不写深度 ✓
+       *
+       * ⚠️ 留这个开关是为了应对「薄板 + 反壳会糊一片」的极端情况 ✓
+       *    （那种情况可以打开它退回老行为 ✓）
+       */
+      skipTransparent: false,
+      enable: false,
+      // _UseOutline = 0
+      color: [0.6, 0.56, 0.73, 1],
+      // _OutlineColor
+      tex: null,
+      // _OutlineTex（URL，null = 纯色）
+      width: 0.08,
+      // _OutlineWidth（内部 ×0.01）
+      widthMask: null,
+      // _OutlineWidthMask（URL，取 .r）
+      /**
+       * 描边贴图的 UV 变换（_OutlineTex_ST）✗ lil_common_functions.hlsl:438
+       *     uv * ST.xy + ST.zw
+       *   = [ tilingX, tilingY, offsetX, offsetY ] ✗ 默认 [1,1,0,0] ✓
+       */
+      texST: [1, 1, 0, 0],
+      /**
+       * 描边贴图的滚动 / 旋转（_OutlineTex_ScrollRotate）✗ :436
+       *     outuv = uv * ST.xy + ST.zw;
+       *     outuv = lilRotateUV( outuv, SR.z + SR.w * _Time.y ) + frac( SR.xy * _Time.y );
+       *   = [ scrollX, scrollY, angle, angleSpeed ] ✗ 默认 [0,0,0,0] ✓
+       */
+      texScrollRotate: [0, 0, 0, 0],
+      /**
+       * 描边贴图的 HSV 调整（_OutlineTexHSVG）✗ lil_common_frag.hlsl:370
+       *     fd.col.rgb = lilToneCorrection( fd.col.rgb, _OutlineTexHSVG );
+       *   lilToneCorrection（:328）：
+       *     c = pow( abs(c), hsvg.w );         // gamma
+       *     hsv = ( h + hsvg.x, saturate(s * hsvg.y), saturate(v * hsvg.z) )
+       *   = [ 色相偏移, 饱和度倍率, 明度倍率, gamma ] ✗ 默认 [0,1,1,1] ✓
+       */
+      texHSVG: [0, 1, 1, 1],
+      /**
+       * 描边自己的模板参数（lts.shader:566-572 的 _OutlineStencil* ✓）。
+       *
+       * ⚠️ 用**平铺键**而不是嵌套对象 ✗ 因为 applyLilConfig 的组循环只处理一层 ✓
+       *    嵌套对象会走到 num() ✗ 静默丢弃 ✓
+       */
+      stencilEnable: false,
+      // _OutlineStencilRef 的启用开关
+      stencilRef: 0,
+      // _OutlineStencilRef
+      stencilReadMask: 255,
+      // _OutlineStencilReadMask
+      stencilWriteMask: 255,
+      // _OutlineStencilWriteMask
+      stencilComp: 8,
+      // _OutlineStencilComp（8 = Always ✓）
+      stencilPass: 0,
+      // _OutlineStencilPass（0 = Keep ✓）
+      stencilFail: 0,
+      // _OutlineStencilFail
+      stencilZFail: 0,
+      // _OutlineStencilZFail
+      fixWidth: 0.5,
+      // _OutlineFixWidth：0=世界单位 1=屏幕恒定
+      /**
+       * _OutlineFixWidth 的求值方式。
+       *
+       * ⚠️ lilToon 原版是 lerp(1.0, saturate(length(headDirection)), fixWidth)，
+       *    但 saturate 把距离**截断在 1.0**，而相机距离通常远大于 1，
+       *    于是 factor 恒为 1，fixWidth 拉 0 还是 1 结果完全一样 —— 参数实际失效。
+       *
+       *   'lilToon' （默认）= 保留 saturate，完全对齐 lilToon 行为
+       *   'screen'          = 去掉 saturate，fixWidth=1 时描边**屏幕粗细恒定**
+       *                       （缩远不变细，这是该参数名字本来的意图）
+       */
+      fixWidthMode: "lilToon",
+      /**
+       * 不做描边的部件（正则 ✗ 匹配网格名或材质名 ✓）。
+       *
+       * 对应 lilToon 的 _OutlineDeleteMesh —— lilToon 把描边做成独立材质 ✗
+       * 美术只要不给某个网格加描边材质即可 ✓ 这里用正则等价实现。
+       *
+       * 默认跳过嘴部：嘴巴被描边会很难看（BA 的嘴部网格名含 Mouth ✗ 材质是 mouth_atlas ✓）
+       */
+      skipPattern: "mouth",
+      vertexR2Width: 0,
+      // _OutlineVertexR2Width：0=不用 1=R 2=A(+法线)
+      zBias: 0,
+      // _OutlineZBias
+      cull: "back",
+      // 'back' = 只画背面（lilToon 默认 Cull Front）
+      litEnable: true,
+      // _OutlineEnableLighting
+      litColor: [1, 0.2, 0, 0],
+      // _OutlineLitColor（alpha=0 ⇒ 默认不受光）
+      litApplyTex: false,
+      // _OutlineLitApplyTex：受光色再乘描边贴图
+      /**
+       * _OutlineLitShadowReceive —— 描边受光时是否被主光的阴影遮挡。
+       *
+       * lilToon：outlineLitFactor *= fd.attenuation
+       * 我们：手动把 three 的阴影管线接进描边材质（MeshBasicMaterial 默认没有）✗
+       *      再用 getShadowMask()（1=受光 0=全阴影）乘到 litF 上 ✓
+       *
+       * ⚠️ 三个必需件（缺一个顶点着色器就编不过）：
+       *   ① #include <packing>  —— unpackRGBAToDepth / unpackRGBATo2Half 来自这里
+       *   ② shadowmap_vertex 必须在 worldpos_vertex **之后** —— 它依赖 worldPosition
+       *   ③ 声明 uniform bool receiveShadow —— three 会无条件 setValue ✗ 只需声明 ✓ 但必须在 shadowmask chunk **之前**（GLSL 先声明后使用）
+       */
+      litShadowReceive: false,
+      /**
+       * 诊断开关：把 getShadowMask() 直接画成描边颜色。
+       *   白 = 受光 ✗ 黑 = 阴影 ✓
+       * 用来区分「阴影遮罩没生效」和「生效了但视觉不明显」两种情况 ✓
+       */
+      litShadowDebug: false,
+      /**
+       * _OutlineLitShadowReceive 的阴影模糊倍率。
+       *   实际采样半径 = 灯光自己的 shadow.radius × 这个倍率
+       *   0 = 硬边 ✗ 1 = 跟随灯光 ✗ 越大越糊 ✓
+       */
+      litShadowBlur: 1,
+      /**
+       * 着色器里是否再乘一次描边色（uOutlineColor）。
+       *
+       * MeshBasicMaterial 的片元最后会乘一次 material.color，
+       * 而材质构造时 mat.color 已经被设成描边色，所以：
+       *
+       *   false（默认 ✗ 正确）→ 描边色只乘一次 ✗ 受光色保持纯净
+       *   true            → 着色器里再乘一次 ✗ 受光色会被描边色染暗（旧行为）
+       */
+      shaderColorMult: false,
+      /**
+       * _OutlineVectorTex —— 用贴图覆盖描边的外扩方向（手绘描边）。
+       *
+       * lilToon：贴图按**切线空间**法线解算 ✗ 经 TBN 转到对象空间：
+       *   vec3 v = unpackNormal(tex2D(_OutlineVectorTex, uv)) * _OutlineVectorScale;
+       *   outlineN = mul(v, tbnOS);
+       *
+       * ⚠️ three 的 MeshBasicMaterial 只有开了 USE_TANGENT 才有 tangent 属性。
+       *    有 tangent 时用真实 TBN（与 Unity 一致）✗ 没有时用法线近似 ✗ 会有差异 ✓
+       */
+      vectorTex: null,
+      // URL
+      vectorScale: 1,
+      // _OutlineVectorScale（-10 ~ 10）
+      vectorUVMode: 0,
+      // _OutlineVectorUVMode：0=uv 1=uv1 2=uv2 3=uv3
+      litScale: 10,
+      // _OutlineLitScale
+      litOffset: -8
+      // _OutlineLitOffset
+    },
+    // —— Rim Light（双色），对应 _Rim* ——
+    rim: {
+      blend: 0,
+      // 0 = 关闭（等价于 lilToon 的 _UseRim = false）
+      color: [1, 1, 1],
+      border: 0.5,
+      // _RimBorder       众数 0.5 (13/19)
+      blur: 0.1,
+      // _RimBlur         众数 0.1 (11/19)
+      fresnelPower: 3,
+      // _RimFresnelPower 众数 3   (12/19)
+      dirStrength: 0,
+      // 0 = 均匀，>0 = 受光侧更亮
+      dirRange: 0,
+      indirColor: [1, 1, 1],
+      indirBorder: 0.5,
+      indirBlur: 0.1,
+      indirRange: 0,
+      blendMode: 1,
+      // 0 Normal / 1 Add / 2 Screen / 3 Multiply
+      enableLighting: 1,
+      // 1 = rim 亮度受主光颜色影响
+      mainStrength: 0,
+      normalStrength: 1,
+      shadowMask: 0
+      // _RimShadowMask：Rim 是否被实时阴影压暗（lil_common_frag.hlsl:1680）
+    },
+    // —— MatCap，对应 _MatCap* ——
+    matcap: {
+      /**
+       * MatCap 的三个进阶参数（lil_common_frag.hlsl:1521-1542 / :1591-1611）
+       *
+       * ⚠️ _MatCapVRParallaxStrength 在**非 VR 下是空操作**：
+       *     lil_common_macro.hlsl:696 lilBlendVRParallax
+       *       #if defined(USING_STEREO_MATRICES)
+       *           return lerp(a, b, c);
+       *       #else
+       *           return b;            ← 直接返回视线方向 · 强度参数没用上
+       *       #endif
+       *   ⇒ 浏览器里调它不会有任何效果 · 这是 lilToon 的设计 · 不是我们的缺陷
+       *     面板上保留只是为了和 lilToon 的参数表一一对应
+       */
+      vrParallax: 0,
+      // _MatCapVRParallaxStrength（⚠️ 非 VR 下无效）
+      lod: 0,
+      // _MatCapLod（MatCap 贴图的 LOD bias）
+      customNormal: false,
+      // _MatCapCustomNormal（用一张 MatCap 专用法线图替换 N）
+      bumpMap: null,
+      // _MatCapBumpMap（url）
+      bumpScale: 1,
+      // _MatCapBumpScale
+      url: null,
+      // 贴图 URL
+      blend: 1,
+      blendMode: 0,
+      enableLighting: 1,
+      mainStrength: 0,
+      normalStrength: 1,
+      mul: false,
+      // false = 加色，true = 乘 albedo（注：这是 lilToon lite 版的形式 ✓）
+      shadowMask: 0,
+      // _MatCapShadowMask：MatCap 是否被实时阴影压暗（lil_common_frag.hlsl:1546）
+      color: [1, 1, 1, 1],
+      // _MatCapColor —— 完整版才有的染色 ✓
+      blendMask: null,
+      // _MatCapBlendMask（取 **RGB** ✗ 逐通道混合 ✓）
+      backfaceMask: 1
+      // _MatCapBackfaceMask：0=两面 1=只正面 2=只背面（默认 1 ✓）
+    },
+    /**
+     * MatCap 2nd（lil_common_frag.hlsl:1585 lilGetMatCap2nd）
+     *
+     * 第二个 MatCap 槽位 ✗ 参数与 1st 完全同构 ✓
+     * 用途：同一部位表现两种材质 —— 剑刃+剑身 / 布料+金属扣 / 发丝+发梢渐变 ✓
+     *
+     * 执行顺序（lil_pass_forward_normal.hlsl:435 / 440）：
+     *     Backlight → MatCap → MatCap2nd → Rim → Emission ✓
+     *   即 2nd 叠在 1st **之上** ✓
+     */
+    matcap2nd: {
+      /**
+       * MatCap 的三个进阶参数（lil_common_frag.hlsl:1521-1542 / :1591-1611）
+       *
+       * ⚠️ _MatCapVRParallaxStrength 在**非 VR 下是空操作**：
+       *     lil_common_macro.hlsl:696 lilBlendVRParallax
+       *       #if defined(USING_STEREO_MATRICES)
+       *           return lerp(a, b, c);
+       *       #else
+       *           return b;            ← 直接返回视线方向 · 强度参数没用上
+       *       #endif
+       *   ⇒ 浏览器里调它不会有任何效果 · 这是 lilToon 的设计 · 不是我们的缺陷
+       *     面板上保留只是为了和 lilToon 的参数表一一对应
+       */
+      vrParallax: 0,
+      // _MatCap2ndVRParallaxStrength（⚠️ 非 VR 下无效）
+      lod: 0,
+      // _MatCap2ndLod（MatCap 贴图的 LOD bias）
+      customNormal: false,
+      // _MatCap2ndCustomNormal（用一张 MatCap 专用法线图替换 N）
+      bumpMap: null,
+      // _MatCap2ndBumpMap（url）
+      bumpScale: 1,
+      // _MatCap2ndBumpScale
+      url: null,
+      // _MatCap2ndTex
+      blend: 0,
+      // _MatCap2ndBlend（0 = 关闭）
+      blendMode: 0,
+      // _MatCap2ndBlendMode
+      enableLighting: 1,
+      // _MatCap2ndEnableLighting
+      mainStrength: 0,
+      // _MatCap2ndMainStrength（乘 albedo）
+      normalStrength: 1,
+      mul: false,
+      shadowMask: 0,
+      // _MatCap2ndShadowMask
+      color: [1, 1, 1, 1],
+      // _MatCap2ndColor
+      blendMask: null,
+      // _MatCap2ndBlendMask（取 **RGB** ✓）
+      backfaceMask: 1
+      // _MatCap2ndBackfaceMask
+    },
+    // —— 自发光，对应 _Emission* ——
+    emission: {
+      use: false,
+      // _UseEmission（⚠️ 之前漏了这个字段 ✗ applyLilConfig 的校验会把它丢掉 ✓）
+      color: [1, 1, 1],
+      blend: 0,
+      blendMode: 1,
+      // 默认 Add
+      uvMode: 0,
+      // _EmissionMap_UVMode（0=uv0 ✗ 4=视角球面 ✗ 1/2/3 需要 uv1~3 暂不支持 ✓）
+      mainStrength: 0,
+      tex: null,
+      // _EmissionMap 贴图 URL
+      blendMask: null
+      // _EmissionBlendMask（**RGBA** 整体乘到 emissionColor ✓）
+    },
+    // —— 背光，对应 _Backlight* ——
+    /**
+     * 反射 + 镜面高光（lil_common_frag.hlsl:1315-1334 · :1350-1370）
+     *
+     * ⚠️ lilToon 里整块被 #if defined(LIL_FEATURE_REFLECTION) 包着 ·
+     *    而它来自 _UseReflection ⇒ **默认 0** ✓
+     *    19 个官方预设里只有 3 个开（Inorganic-Glass / LiteGlass / Metal ✓）
+     *    ⇒ 这就是「金属 / 玻璃类材质的高光」· 皮肤/衣服/头发都不开 ✓
+     *
+     * ⚠️ 已确认 _ApplySpecular / _Smoothness 虽然默认写 1 ·
+     *    但在 _UseReflection = 0 时是**空写**（块被编译掉 ✓）
+     */
+    /**
+     * 抖动（lil_common_frag.hlsl:524-546）
+     *
+     *   if(_UseDither == 1)
+     *       fd.col.a = fd.col.a >= ( lilSamplePointRepeat( _DitherTex,
+     *                                  input.positionCS.xy, _DitherTex_TexelSize.zw ).r * 255 + 1 )
+     *                            / ( _DitherMaxValue + 2 );
+     *
+     * 辅助函数（lil_common_macro.hlsl:321）：
+     *   uint2 uv = (uint2)positionCS.xy % (uint2)size;   // 屏幕像素坐标取模
+     *   return tex2D(tex, uv / size);
+     *
+     * ⇒ 把连续的 alpha 量化成**屏幕空间的有序点阵**
+     *   配合距离淡出用 ⇒ 远处用「点阵消失」代替半透明（省 overdraw）
+     *
+     * ⚠️ lilToon 里前面还有一句 lilDistanceFadeAlphaOnly（仅 Cutout 下）
+     *    那需要**基础材质的 _DistanceFade** ⇒ 我们还没做（记为 A2）
+     *    ⇒ 这里只做抖动那一步 ⇒ 单独用也成立
+     *
+     * ⚠️ GLSL ES 1.00 没有 uint ⇒ 用 mod() + floor() 等价实现
+     */
+    dither: {
+      use: false,
+      // _UseDither（默认 0）
+      url: null,
+      // _DitherTex（默认 "white" ⇒ 全 1）
+      maxValue: 255
+      // _DitherMaxValue
+    },
+    reflection: {
+      use: false,
+      // _UseReflection（⚠️ 默认 0 ⇒ 整块关 ✓）
+      apply: true,
+      // _ApplySpecular（默认 1）
+      toon: true,
+      // _SpecularToon（默认 1 ⇒ 走卡通化那条路）
+      border: 0.5,
+      // _SpecularBorder
+      blur: 0,
+      // _SpecularBlur
+      normalStrength: 1,
+      // _SpecularNormalStrength
+      smoothness: 1,
+      // _Smoothness ⇒ perceptualRoughness = 1-它 · roughness = 它的平方
+      reflectance: 0.04,
+      // _Reflectance（非金属的镜面反射率）
+      metallic: 0,
+      // _Metallic
+      color: [1, 1, 1, 1],
+      // _ReflectionColor（HDR）
+      blendMode: 1,
+      // _ReflectionBlendMode（0正常 1加算 2屏幕 3乘算 · 默认 1）
+      aaStrength: 1
+      // _AAStrength（卡通边的 AA 强度 · 0 = 硬边 ✓）
+    },
+    backlight: {
+      blend: 0,
+      // 0 = 关闭（等价于 lilToon 的 _UseBacklight = false）
+      color: [1, 1, 1],
+      border: 0.35,
+      blur: 0.05,
+      directivity: 5,
+      viewStrength: 1,
+      normalStrength: 1,
+      mainStrength: 0
+    },
+    /**
+     * 自发光第二层（lil_common_frag.hlsl:1888-1899 lilEmission2nd ✓）
+     *
+     * ⚠️ 和 1st **完全同构** ✗ 只是所有参数带 2nd 后缀 ✗ 各有一份独立的贴图/遮罩 ✓
+     *    两者都会**加算到 emissionColor** ✗ 所以是叠加发光 ✗ 不是替换 ✓
+     *    顺序：Emission1st → Emission2nd（lil_pass_forward_normal.hlsl:462 / 468 ✓）
+     */
+    emission2nd: {
+      use: false,
+      // _UseEmission2nd
+      color: [1, 1, 1, 1],
+      // _Emission2ndColor
+      blend: 0,
+      // _Emission2ndBlend
+      blendMode: 0,
+      // _Emission2ndBlendMode（0正常 1加算 2屏幕 3乘算 ✓）
+      uvMode: 0,
+      // _Emission2ndMap_UVMode
+      tex: null,
+      // _Emission2ndMap（url）
+      blendMask: null
+      // _Emission2ndBlendMask（url ✗ RGBA 整体乘 ✓）
+    },
+    /**
+     * 主色层 2nd / 3rd（lil_common_frag.hlsl:725 lilGetMain2nd / :757 lilGetMain3rd）
+     *
+     * 在同一个材质上再叠两层基础色 ✗ 每层有独立的贴图 / 混合模式 / 遮罩 / 剔除 ✓
+     *
+     * ★ _Main2ndEnableLighting 不是开关 ✗ 是「这一层有多大比例参与光照」：
+     *     lil_pass_forward_normal.hlsl:342（光照**前**）
+     *         fd.col.rgb = lilBlendColor( fd.col.rgb, color2nd.rgb,
+     *                                     color2nd.a * _Main2ndEnableLighting, _Main2ndTexBlendMode );
+     *     lil_pass_forward_normal.hlsl:376（光照**后**）
+     *         fd.col.rgb = lilBlendColor( fd.col.rgb, color2nd.rgb,
+     *                                     color2nd.a - color2nd.a * _Main2ndEnableLighting, ... );
+     *   ⇒ 1.0 = 完全受光照（会被明暗分档影响 ✗ 像皮肤的一部分 ✓）
+     *     0.0 = 完全不受光照（保持原色 ✗ 像贴纸/自发光 ✓）
+     *   所以实现上要**两处注入** ✗ 和 lilToon 一样 ✓
+     *
+     * 用途：脸部腮红 / 衣服花纹 / 纹身 / 眼影 / 可独立淡出的配件 ✓
+     */
+    main2nd: {
+      /**
+       * ★ Decal 调试（0=正常 · 1=跳过边缘 AA · 2=把 decal UV 输出成颜色 · 3=只看 alpha）
+       *
+       * 「开了 Decal 但画面没变化」时用它二分定位：
+       *   1 ⇒ 有变化  ⇒ 是**边缘 AA** 把 alpha 清成 0 了（decal UV 出了 [0,1] ✓）
+       *   2 ⇒ 有变化  ⇒ 采样代码在跑 ✗ 问题在 alpha/混合
+       *   3 ⇒ 有变化  ⇒ 采样到了 ✗ 问题在颜色/混合
+       *   都没变化     ⇒ 这段 GLSL 根本没进着色器（注入问题 ✓）
+       */
+      decalDebug: 0,
+      /**
+      * ★ Decal（贴花 ✗ lil_common_functions.hlsl:473 lilCalcDecalUV ✓）
+      *
+      * ⚠️ Decal **不是独立层** ⇒ 它是这一层的一个**模式**（_Main2ndTexIsDecal ✓）
+      *    开启后把贴图按「贴花」方式铺（可镜像 / 单侧 / 图集动画 ✓）
+      *
+      * ⚠️ 实际模型多半把 uvMode 设成 1（UV1 ✓）—— 因为贴花本来就是「换一套 UV 贴上去」
+      * ⚠️ isLeftOnly / isRightOnly 靠 vBa3dRightHand（切线 w 的符号 ✓）分区
+      *    没有切线的模型 ⇒ 恒为 1.0（和 lilToon 的初值一致 ✓）
+      */
+      isDecal: false,
+      // _Main2ndTexIsDecal
+      isLeftOnly: false,
+      // _Main2ndTexIsLeftOnly
+      isRightOnly: false,
+      // _Main2ndTexIsRightOnly
+      shouldCopy: false,
+      // _Main2ndTexShouldCopy（左半镜像到右半）
+      shouldFlipMirror: false,
+      // _Main2ndTexShouldFlipMirror
+      shouldFlipCopy: false,
+      // _Main2ndTexShouldFlipCopy
+      // _Main2ndTexDecalAnimation：(列数, 行数, 固定帧, 帧率) ✗ 默认 (1,1,1,30)
+      decalAnimation: [1, 1, 1, 30],
+      // _Main2ndTexDecalSubParam：(宽, 高, 向中心吸附, 1) ✗ 默认 (1,1,0,1)
+      decalSubParam: [1, 1, 0, 1],
+      // _Main2ndTex_ST：(缩放x, 缩放y, 偏移x, 偏移y)
+      texST: [1, 1, 0, 0],
+      // _Main2ndTexAngle：UV 旋转角
+      texAngle: 0,
+      /**
+             * _Main2ndTexAlphaMode（Int · 默认 0）：
+             *   0 = 不改变   1 = 用这一层的 alpha 替换   2 = 相乘
+             *   3 = 相加（截断）  4 = 相减（截断）
+             * ⚠️ lilToon 里整块被 `#if LIL_RENDER != 0` 包着 ⇒ 只在 Cutout / Transparent 下生效
+             * ⚠️ 用完会把这一层的 alpha **置 1**（lil_common_frag.hlsl:805）⇒
+             *    接下来的**颜色混合**按满强度算（这一句很容易漏）
+             */
+      alphaMode: 0,
+      use: false,
+      // _UseMain2ndTex
+      color: [1, 1, 1, 1],
+      // _Color2nd
+      tex: null,
+      // _Main2ndTex
+      uvMode: 0,
+      // _Main2ndTex_UVMode：0=uv0 4=视角球面（1/2/3 需要 uv1~3 ✗ 暂不支持）
+      blendMode: 0,
+      // _Main2ndTexBlendMode：0 Normal / 1 Add / 2 Screen / 3 Multiply
+      enableLighting: 1,
+      // _Main2ndEnableLighting：参与光照的比例
+      blendMask: null,
+      // _Main2ndBlendMask（取 R 通道）
+      cull: 0,
+      // _Main2ndTex_Cull：0=两面 1=只背面 2=只正面
+      /**
+       * 层溶解（lil_common_frag.hlsl:725 → lil_common_functions.hlsl:626 lilCalcDissolve ✓）
+       *
+       * ⚠️ 它和顶层 Dissolve **不一样**：
+       *   · 顶层 Dissolve 是**丢弃像素**（alphaTest ✓）+ 边缘发光 ✓
+       *   · 层溶解只是把**这一层的 alpha 乘 0/1** ✗ 不丢弃像素 ✓
+       *     边缘颜色是**加算到自发光**（lil_pass_forward_normal.hlsl:479 ✓）
+       *     ⇒ fd.emissionColor += _Main2ndDissolveColor.rgb * dissolveAlpha ✓
+       *
+       * 公式（dissolveParams = (mode, dirMode, threshold, softness) ✓）：
+       *   mode 0 = 关闭 ✗ 1 = 贴图阈值 ✗ 2 = UV 2D ✗ 3 = 3D 坐标
+       *   dirMode 1 → 用 dot(方向) ✗ 否则用 distance
+       *   dissolveAlpha = 1 - saturate( |值 - threshold| / softness )   ← 边缘强度
+       *   这一层的 alpha *= (值 > threshold ? 1 : 0)                     ← 硬裁剪
+       */
+      dissolveMode: 0,
+      // _Main2ndDissolveParams.r
+      dissolveDir: 0,
+      // .g（1 = 方向 ✗ 0 = 距离）
+      dissolveThreshold: 0.5,
+      // .b
+      dissolveSoftness: 0.1,
+      // .a
+      dissolvePos: [0, 0, 0, 0],
+      // _Main2ndDissolvePos（xy 用于 mode 2 ✗ xyz 用于 mode 3 ✗ w = 旋转角）
+      dissolveColor: [1, 1, 1],
+      // _Main2ndDissolveColor（加算到自发光 ✓）
+      dissolveMask: null,
+      // _Main2ndDissolveMask（url ✗ 采样 .r ✓）
+      dissolveMaskST: [1, 1, 0, 0],
+      dissolveNoiseMask: null,
+      // _Main2ndDissolveNoiseMask（url ✓）
+      dissolveNoiseMaskST: [1, 1, 0, 0],
+      dissolveNoiseScrollRotate: [0, 0, 0, 0],
+      dissolveNoiseStrength: 0,
+      // _Main2ndDissolveNoiseStrength ✓
+      /**
+       * 距离淡出（_Main2ndDistanceFade ✗ lil_common_frag.hlsl:796 ✓）
+       *
+       * lilToon 是一个 float4：(near, far, strength, 未用 ✓)
+       * ⚠️ 这里拆成 3 个标量 ✗ 面板上比一个 vec4 好调 ✓
+       *   语义完全一样 ✗ GLSL 里再合起来用 ✓
+       *
+       * 效果：离相机 **near 以内**完全不淡 ✗ far 以外淡到 strength 指定的程度 ✓
+       *   strength 1 = 完全淡掉（这一层消失 ✓）✗ 0 = 不淡 ✓
+       *   ⚠️ near == far 会除零 ✗ 代码里用 max(1e-5, ...) 兜底 ✓
+       */
+      distFadeNear: 0,
+      // _Main2ndDistanceFade.x
+      distFadeFar: 0,
+      // .y（默认 = near ⇒ 不淡 ✓）
+      distFadeStrength: 0
+      // .z
+    },
+    main3rd: {
+      /**
+       * ★ Decal 调试（0=正常 · 1=跳过边缘 AA · 2=把 decal UV 输出成颜色 · 3=只看 alpha）
+       *
+       * 「开了 Decal 但画面没变化」时用它二分定位：
+       *   1 ⇒ 有变化  ⇒ 是**边缘 AA** 把 alpha 清成 0 了（decal UV 出了 [0,1] ✓）
+       *   2 ⇒ 有变化  ⇒ 采样代码在跑 ✗ 问题在 alpha/混合
+       *   3 ⇒ 有变化  ⇒ 采样到了 ✗ 问题在颜色/混合
+       *   都没变化     ⇒ 这段 GLSL 根本没进着色器（注入问题 ✓）
+       */
+      decalDebug: 0,
+      /**
+      * ★ Decal（贴花 ✗ lil_common_functions.hlsl:473 lilCalcDecalUV ✓）
+      *
+      * ⚠️ Decal **不是独立层** ⇒ 它是这一层的一个**模式**（_Main3rdTexIsDecal ✓）
+      *    开启后把贴图按「贴花」方式铺（可镜像 / 单侧 / 图集动画 ✓）
+      *
+      * ⚠️ 实际模型多半把 uvMode 设成 1（UV1 ✓）—— 因为贴花本来就是「换一套 UV 贴上去」
+      * ⚠️ isLeftOnly / isRightOnly 靠 vBa3dRightHand（切线 w 的符号 ✓）分区
+      *    没有切线的模型 ⇒ 恒为 1.0（和 lilToon 的初值一致 ✓）
+      */
+      isDecal: false,
+      // _Main3rdTexIsDecal
+      isLeftOnly: false,
+      // _Main3rdTexIsLeftOnly
+      isRightOnly: false,
+      // _Main3rdTexIsRightOnly
+      shouldCopy: false,
+      // _Main3rdTexShouldCopy（左半镜像到右半）
+      shouldFlipMirror: false,
+      // _Main3rdTexShouldFlipMirror
+      shouldFlipCopy: false,
+      // _Main3rdTexShouldFlipCopy
+      // _Main3rdTexDecalAnimation：(列数, 行数, 固定帧, 帧率) ✗ 默认 (1,1,1,30)
+      decalAnimation: [1, 1, 1, 30],
+      // _Main3rdTexDecalSubParam：(宽, 高, 向中心吸附, 1) ✗ 默认 (1,1,0,1)
+      decalSubParam: [1, 1, 0, 1],
+      // _Main3rdTex_ST：(缩放x, 缩放y, 偏移x, 偏移y)
+      texST: [1, 1, 0, 0],
+      // _Main3rdTexAngle：UV 旋转角
+      texAngle: 0,
+      /**
+             * _Main3rdTexAlphaMode（Int · 默认 0）：
+             *   0 = 不改变   1 = 用这一层的 alpha 替换   2 = 相乘
+             *   3 = 相加（截断）  4 = 相减（截断）
+             * ⚠️ lilToon 里整块被 `#if LIL_RENDER != 0` 包着 ⇒ 只在 Cutout / Transparent 下生效
+             * ⚠️ 用完会把这一层的 alpha **置 1**（lil_common_frag.hlsl:805）⇒
+             *    接下来的**颜色混合**按满强度算（这一句很容易漏）
+             */
+      alphaMode: 0,
+      use: false,
+      color: [1, 1, 1, 1],
+      tex: null,
+      uvMode: 0,
+      blendMode: 0,
+      enableLighting: 1,
+      blendMask: null,
+      cull: 0,
+      /**
+       * 层溶解（lil_common_frag.hlsl:821 → lil_common_functions.hlsl:626 lilCalcDissolve ✓）
+       *
+       * ⚠️ 它和顶层 Dissolve **不一样**：
+       *   · 顶层 Dissolve 是**丢弃像素**（alphaTest ✓）+ 边缘发光 ✓
+       *   · 层溶解只是把**这一层的 alpha 乘 0/1** ✗ 不丢弃像素 ✓
+       *     边缘颜色是**加算到自发光**（lil_pass_forward_normal.hlsl:479 ✓）
+       *     ⇒ fd.emissionColor += _Main3rdDissolveColor.rgb * dissolveAlpha ✓
+       *
+       * 公式（dissolveParams = (mode, dirMode, threshold, softness) ✓）：
+       *   mode 0 = 关闭 ✗ 1 = 贴图阈值 ✗ 2 = UV 2D ✗ 3 = 3D 坐标
+       *   dirMode 1 → 用 dot(方向) ✗ 否则用 distance
+       *   dissolveAlpha = 1 - saturate( |值 - threshold| / softness )   ← 边缘强度
+       *   这一层的 alpha *= (值 > threshold ? 1 : 0)                     ← 硬裁剪
+       */
+      dissolveMode: 0,
+      // _Main3rdDissolveParams.r
+      dissolveDir: 0,
+      // .g（1 = 方向 ✗ 0 = 距离）
+      dissolveThreshold: 0.5,
+      // .b
+      dissolveSoftness: 0.1,
+      // .a
+      dissolvePos: [0, 0, 0, 0],
+      // _Main3rdDissolvePos（xy 用于 mode 2 ✗ xyz 用于 mode 3 ✗ w = 旋转角）
+      dissolveColor: [1, 1, 1],
+      // _Main3rdDissolveColor（加算到自发光 ✓）
+      dissolveMask: null,
+      // _Main3rdDissolveMask（url ✗ 采样 .r ✓）
+      dissolveMaskST: [1, 1, 0, 0],
+      dissolveNoiseMask: null,
+      // _Main3rdDissolveNoiseMask（url ✓）
+      dissolveNoiseMaskST: [1, 1, 0, 0],
+      dissolveNoiseScrollRotate: [0, 0, 0, 0],
+      dissolveNoiseStrength: 0,
+      // _Main3rdDissolveNoiseStrength ✓
+      /**
+       * 距离淡出（_Main3rdDistanceFade ✗ lil_common_frag.hlsl:796 ✓）
+       *
+       * lilToon 是一个 float4：(near, far, strength, 未用 ✓)
+       * ⚠️ 这里拆成 3 个标量 ✗ 面板上比一个 vec4 好调 ✓
+       *   语义完全一样 ✗ GLSL 里再合起来用 ✓
+       *
+       * 效果：离相机 **near 以内**完全不淡 ✗ far 以外淡到 strength 指定的程度 ✓
+       *   strength 1 = 完全淡掉（这一层消失 ✓）✗ 0 = 不淡 ✓
+       *   ⚠️ near == far 会除零 ✗ 代码里用 max(1e-5, ...) 兜底 ✓
+       */
+      distFadeNear: 0,
+      // _Main3rdDistanceFade.x
+      distFadeFar: 0,
+      // .y（默认 = near ⇒ 不淡 ✓）
+      distFadeStrength: 0
+      // .z
+    },
+    /**
+     * Dissolve（lil_common_functions.hlsl:626 lilCalcDissolve）
+     *
+     * 参数对应：
+     *   mode      _DissolveParams.r   0=关 1=贴图阈值 2=UV(平面/圆形) 3=对象空间(平面/球形)
+     *   linear    _DissolveParams.g   1=线性(平面) 0=圆形(球形)
+     *   threshold _DissolveParams.b   阈值
+     *   softness  _DissolveParams.a   边缘羽化宽度（0 会除零 ✗ 内部兜底 0.001）
+     *   pos       _DissolvePos        (xyz 中心/方向 ✗ w = UV 旋转)
+     *   color     _DissolveColor.rgb  边缘颜色（加色 ✗ 见 lil_common_frag.hlsl:1962）
+     *   maskTex   _DissolveMask       模式 1 用的遮罩贴图
+     *   noiseTex / noiseStrength      噪声扰动（lilCalcDissolveWithNoise ✗ :642）
+     */
+    /**
+     * 模板缓冲（Stencil）—— 对应 lilToon 的 _Stencil*（lts.shader:535-541 ✓）
+     *
+     * ⚠️ 这是**作者向**的技术 ✗ 用来「用 A 的形状遮罩 B」✗ 不是一种观感风格 ✓
+     *    典型用法：
+     *      角色网格：Pass = Replace ✗ Ref = 1（把自己标记进模板缓冲）
+     *      魔法阵  ：Comp = Equal ✗ Ref = 1（只画在角色占的像素上）
+     *    查看器里用处有限 ✗ 但 three 原生支持 ✗ 参数直通即可 ✓
+     *
+     * Unity 的枚举 → three 常量（两套编号完全不同 ✗ 见 applyStencil 的映射表 ✓）
+     */
+    stencil: {
+      use: false,
+      // 是否启用（对应 lilToon 靠材质开关关闭 ✓）
+      ref: 0,
+      // _StencilRef        0~255
+      readMask: 255,
+      // _StencilReadMask   0~255
+      writeMask: 255,
+      // _StencilWriteMask  0~255
+      comp: 8,
+      // _StencilComp       Unity CompareFunction（8 = Always ✗ 默认 ✓）
+      pass: 0,
+      // _StencilPass       Unity StencilOp（0 = Keep ✓）
+      fail: 0,
+      // _StencilFail
+      zfail: 0
+      // _StencilZFail
+    },
+    dissolve: {
+      mode: 0,
+      linear: 1,
+      threshold: 0.5,
+      softness: 0.03,
+      // 边缘羽化宽度 ✗ 太大时整只都会进边缘带（尤其球形模式）✓
+      pos: [0, 0, 0, 0],
+      color: [1, 1, 1],
+      maskTex: null,
+      noiseTex: null,
+      noiseStrength: 0
     }
-    const tex = new DataTexture(data, TOON_STEPS, 1, RGBAFormat);
-    tex.minFilter = NearestFilter;
-    tex.magFilter = NearestFilter;
-    tex.generateMipmaps = false;
-    tex.wrapS = ClampToEdgeWrapping;
-    tex.wrapT = ClampToEdgeWrapping;
-    tex.needsUpdate = true;
-    toonGradient = tex;
-    return tex;
+  };
+  let lilCfgByMaterial = {};
+  function mergeLilCfg(base, over) {
+    if (!over) return base;
+    const out = Object.assign({}, base);
+    for (const k of Object.keys(over)) {
+      const v = over[k], b = base[k];
+      const isObj = (x) => x && typeof x === "object" && !Array.isArray(x);
+      out[k] = isObj(v) && isObj(b) ? Object.assign({}, b, v) : v;
+    }
+    return out;
+  }
+  function normalizeLayerUse(c) {
+    if (!c) return c;
+    for (const g of ["main2nd", "main3rd"]) {
+      const L = c[g];
+      if (L && L.tex && !L.use) L.use = true;
+    }
+    return c;
+  }
+  function lilCfgFor(mat) {
+    const nm = mat && mat.name;
+    if (!nm || !lilCfgByMaterial[nm]) return normalizeLayerUse(lilCfg);
+    return normalizeLayerUse(mergeLilCfg(lilCfg, lilCfgByMaterial[nm]));
+  }
+  function celCfgFor() {
+    return celCfg;
+  }
+  let lilMatCapTex = null;
+  const LIL_DEFAULTS = JSON.parse(JSON.stringify(lilCfg));
+  const celCfg = {
+    shadowMin: 0.3,
+    // 投射阴影里保留多少主光（0 = 原来的硬阴影，1 = 完全没有阴影）；实测定标 0.3
+    faceShadowMin: 0.7,
+    // 面部单独一档；null = 跟随 shadowMin。0 = 最深，>=0.95 = 没有面部阴影
+    steps: 4,
+    // 明暗分档数（2 = 硬边两级）
+    dark: 0.55,
+    // 最暗档亮度（1.0 = 全亮）
+    shadowTint: null,
+    // 暗部色调 THREE.Color | null
+    /**
+     * 分档色（阶段 1 ①「每段各自颜色」）。
+     *
+     *   null  = **老公式**（mix(shadowTint, white, dark..1 线性)）✗ 默认 ✓
+     *   否则  = 4 个 [r,g,b] ✗ 从**最暗段**到**最亮段**线性插值出每一段的颜色 ✓
+     *
+     * ⚠️ 默认 null 是刻意的 —— 老公式一个字节都不变 ✗ 想用新功能才打开 ✓
+     *    这样「cel 模式没变」这条回归保证仍然成立 ✓
+     */
+    bandRamp: null,
+    /**
+     * 段与段之间的**过渡带宽度**（阶段 1 ①）。
+     *
+     *   0    = 硬边（floor ✓ 和老公式一致 ✓）
+     *   0.5  = 段内后半段平滑过渡
+     *   1    = 整段都是过渡（接近连续渐变）
+     *
+     * ⚠️ 只对 bandRamp 生效 ✗ bandRamp = null 时这个值被忽略 ✓
+     */
+    bandSoft: 0,
+    faceLight: false,
+    // 面部光照修正
+    facePattern: "Face|EyeMouth|Eyebrow|Mouth"
+  };
+  const CEL_DEFAULTS = JSON.parse(JSON.stringify(celCfg));
+  let celProgramVersion = 0;
+  let lilMaterialVersion = 0;
+  let renderMode = "toon";
+  let shaderMode = "cel";
+  function celSnapshot() {
+    const c = celCfg.shadowTint;
+    return {
+      steps: celCfg.steps,
+      dark: celCfg.dark,
+      shadowMin: celCfg.shadowMin,
+      faceShadowMin: celCfg.faceShadowMin,
+      shadowTint: c ? [+c.r.toFixed(4), +c.g.toFixed(4), +c.b.toFixed(4)] : null,
+      faceLight: celCfg.faceLight,
+      facePattern: celCfg.facePattern,
+      // 分档色：null 就原样带过去（导出 diff 时要能区分「没用」和「用了全白」✓）
+      bandRamp: Array.isArray(celCfg.bandRamp) ? celCfg.bandRamp.map((c2) => [+c2[0].toFixed(4), +c2[1].toFixed(4), +c2[2].toFixed(4)]) : null,
+      bandSoft: celCfg.bandSoft
+    };
+  }
+  function setCelParams(o) {
+    o = o || {};
+    if (o.steps !== void 0) celCfg.steps = Math.max(2, Math.min(16, Math.round(Number(o.steps)) || 4));
+    if (o.dark !== void 0) celCfg.dark = Math.max(0, Math.min(1, Number(o.dark)));
+    if (o.shadowMin !== void 0) celCfg.shadowMin = Math.max(0, Math.min(1, Number(o.shadowMin)));
+    if (o.faceShadowMin !== void 0) {
+      celCfg.faceShadowMin = o.faceShadowMin === null || o.faceShadowMin === void 0 ? null : Math.max(0, Math.min(1, Number(o.faceShadowMin)));
+    }
+    if (o.shadowTint !== void 0) {
+      if (o.shadowTint) {
+        const a = o.shadowTint;
+        celCfg.shadowTint = new Color(Number(a[0]) || 0, Number(a[1]) || 0, Number(a[2]) || 0);
+      } else celCfg.shadowTint = null;
+    }
+    if (o.faceLight !== void 0) celCfg.faceLight = !!o.faceLight;
+    if (o.facePattern !== void 0) celCfg.facePattern = String(o.facePattern);
+    if (o.bandRamp !== void 0) {
+      if (Array.isArray(o.bandRamp) && o.bandRamp.length >= 2) {
+        celCfg.bandRamp = o.bandRamp.slice(0, 4).map((c) => {
+          const a = Array.isArray(c) ? c : [1, 1, 1];
+          const cl = (x) => Math.max(0, Math.min(1, Number(x) || 0));
+          return [cl(a[0]), cl(a[1]), cl(a[2])];
+        });
+        while (celCfg.bandRamp.length < 4) celCfg.bandRamp.push(celCfg.bandRamp[celCfg.bandRamp.length - 1].slice());
+      } else celCfg.bandRamp = null;
+    }
+    if (o.bandSoft !== void 0) celCfg.bandSoft = Math.max(0, Math.min(1, Number(o.bandSoft) || 0));
+    cfg.faceNoShadow = deriveFaceNoShadow();
+    applyFaceNoShadow();
+    celProgramVersion++;
+    if (modelRoot) {
+      modelRoot.traverse((o2) => {
+        if (!o2.isMesh || !o2.material) return;
+        const mats = Array.isArray(o2.material) ? o2.material : [o2.material];
+        mats.forEach((m) => {
+          if (m) m.needsUpdate = true;
+        });
+      });
+    }
+    applyRender(renderMode);
+  }
+  function celGradientGLSL(cfgIn, ccIn) {
+    const cfg2 = cfgIn || lilCfg;
+    const cc = ccIn || celCfg;
+    const steps = Math.max(2, Math.min(16, Math.round(cc.steps) || 4));
+    const dark = Math.max(0, Math.min(1, Number(cc.dark)));
+    const c = cc.shadowTint;
+    const tint = c ? "vec3(" + c.r.toFixed(4) + ", " + c.g.toFixed(4) + ", " + c.b.toFixed(4) + ")" : "vec3(1.0)";
+    const num = (v, d) => v === void 0 || v === null || !isFinite(Number(v)) ? d : Number(v);
+    const col = (a) => "vec3(" + Number(a[0]).toFixed(4) + ", " + Number(a[1]).toFixed(4) + ", " + Number(a[2]).toFixed(4) + ")";
+    const alphaOf = (a) => Array.isArray(a) && a.length >= 4 && isFinite(Number(a[3])) ? Math.max(0, Math.min(1, Number(a[3]))) : 1;
+    if (shaderMode === "lilToon") {
+      const L = [];
+      L.push("vec3 getGradientIrradiance( vec3 normal, vec3 lightDirection ) {");
+      L.push("	float dotNL = dot( normal, lightDirection );");
+      L.push("	float t = clamp( dotNL * 0.5 + 0.5, 0.0, 1.0 );");
+      L.push("	float t1n = clamp( dot( ba3dShadowN1, lightDirection ) * 0.5 + 0.5, 0.0, 1.0 );");
+      L.push("	float t2n = clamp( dot( ba3dShadowN2, lightDirection ) * 0.5 + 0.5, 0.0, 1.0 );");
+      L.push("	float t3n = clamp( dot( ba3dShadowN3, lightDirection ) * 0.5 + 0.5, 0.0, 1.0 );");
+      L.push("	vec3 outCol = vec3( 1.0 );");
+      const __useShadow = Math.round(num(cfg2.useShadow, 1)) !== 0;
+      if (!__useShadow) {
+        L.push("	// _UseShadow = 0 ⇒ 阴影整段跳过（outCol 保持 1.0 ✓）");
+      } else {
+        L.push("	float t1 = t1n * mix( 1.0, ba3dShadowMaskG, " + Math.max(0, Math.min(1, num(cfg2.shadowReceive, 1))).toFixed(4) + " );");
+        L.push("	float s1 = 1.0 - ba3dLilToonRange( t1, " + num(cfg2.shadowBorder, 0.5).toFixed(4) + ", " + num(cfg2.shadowBlur, 0.1).toFixed(4) + ", " + Math.max(0, num(cfg2.shadowBorderRange, 0)).toFixed(4) + " );");
+        L.push("	outCol = mix( outCol, " + col(cfg2.shadowColor || [0.82, 0.76, 0.85]) + ", s1 * " + alphaOf(cfg2.shadowColor || [0.82, 0.76, 0.85]).toFixed(4) + " );");
+        L.push("	float t2 = t2n * mix( 1.0, ba3dShadowMaskG, " + Math.max(0, Math.min(1, num(cfg2.shadow2ndReceive, 1))).toFixed(4) + " );");
+        L.push("	float s2 = 1.0 - ba3dLilToon( t2, " + num(cfg2.shadow2ndBorder, 0.15).toFixed(4) + ", " + num(cfg2.shadow2ndBlur, 0.1).toFixed(4) + " );");
+        L.push("	outCol = mix( outCol, " + col(cfg2.shadow2ndColor || [0.68, 0.66, 0.79]) + ", s2 * " + alphaOf(cfg2.shadow2ndColor || [0.68, 0.66, 0.79]).toFixed(4) + " );");
+        if (cfg2.shadow3rdColor) {
+          L.push("	float t3 = t3n * mix( 1.0, ba3dShadowMaskG, " + Math.max(0, Math.min(1, num(cfg2.shadow3rdReceive, 1))).toFixed(4) + " );");
+          L.push("	float s3 = 1.0 - ba3dLilToon( t3, " + num(cfg2.shadow3rdBorder, 0.25).toFixed(4) + ", " + num(cfg2.shadow3rdBlur, 0.1).toFixed(4) + " );");
+          L.push("	outCol = mix( outCol, " + col(cfg2.shadow3rdColor) + ", s3 * " + alphaOf(cfg2.shadow3rdColor).toFixed(4) + " );");
+        }
+      }
+      L.push("	return mix( vec3( 1.0 ), outCol, " + Math.max(0, Math.min(2, num(cfg2.shadowStrength, 1))).toFixed(4) + " );");
+      L.push("}");
+      return L.join("\n");
+    }
+    const ramp = Array.isArray(cc.bandRamp) && cc.bandRamp.length >= 2 ? cc.bandRamp : null;
+    if (ramp) {
+      const soft = Math.max(0, Math.min(1, Number(cc.bandSoft) || 0));
+      const C = (i) => {
+        const a = ramp[Math.min(i, ramp.length - 1)] || [1, 1, 1];
+        return "vec3(" + Number(a[0]).toFixed(4) + ", " + Number(a[1]).toFixed(4) + ", " + Number(a[2]).toFixed(4) + ")";
+      };
+      return [
+        /**
+         * ⚠️ GLSL **不允许函数嵌套定义**（和 HLSL 不同 · 第一版就栽在这里 ✓）
+         *    ⇒ 查表函数必须是**顶层** · 所以它排在 getGradientIrradiance 前面 ✓
+         *
+         * 4 个色标把 0~1 分成 3 段 · 每段内线性插值 ✓
+         * 段号用 step 选 · 规避 GLSL ES 1.00 不能用变量下标数组的限制 ✓
+         */
+        "vec3 ba3dRamp4( float u ) {",
+        "	float x = clamp( u, 0.0, 1.0 ) * 3.0;",
+        "	vec3 a = mix( " + C(0) + ", " + C(1) + ", clamp( x, 0.0, 1.0 ) );",
+        "	vec3 b = mix( " + C(1) + ", " + C(2) + ", clamp( x - 1.0, 0.0, 1.0 ) );",
+        "	vec3 c = mix( " + C(2) + ", " + C(3) + ", clamp( x - 2.0, 0.0, 1.0 ) );",
+        "	return mix( mix( a, b, step( 1.0, x ) ), c, step( 2.0, x ) );",
+        "}",
+        "vec3 getGradientIrradiance( vec3 normal, vec3 lightDirection ) {",
+        "	float dotNL = dot( normal, lightDirection );",
+        "	float t = clamp( dotNL * 0.5 + 0.5, 0.0, 1.0 );",
+        "	float x = t * " + (steps - 1) + ".0;",
+        "	float bi = floor( x );",
+        "	float bf = x - bi;",
+        "	float s = " + soft.toFixed(4) + " > 0.0005 ? smoothstep( 0.0, " + soft.toFixed(4) + ", bf ) : 0.0;",
+        "	float d = max( " + (steps - 1) + ".0, 1.0 );",
+        "	float u0 = bi / d;",
+        "	float u1 = min( u0 + 1.0 / d, 1.0 );",
+        "	return mix( ba3dRamp4( u0 ), ba3dRamp4( u1 ), s );",
+        "}"
+      ].join("\n");
+    }
+    return [
+      "vec3 getGradientIrradiance( vec3 normal, vec3 lightDirection ) {",
+      "	float dotNL = dot( normal, lightDirection );",
+      "	float t = clamp( dotNL * 0.5 + 0.5, 0.0, 1.0 );",
+      "	float q = floor( t * " + steps + ".0 ) / max( " + steps + ".0 - 1.0, 1.0 );",
+      "	q = clamp( q, 0.0, 1.0 );",
+      "	float v = " + dark.toFixed(4) + " + " + (1 - dark).toFixed(4) + " * q;",
+      "	return mix( " + tint + ", vec3( 1.0 ), v );",
+      "}"
+    ].join("\n");
+  }
+  function lilSpecularGLSL(R, tag) {
+    const num = (v, d) => v === void 0 || v === null || !isFinite(Number(v)) ? d : Number(v);
+    const cl = (v, d) => Math.max(0, Math.min(1, num(v, d)));
+    if (!R || !R.use) return "";
+    const aa = cl(R.aaStrength, 1);
+    const toon = R.toon !== false;
+    const border = cl(R.border, 0.5);
+    const blur = cl(R.blur, 0);
+    const nstr = cl(R.normalStrength, 1);
+    const smooth = cl(R.smoothness, 1);
+    const reflect = cl(R.reflectance, 0.04);
+    const metal = cl(R.metallic, 0);
+    const bmode = Math.round(Math.max(0, Math.min(3, num(R.blendMode, 1))));
+    const c = Array.isArray(R.color) ? R.color : [1, 1, 1, 1];
+    const cr = num(c[0], 1).toFixed(4), cg = num(c[1], 1).toFixed(4), cb = num(c[2], 1).toFixed(4);
+    const ca = cl(c[3], 1);
+    const pr = 1 - smooth;
+    const rough = pr * pr;
+    const invRough = rough > 1e-3 ? (1 / rough).toFixed(4) : "0.0";
+    const L = [];
+    L.push("	{");
+    L.push("		// _SpecularNormalStrength：在 origN 与 N 之间插值");
+    L.push("		vec3 ba3dSpN = normalize( mix( ba3dNrmOrig, ba3dN, " + nstr.toFixed(4) + " ) );");
+    L.push("		// 半角向量与 nh");
+    L.push("		vec3 ba3dSpH = normalize( ba3dV + ba3dL );");
+    L.push("		float ba3dSpNH = clamp( dot( ba3dSpN, ba3dSpH ), 0.0, 1.0 );");
+    if (toon) {
+      if (rough > 1e-3) {
+        L.push("		float ba3dSpTerm = pow( ba3dSpNH, " + invRough + " );");
+      } else {
+        L.push("		// roughness = 0（_Smoothness = 1）⇒ 等价于 HLSL 的 pow( nh, +INF ) = step(1, nh)");
+        L.push("		float ba3dSpTerm = ba3dSpNH >= 1.0 ? 1.0 : 0.0;");
+      }
+      L.push("		float ba3dSpLo = clamp( " + border.toFixed(4) + " - " + blur.toFixed(4) + " * 0.5, 0.0, 1.0 );");
+      L.push("		float ba3dSpHi = clamp( " + border.toFixed(4) + " + " + blur.toFixed(4) + " * 0.5, 0.0, 1.0 );");
+      L.push("		float ba3dSpCol2 = clamp( ( ba3dSpTerm - ba3dSpLo ) / max( 1e-4, ba3dSpHi - ba3dSpLo + fwidth( ba3dSpTerm ) * " + aa.toFixed(4) + " ), 0.0, 1.0 );");
+    } else {
+      L.push("		float ba3dSpTerm = pow( ba3dSpNH, " + (rough > 1e-3 ? invRough : "1024.0") + " );");
+      L.push("		float ba3dSpCol2 = ba3dSpTerm * " + (reflect + metal * (1 - reflect)).toFixed(4) + ";");
+    }
+    L.push("		vec3 ba3dSpColor = vec3( " + cr + ", " + cg + ", " + cb + " ) * ba3dLightCol;");
+    L.push("		gl_FragColor.rgb = ba3dBlend( gl_FragColor.rgb, ba3dSpColor, clamp( ba3dSpCol2 * " + ca.toFixed(4) + ", 0.0, 1.0 ), " + bmode + "u );");
+    L.push("	}");
+    const out = L.join("\n");
+    if (tag) console.debug("[reflection] " + tag + "：toon=" + (toon ? 1 : 0) + " border=" + border + " blur=" + blur + " normalStrength=" + nstr + " smoothness=" + smooth + " roughness=" + rough.toFixed(4) + " reflectance=" + reflect + " metallic=" + metal + " blendMode=" + bmode + " aa=" + aa);
+    return out;
+  }
+  function lilMatCapGLSL(M, texUni, triCall, tag, nrmVar) {
+    const num = (v, d) => v === void 0 || v === null || !isFinite(Number(v)) ? d : Number(v);
+    if (!M || !M.url || num(M.blend, 0) === 0) return "";
+    const bs = Math.max(0, Math.min(1, num(M.blend, 1)));
+    const el = Math.max(0, Math.min(1, num(M.enableLighting, 1)));
+    const sm = Math.max(0, Math.min(1, num(M.shadowMask, 0)));
+    const ms = Math.max(0, Math.min(1, num(M.mainStrength, 0)));
+    const bmode = Math.round(Math.max(0, Math.min(3, num(M.blendMode, 0))));
+    const bfm = Math.round(Math.max(0, Math.min(2, num(M.backfaceMask, 1))));
+    const c = Array.isArray(M.color) ? M.color : [1, 1, 1, 1];
+    const tint = "vec3(" + [0, 1, 2].map((i) => num(c[i], 1).toFixed(4)).join(", ") + ")";
+    const ca = num(c[3], 1);
+    const L = [];
+    L.push("	{");
+    const lodV = num(M.lod, 0);
+    const cnUni = texUni === "ba3dMatCap2nd" ? "ba3dMatCap2ndBumpMap" : "ba3dMatCapBumpMap";
+    const useCN = !!M.customNormal && !!M.bumpMap;
+    L.push("		vec3 ba3dCapN = " + (nrmVar || "ba3dNCap") + ";");
+    if (useCN) {
+      const cbs = Math.max(-10, Math.min(10, num(M.bumpScale, 1))).toFixed(4);
+      L.push("		{");
+      L.push("			vec3 ba3dCapBn = texture2D( " + cnUni + ", vBa3dUv ).xyz * 2.0 - 1.0;");
+      L.push("			ba3dCapBn.xy *= " + cbs + ";");
+      L.push("			ba3dCapN = normalize( tbn * normalize( ba3dCapBn ) );");
+      L.push("		}");
+    }
+    const lodArg = Math.abs(lodV) > 1e-6 ? ", " + lodV.toFixed(4) : "";
+    const zrcV = Math.max(0, Math.min(1, num(M.zRotCancel, 1))).toFixed(4);
+    const prpV = Math.max(0, Math.min(1, num(M.perspective, 1))).toFixed(4);
+    L.push("		vec3 ba3dCapNw = inverseTransformDirection( normalize( ba3dCapN ), viewMatrix );");
+    L.push("		vec3 ba3dNvd = ( " + prpV + " > 0.5 && !isOrthographic ) ? normalize( cameraPosition - vBa3dPositionWS ) : normalize( vec3( viewMatrix[ 2 ] ) );");
+    L.push("		vec3 ba3dBtd = " + zrcV + " > 0.5 ? vec3( 0.0, 1.0, 0.0 ) : normalize( vec3( viewMatrix[ 1 ] ) );");
+    L.push("		ba3dBtd = normalize( ba3dBtd - ba3dNvd * dot( ba3dNvd, ba3dBtd ) );");
+    L.push("		vec3 ba3dTgd = cross( ba3dNvd, ba3dBtd );");
+    L.push("		vec2 uvMat = vec2( dot( ba3dTgd, ba3dCapNw ), dot( ba3dBtd, ba3dCapNw ) ) * 0.5 + 0.5;");
+    L.push("		vec3 matcap = " + tint + " * texture2D( " + texUni + ", uvMat" + lodArg + " ).rgb;");
+    L.push("		vec3 ba3dCapMul = mix( vec3( 1.0 ), ba3dLightCol, " + el.toFixed(4) + " );");
+    L.push("		vec3 ba3dCapSrc = " + (M.mul ? "gl_FragColor.rgb * matcap" : "gl_FragColor.rgb + matcap") + " * ba3dCapMul;");
+    if (ms > 0) {
+      L.push("		ba3dCapSrc = mix( ba3dCapSrc, ba3dCapSrc * diffuseColor.rgb, " + ms.toFixed(4) + " );");
+    }
+    L.push("		float ba3dCapShadow = mix( 1.0, ba3dShadowMaskG, " + sm.toFixed(4) + " );");
+    const maskUni = texUni === "ba3dMatCap2nd" ? "ba3dMatCap2ndBlendMask" : "ba3dMatCapBlendMask";
+    const hasMask = !!M.blendMask;
+    if (hasMask) {
+      L.push("		vec3 ba3dCapMask = texture2D( " + maskUni + ", vBa3dUv ).rgb;");
+    }
+    let aExpr = bs.toFixed(4) + " * " + ca.toFixed(4) + " * " + triCall + " * ba3dCapShadow";
+    if (hasMask) aExpr = "vec3( " + aExpr + " ) * ba3dCapMask";
+    const __fn = hasMask ? "ba3dBlend3" : "ba3dBlend";
+    const __zero = hasMask ? "vec3( 0.0 )" : "0.0";
+    L.push("		gl_FragColor.rgb = " + __fn + "( gl_FragColor.rgb, ba3dCapSrc, " + (bfm === 0 ? aExpr : bfm === 1 ? "( gl_FrontFacing ? " + aExpr + " : " + __zero + " )" : "( gl_FrontFacing ? " + __zero + " : " + aExpr + " )") + ", " + bmode + "u );");
+    L.push("	}");
+    const out = L.join("\n");
+    if (tag) console.debug("[matcap] " + tag + "：blend=" + bs + " mode=" + bmode + " enableLighting=" + el + " shadowMask=" + sm + " mainStrength=" + ms + " backfaceMask=" + bfm + " blendMask=" + (M.blendMask ? "有" : "无") + " 采遮罩=" + (hasMask ? "是" : "否") + " lod=" + lodV + " 自定法线=" + (useCN ? "有" : "无") + " vrParallax=" + num(M.vrParallax, 0) + "（非VR无效） zRotCancel=" + num(M.zRotCancel, 1) + " perspective=" + num(M.perspective, 1));
+    return out;
+  }
+  function lilEmissionGLSL(E, texUni, maskUni, varName, tag) {
+    const num = (v, d) => v === void 0 || v === null || !isFinite(Number(v)) ? d : Number(v);
+    const v3 = (arr, d) => "vec3(" + [0, 1, 2].map((i) => num(arr && arr[i], d[i]).toFixed(4)).join(", ") + ")";
+    if (!E || !E.use || num(E.blend, 0) === 0) return null;
+    const bs = Math.max(0, Math.min(1, num(E.blend, 1)));
+    const L2 = [];
+    L2.push("	{");
+    L2.push("		vec3 " + varName + " = " + v3(E.color, [1, 1, 1]) + ";");
+    if (E.tex) {
+      L2.push("		" + varName + " *= texture2D( " + texUni + ", vBa3dUv ).rgb;");
+    }
+    let maskVar = null;
+    if (E.blendMask) {
+      maskVar = varName + "Mask";
+      L2.push("		vec4 " + maskVar + " = texture2D( " + maskUni + ", vBa3dUv );");
+      L2.push("		" + varName + " *= " + maskVar + ".rgb;");
+    }
+    const alpha = maskVar ? " * " + maskVar + ".a" : "";
+    L2.push("		gl_FragColor.rgb = ba3dBlend( gl_FragColor.rgb, " + varName + ", " + bs.toFixed(4) + " * ba3dMaskB()" + alpha + ", " + Math.round(num(E.blendMode, 0)) + "u );");
+    L2.push("	}");
+    if (tag) console.debug("[emission] " + tag + "：blend=" + bs.toFixed(3) + " mode=" + Math.round(num(E.blendMode, 0)) + " tex=" + (E.tex ? "有" : "无") + " mask=" + (E.blendMask ? "有" : "无") + " uvMode=" + Math.round(num(E.uvMode, 0)));
+    return L2;
+  }
+  function lilShaderGLSL(cfgIn) {
+    const cfg2 = cfgIn || lilCfg;
+    const R = cfg2.rim, M = cfg2.matcap, E = cfg2.emission, B = cfg2.backlight;
+    const num = (v, d) => v === void 0 || v === null || !isFinite(Number(v)) ? d : Number(v);
+    const v3 = (a, d) => "vec3(" + [0, 1, 2].map((i) => Number(a && a[i] !== void 0 ? a[i] : d[i]).toFixed(4)).join(", ") + ")";
+    const E2 = cfg2.emission2nd;
+    const anyOn = R && num(R.blend, 0) !== 0 || M && M.url && num(M.blend, 0) !== 0 || cfg2.matcap2nd && cfg2.matcap2nd.url && num(cfg2.matcap2nd.blend, 0) !== 0 || E && E.use && num(E.blend, 0) !== 0 || E2 && E2.use && num(E2.blend, 0) !== 0 || B && num(B.blend, 0) !== 0 || cfg2.reflection && cfg2.reflection.use;
+    if (!anyOn) return "";
+    const L = [];
+    L.push("");
+    L.push("// ===== lilToon 风格（阶段 1）=====");
+    L.push("{");
+    L.push("	vec3 ba3dN = normalize( normal );");
+    L.push("	vec3 ba3dNrmOrig = normalize( nonPerturbedNormal );");
+    const nsBack = Math.max(0, Math.min(1, num(B && B.normalStrength, 1))).toFixed(4);
+    const nsCap = Math.max(0, Math.min(1, num(M && M.normalStrength, 1))).toFixed(4);
+    const nsCap2 = Math.max(0, Math.min(1, num(cfg2.matcap2nd && cfg2.matcap2nd.normalStrength, 1))).toFixed(4);
+    const nsRim = Math.max(0, Math.min(1, num(R && R.normalStrength, 1))).toFixed(4);
+    L.push("	vec3 ba3dNBack = normalize( mix( ba3dNrmOrig, ba3dN, " + nsBack + " ) );");
+    L.push("	vec3 ba3dNCap = normalize( mix( ba3dNrmOrig, ba3dN, " + nsCap + " ) );");
+    L.push("	vec3 ba3dNCap2 = normalize( mix( ba3dNrmOrig, ba3dN, " + nsCap2 + " ) );");
+    L.push("	vec3 ba3dNRim = normalize( mix( ba3dNrmOrig, ba3dN, " + nsRim + " ) );");
+    L.push("	vec3 ba3dV = normalize( vBa3dViewPos );");
+    L.push("	vec3 ba3dL = normalize( directionalLights[ 0 ].direction );");
+    L.push("	vec3 ba3dLightCol = directionalLights[ 0 ].color;");
+    L.push("	float ba3dNL = dot( ba3dN, ba3dL );");
+    if (B && num(B.blend, 0) !== 0) {
+      L.push("	{");
+      L.push("		vec3 N = ba3dNBack;");
+      L.push("		vec3 V = normalize( vBa3dViewPos );");
+      L.push("		float hl = dot( ba3dL, V );");
+      L.push("		float factor = pow( saturate( -hl * 0.5 + 0.5 ), " + Math.max(1e-3, num(B.directivity, 5)).toFixed(4) + " );");
+      L.push("		vec3 Ldir = normalize( -V * " + num(B.viewStrength, 1).toFixed(4) + " + ba3dL );");
+      L.push("		float ln = dot( Ldir, N ) * 0.5 + 0.5;");
+      L.push("		ln = ba3dLilToon( ln, " + num(B.border, 0.35).toFixed(4) + ", " + num(B.blur, 0.05).toFixed(4) + " );");
+      L.push("		gl_FragColor.rgb += saturate( factor * ln ) * " + v3(B.color, [1, 1, 1]) + " * ba3dLightCol;");
+      L.push("	}");
+    }
+    {
+      const __spc = lilSpecularGLSL(cfg2.reflection, "1st");
+      if (__spc) L.push(__spc);
+      const __cap1 = lilMatCapGLSL(M, "ba3dMatCap", "ba3dMaskR()", "1st", "ba3dNCap");
+      if (__cap1) L.push(__cap1);
+      const __cap2 = lilMatCapGLSL(cfg2.matcap2nd, "ba3dMatCap2nd", "ba3dMaskR()", "2nd", "ba3dNCap2");
+      if (__cap2) L.push(__cap2);
+    }
+    if (R && num(R.blend, 0) !== 0) {
+      const bs = Math.max(0, Math.min(1, num(R.blend, 1)));
+      L.push("	{");
+      L.push("		vec3 N = ba3dNRim;");
+      L.push("		vec3 V = normalize( vBa3dViewPos );");
+      L.push("		float nvabs = abs( dot( N, V ) );");
+      L.push("		float lnRaw = dot( ba3dL, N ) * 0.5 + 0.5;");
+      L.push("		float lnDir = saturate( ( lnRaw + " + num(R.dirRange, 0).toFixed(4) + " ) / ( 1.0 + " + num(R.dirRange, 0).toFixed(4) + " ) );");
+      L.push("		float lnIndir = saturate( ( 1.0 - lnRaw + " + num(R.indirRange, 0).toFixed(4) + " ) / ( 1.0 + " + num(R.indirRange, 0).toFixed(4) + " ) );");
+      L.push("		float rim = pow( saturate( 1.0 - nvabs ), " + num(R.fresnelPower, 1).toFixed(4) + " );");
+      L.push("		float rimDir = mix( rim, rim * lnDir, " + num(R.dirStrength, 0).toFixed(4) + " );");
+      L.push("		float rimIndir = rim * lnIndir * " + num(R.dirStrength, 0).toFixed(4) + ";");
+      L.push("		rimDir = ba3dLilToon( rimDir, " + num(R.border, 0.5).toFixed(4) + ", " + num(R.blur, 0.65).toFixed(4) + " );");
+      L.push("		rimIndir = ba3dLilToon( rimIndir, " + num(R.indirBorder, 0.5).toFixed(4) + ", " + num(R.indirBlur, 0.1).toFixed(4) + " );");
+      L.push("		vec3 ba3dRimMul = mix( vec3( 1.0 ), ba3dLightCol, " + Math.max(0, Math.min(1, num(R.enableLighting, 1))).toFixed(4) + " );");
+      L.push("		float ba3dRimMask = ba3dMaskG();");
+      L.push("		float ba3dRimShadow = mix( 1.0, ba3dShadowMaskG, " + num(R.shadowMask, 0).toFixed(4) + " );");
+      L.push("		gl_FragColor.rgb = ba3dBlend( gl_FragColor.rgb, " + v3(R.color, [1, 1, 1]) + " * ba3dRimMul, rimDir * " + bs.toFixed(4) + " * ba3dRimMask * ba3dRimShadow, " + Math.round(num(R.blendMode, 1)) + "u );");
+      L.push("		gl_FragColor.rgb = ba3dBlend( gl_FragColor.rgb, " + v3(R.indirColor, [1, 1, 1]) + " * ba3dRimMul, rimIndir * " + bs.toFixed(4) + " * ba3dRimMask * ba3dRimShadow, " + Math.round(num(R.blendMode, 1)) + "u );");
+      L.push("	}");
+    }
+    {
+      const __emi1 = lilEmissionGLSL(E, "ba3dEmissionMap", "ba3dEmissionBlendMask", "ba3dEmi", "1st");
+      if (__emi1) for (const ln of __emi1) L.push(ln);
+    }
+    {
+      const __emi2 = lilEmissionGLSL(cfg2.emission2nd, "ba3dEmission2ndMap", "ba3dEmission2ndBlendMask", "ba3dEmi2", "2nd");
+      if (__emi2) for (const ln of __emi2) L.push(ln);
+    }
+    L.push("}");
+    const out = L.join("\n");
+    const HLSL_ISMS = ["lerp(", "frac(", "atan2(", "tex2D(", "mul("];
+    for (const bad of HLSL_ISMS) {
+      if (out.indexOf(bad) >= 0) console.error('[lilToon] GLSL 里出现 HLSL 写法 "' + bad + '"，会导致着色器编译失败！');
+    }
+    return out;
+  }
+  function lilMainLayerGLSL(cfgIn, which, alphaRender) {
+    const cfg2 = cfgIn || lilCfg;
+    const Lc = cfg2[which === "3rd" ? "main3rd" : "main2nd"];
+    if (typeof console !== "undefined") {
+      console.debug("[layer] " + which + " | use=" + (Lc && Lc.use ? 1 : 0) + " tex=" + (Lc && Lc.tex ? "有" : "**无**") + " isDecal=" + (Lc && Lc.isDecal ? 1 : 0) + " uvMode=" + (Lc ? Math.round(Number(Lc.uvMode) || 0) : "-") + " blendMode=" + (Lc ? Math.round(Number(Lc.blendMode) || 0) : "-") + " enableLighting=" + (Lc ? Number(Lc.enableLighting) : "-"));
+    }
+    if (!Lc || !Lc.use) return null;
+    const num = (v, d) => v === void 0 || v === null || !isFinite(Number(v)) ? d : Number(v);
+    const v3 = (a, d) => "vec3(" + [0, 1, 2].map((i) => num(a && a[i], d[i]).toFixed(4)).join(", ") + ")";
+    const alpha = (a) => num(a && a[3], 1);
+    const el = Math.max(0, Math.min(1, num(Lc.enableLighting, 1)));
+    const bm = Math.round(Math.max(0, Math.min(3, num(Lc.blendMode, 0))));
+    const uvMode = Math.round(num(Lc.uvMode, 0));
+    const cull = Math.round(Math.max(0, Math.min(2, num(Lc.cull, 0))));
+    const hasTex = !!Lc.tex;
+    const hasMask = !!Lc.blendMask;
+    const varName = which === "3rd" ? "ba3dColor3rd" : "ba3dColor2nd";
+    const texUni = which === "3rd" ? "ba3dMain3rdTex" : "ba3dMain2ndTex";
+    const maskUni = which === "3rd" ? "ba3dMain3rdBlendMask" : "ba3dMain2ndBlendMask";
+    let uvExpr = "vBa3dUv";
+    if (uvMode === 4) {
+      uvExpr = "( viewMatrix * vec4( normalize( normal ), 0.0 ) ).xy * 0.5 + 0.5";
+    } else if (uvMode === 1) {
+      uvExpr = "vBa3dUv1";
+    } else if (uvMode >= 2 && uvMode <= 3) {
+      console.debug("[main" + which + "] uvMode=" + uvMode + " 需要 uv" + uvMode + " ✗ 我们只上行了 uv0/uv1（glTF 的 TEXCOORD_2 一般也没有）✗ 回退到 uv0");
+    }
+    const B = [];
+    B.push("");
+    B.push("// ===== 主色层 " + which + "（lilGetMain" + which + "）=====");
+    B.push("{");
+    B.push("	vec4 ba3dLc = vec4( " + v3(Lc.color, [1, 1, 1]) + ", " + alpha(Lc.color).toFixed(4) + " );");
+    const isDecal = !!Lc.isDecal;
+    if (hasTex && !isDecal) {
+      B.push("	ba3dLc *= texture2D( " + texUni + ", " + uvExpr + " );");
+    } else if (hasTex && isDecal) {
+      const st = Array.isArray(Lc.texST) ? Lc.texST : [1, 1, 0, 0];
+      const stx = num(st[0], 1).toFixed(6), sty = num(st[1], 1).toFixed(6);
+      const stz = num(st[2], 0).toFixed(6), stw = num(st[3], 0).toFixed(6);
+      const ang = num(Lc.texAngle, 0).toFixed(6);
+      const an = Array.isArray(Lc.decalAnimation) ? Lc.decalAnimation : [1, 1, 1, 30];
+      const sp = Array.isArray(Lc.decalSubParam) ? Lc.decalSubParam : [1, 1, 0, 1];
+      const ax = Math.max(1e-5, num(an[0], 1)), ay = Math.max(1e-5, num(an[1], 1));
+      const az = Math.max(0, num(an[2], 1)), aw = num(an[3], 30);
+      const px = num(sp[0], 1).toFixed(6), py = num(sp[1], 1).toFixed(6), pz = num(sp[2], 0).toFixed(6);
+      const D = [];
+      D.push("	// _Main" + which + "TexIsDecal：lilCalcDecalUV（lil_common_functions.hlsl:473）");
+      D.push("	vec2 ba3dDcUv = " + uvExpr + ";");
+      D.push("	vec2 ba3dDcRaw = " + uvExpr + ";   // FlipCopy 判据用的是**原始** uv.x");
+      if (Lc.shouldCopy) D.push("	ba3dDcUv.x = abs( ba3dDcUv.x - 0.5 ) + 0.5;");
+      D.push("	ba3dDcUv = ba3dDcUv * vec2( " + stx + ", " + sty + " ) + vec2( " + stz + ", " + stw + " );");
+      if (Lc.shouldFlipCopy) D.push("	if ( ba3dDcRaw.x < 0.5 ) ba3dDcUv.x = 1.0 - ba3dDcUv.x;");
+      if (Lc.shouldFlipMirror) D.push("	if ( vBa3dRightHand > 0.5 ) ba3dDcUv.x = 1.0 - ba3dDcUv.x;");
+      if (Lc.isLeftOnly) D.push("	if ( vBa3dRightHand > 0.5 ) ba3dDcUv.x = -1.0;   // 右半隐藏");
+      if (Lc.isRightOnly) D.push("	if ( vBa3dRightHand < 0.5 ) ba3dDcUv.x = -1.0;   // 左半隐藏");
+      D.push("	ba3dDcUv = ( ba3dDcUv - vec2( " + stz + ", " + stw + " ) ) / vec2( " + stx + ", " + sty + " );");
+      D.push("	{ float si = sin( " + ang + " ); float co = cos( " + ang + " );");
+      D.push("	  vec2 o = ba3dDcUv - 0.5;");
+      D.push("	  ba3dDcUv = vec2( o.x * co - o.y * si, o.x * si + o.y * co ) + 0.5; }");
+      D.push("	ba3dDcUv = ba3dDcUv * vec2( " + stx + ", " + sty + " ) + vec2( " + stz + ", " + stw + " );");
+      D.push("	// 图集帧动画（lilCalcAtlasAnimationAtAnimTime · lil_common_functions.hlsl:533）");
+      D.push("	vec2 ba3dDcSamp;");
+      D.push("	{ vec2 o = mix( vec2( ba3dDcUv.x, 1.0 - ba3dDcUv.y ), vec2( 0.5 ), " + pz + " );");
+      D.push("	  float ba3dAnimN = " + (aw === 0 ? az.toFixed(6) : "mod( floor( uBa3dTime * " + aw.toFixed(6) + " ), " + Math.max(1, az).toFixed(6) + " )") + ";");
+      D.push("	  float ba3dOx = mod( ba3dAnimN, " + ax.toFixed(6) + " );");
+      D.push("	  float ba3dOy = floor( ba3dAnimN / " + ax.toFixed(6) + " );");
+      D.push("	  o = ( o + vec2( ba3dOx, ba3dOy ) ) * vec2( " + px + ", " + py + " ) / vec2( " + ax.toFixed(6) + ", " + ay.toFixed(6) + " );");
+      D.push("	  ba3dDcSamp = vec2( o.x, 1.0 - o.y ); }");
+      D.push("	vec4 ba3dDcCol = texture2D( " + texUni + ", ba3dDcSamp );");
+      D.push("	// 边缘 AA（lilIsIn0to1( uv2, saturate( nv - 0.05 ) ) ✗ 只判 x ✓）");
+      D.push("	{ float ba3dDcIn = 0.5 - abs( ba3dDcUv.x - 0.5 );");
+      D.push("	  float ba3dNv = clamp( dot( normalize( normal ), normalize( vBa3dViewPos ) ), 0.0, 1.0 );");
+      D.push("	  ba3dDcCol.a *= saturate( ba3dDcIn / clamp( fwidth( ba3dDcIn ), 0.0001, saturate( ba3dNv - 0.05 ) ) ); }");
+      const dbg = Math.round(Math.max(0, Math.min(3, num(Lc.decalDebug, 0))));
+      if (dbg === 1) {
+        D.push("	// [调试 1] 跳过边缘 AA：ba3dDcCol.a 保持贴图原值");
+      } else if (dbg === 2) {
+        D.push("	// [调试 2] 把 decal UV 输出成颜色（R=uv.x G=uv.y）· alpha=1");
+        D.push("	ba3dDcCol = vec4( fract( ba3dDcUv.x ), fract( ba3dDcUv.y ), 1.0, 1.0 );");
+      } else if (dbg === 3) {
+        D.push("	// [调试 3] alpha 强制 1（保留 RGB）");
+        D.push("	ba3dDcCol.a = 1.0;");
+      }
+      D.push("	ba3dLc *= ba3dDcCol;");
+      D.forEach((l) => B.push(l));
+      if (typeof console !== "undefined") console.debug("[decal] " + which + " | use=" + (Lc.use ? 1 : 0) + " tex=" + (Lc.tex ? "有" : "**无**") + " isDecal=" + (Lc.isDecal ? 1 : 0) + " uvMode=" + uvMode + " | copy=" + (Lc.shouldCopy ? 1 : 0) + " flipMirror=" + (Lc.shouldFlipMirror ? 1 : 0) + " flipCopy=" + (Lc.shouldFlipCopy ? 1 : 0) + " left=" + (Lc.isLeftOnly ? 1 : 0) + " right=" + (Lc.isRightOnly ? 1 : 0) + " | anim=(" + ax + "," + ay + "," + az + "," + aw + ") sub=(" + px + "," + py + "," + pz + ") | texST=(" + stx + "," + sty + "," + stz + "," + stw + ") rawTexST=" + JSON.stringify(Lc.texST) + " rawAnim=" + JSON.stringify(Lc.decalAnimation) + " rawSub=" + JSON.stringify(Lc.decalSubParam) + " decalDebug=" + Math.round(Math.max(0, Math.min(3, num(Lc.decalDebug, 0)))));
+    }
+    if (hasMask) B.push("	ba3dLc.a *= texture2D( " + maskUni + ", vBa3dUv ).r;");
+    const dmode = Math.round(Math.max(0, Math.min(3, num(Lc.dissolveMode, 0))));
+    const edgeVar = which === "3rd" ? "ba3dDisEdge3rd" : "ba3dDisEdge2nd";
+    if (window.__ba3dDebugUI && dmode > 0) {
+      console.debug("[layer" + which + "] 层溶解 mode=" + dmode + " shape=" + (num(Lc.dissolveDir, 0) === 1 ? "Line" : "Point") + " thr=" + num(Lc.dissolveThreshold, 0.5) + " soft=" + num(Lc.dissolveSoftness, 0.1) + " pos=" + JSON.stringify(Lc.dissolvePos || [0, 0, 0, 0]) + " color=" + JSON.stringify(Lc.dissolveColor || [1, 1, 1]) + " mask=" + (Lc.dissolveMask ? "有" : "无") + " noise=" + (Lc.dissolveNoiseMask ? "有" : "无"));
+    }
+    const hasDMask = !!Lc.dissolveMask;
+    const hasDNoise = !!Lc.dissolveNoiseMask;
+    if (dmode > 0) {
+      const thr = num(Lc.dissolveThreshold, 0.5).toFixed(4);
+      const soft = Math.max(1e-5, num(Lc.dissolveSoftness, 0.1)).toFixed(5);
+      const dmDir = Math.round(num(Lc.dissolveDir, 0)) === 1;
+      const dpos = Lc.dissolvePos || [0, 0, 0, 0];
+      const dpx = num(dpos[0], 0).toFixed(4);
+      const dpy = num(dpos[1], 0).toFixed(4);
+      const dpz = num(dpos[2], 0).toFixed(4);
+      const dns = num(Lc.dissolveNoiseStrength, 0).toFixed(4);
+      const dmUni = which === "3rd" ? "ba3dMain3rdDisMask" : "ba3dMain2ndDisMask";
+      const dnUni = which === "3rd" ? "ba3dMain3rdDisNoise" : "ba3dMain2ndDisNoise";
+      const dv = "ba3dDis" + which;
+      const P = (x) => B.push(x);
+      P("  // 层溶解 dissolveMode=" + dmode + " thr=" + thr + " soft=" + soft);
+      P("  {");
+      P("    float " + dv + "Mask = 1.0;");
+      if (dmode === 1 && hasDMask) P("    " + dv + "Mask = texture2D( " + dmUni + ", vBa3dUv ).r;");
+      if (hasDNoise) P("    float " + dv + "Noise = ( texture2D( " + dnUni + ", vBa3dUv ).r - 0.5 ) * " + dns + ";");
+      else P("    float " + dv + "Noise = 0.0;");
+      P("    float " + dv + " = 0.0;");
+      if (dmode === 1) {
+        P("    float " + dv + "V = " + dv + "Mask + " + dv + "Noise;");
+        P("    " + dv + " = 1.0 - clamp( abs( " + dv + "V - " + thr + " ) / " + soft + ", 0.0, 1.0 );");
+        P("    " + dv + "Mask = " + dv + "V > " + thr + " ? 1.0 : 0.0;");
+      } else if (dmode === 2) {
+        const dw = num(dpos[3], 0).toFixed(6);
+        const rc = "ba3dRC" + which, rs = "ba3dRS" + which, ru = "ba3dRU" + which;
+        const uvC = dmDir ? "( " + ru + ".x * " + rc + " - " + ru + ".y * " + rs + " ) + 0.5" : "distance( vBa3dUv, vec2( " + dpx + ", " + dpy + " ) )";
+        if (dmDir) {
+          P("    float " + rc + " = cos( " + dw + " );");
+          P("    float " + rs + " = sin( " + dw + " );");
+          P("    vec2 " + ru + " = vBa3dUv - 0.5;");
+        }
+        P("    " + dv + " = " + uvC + " + " + dv + "Noise;");
+        P("    " + dv + "Mask = " + dv + " > " + thr + " ? 1.0 : 0.0;");
+        P("    " + dv + " = 1.0 - clamp( abs( " + dv + " - " + thr + " ) / " + soft + ", 0.0, 1.0 );");
+      } else {
+        const dsc = dissolvePosScale();
+        const kx = dsc.k[0].toFixed(6), ky = dsc.k[1].toFixed(6), kz = dsc.k[2].toFixed(6);
+        const cx = dsc.c[0].toFixed(6), cy = dsc.c[1].toFixed(6), cz = dsc.c[2].toFixed(6);
+        const posE = "vec3( ( vBa3dPositionWS.x - " + cx + " ) * " + kx + ", ( vBa3dPositionWS.y - " + cy + " ) * " + ky + ", ( vBa3dPositionWS.z - " + cz + " ) * " + kz + " )";
+        const pC = dmDir ? "dot( " + posE + ", normalize( vec3( " + dpx + ", " + dpy + ", " + dpz + " ) + vec3( 0.0, 0.0, 1e-6 ) ) )" : "distance( " + posE + ", vec3( " + dpx + ", " + dpy + ", " + dpz + " ) )";
+        P("    " + dv + " = " + pC + " + " + dv + "Noise;");
+        P("    " + dv + "Mask = " + dv + " > " + thr + " ? 1.0 : 0.0;");
+        P("    " + dv + " = 1.0 - clamp( abs( " + dv + " - " + thr + " ) / " + soft + ", 0.0, 1.0 );");
+      }
+      P("    ba3dLc.a *= " + dv + "Mask;");
+      P("    " + edgeVar + " = " + dv + ";");
+      P("  }");
+    }
+    const dfNear = num(Lc.distFadeNear, 0);
+    const dfFar = num(Lc.distFadeFar, 0);
+    const dfStr = Math.max(0, Math.min(1, num(Lc.distFadeStrength, 0)));
+    if (dfStr > 0) {
+      const span = Math.max(1e-5, dfFar - dfNear);
+      B.push("  // 距离淡出 near=" + dfNear.toFixed(3) + " far=" + dfFar.toFixed(3) + " strength=" + dfStr.toFixed(3));
+      B.push("  ba3dLc.a *= mix( 1.0, saturate( ( distance( cameraPosition, vBa3dPositionWS ) - " + dfNear.toFixed(4) + " ) / " + span.toFixed(6) + " ), " + dfStr.toFixed(4) + " );");
+    }
+    if (cull === 1) B.push("	if ( gl_FrontFacing ) ba3dLc.a = 0.0;");
+    if (cull === 2) B.push("	if ( !gl_FrontFacing ) ba3dLc.a = 0.0;");
+    const amode = Math.round(Math.max(0, Math.min(4, num(Lc.alphaMode, 0))));
+    if (amode !== 0 && alphaRender) {
+      B.push("	// _Main" + which + "TexAlphaMode = " + amode + "（lil_common_frag.hlsl:799-806）");
+      if (amode === 1) B.push("	diffuseColor.a = ba3dLc.a;");
+      else if (amode === 2) B.push("	diffuseColor.a = diffuseColor.a * ba3dLc.a;");
+      else if (amode === 3) B.push("	diffuseColor.a = saturate( diffuseColor.a + ba3dLc.a );");
+      else if (amode === 4) B.push("	diffuseColor.a = saturate( diffuseColor.a - ba3dLc.a );");
+      B.push("	ba3dLc.a = 1.0;   // 用完置 1 ⇒ 颜色混合按满强度");
+    }
+    B.push("	" + varName + " = ba3dLc;");
+    B.push("	diffuseColor.rgb = ba3dBlend( diffuseColor.rgb, ba3dLc.rgb, ba3dLc.a * " + el.toFixed(4) + ", " + bm + "u );");
+    B.push("}");
+    const A = [];
+    A.push("// 主色层 " + which + "：不受光照的那部分（enableLighting=" + el.toFixed(2) + " ✓）");
+    A.push("gl_FragColor.rgb = ba3dBlend( gl_FragColor.rgb, " + varName + ".rgb, " + varName + ".a * " + (1 - el).toFixed(4) + ", " + bm + "u );");
+    if (dmode > 0) {
+      A.push("gl_FragColor.rgb += " + v3(Lc.dissolveColor, [1, 1, 1]) + " * " + edgeVar + ";");
+    }
+    const AM = [];
+    if (el > 0) {
+      AM.push("// 主色层 " + which + "：喂给光照用的漫反射色（material.diffuseColor ✓）");
+      AM.push("material.diffuseColor.rgb = mix( material.diffuseColor.rgb, " + varName + ".rgb, " + varName + ".a * " + el.toFixed(4) + " );");
+    }
+    return {
+      before: B.join("\n"),
+      after: A.join("\n"),
+      afterMaterial: AM.length ? AM.join("\n") : null,
+      uniforms: {
+        tex: hasTex ? Lc.tex : null,
+        mask: hasMask ? Lc.blendMask : null,
+        // 层溶解的两张贴图（都是数据贴图 · 采样 .r ✓）
+        disMask: dmode === 1 ? Lc.dissolveMask : null,
+        disNoise: hasDNoise ? Lc.dissolveNoiseMask : null
+      },
+      varName
+    };
+  }
+  let __dissolveScaleCache = { root: null, k: [1, 1, 1], c: [0, 0, 0] };
+  function dissolvePosScale() {
+    if (__dissolveScaleCache.root === modelRoot) return __dissolveScaleCache;
+    let k = [1, 1, 1], c = [0, 0, 0];
+    try {
+      if (modelRoot) {
+        const box = new Box3().setFromObject(modelRoot);
+        if (box.isEmpty && !box.isEmpty()) {
+          const size = new Vector3(), center = new Vector3();
+          box.getSize(size);
+          box.getCenter(center);
+          const sx = isFinite(size.x) && size.x > 1e-6 ? 1 / size.x : 1;
+          const sy = isFinite(size.y) && size.y > 1e-6 ? 1 / size.y : 1;
+          const sz = isFinite(size.z) && size.z > 1e-6 ? 1 / size.z : 1;
+          k = [sx, sy, sz];
+          if (isFinite(center.x)) c = [center.x, center.y, center.z];
+        }
+      }
+    } catch (e) {
+      console.debug("[dissolve] 包围盒计算失败 ✗ 归一化取默认", e);
+    }
+    __dissolveScaleCache = { root: modelRoot, k, c };
+    console.debug("[dissolve] 世界空间归一化：k=(" + k.map((x) => x.toFixed(5)).join(", ") + ") 尺寸=(" + k.map((x) => (1 / x).toFixed(3)).join(", ") + ") center=(" + c.map((x) => x.toFixed(2)).join(", ") + ")");
+    return __dissolveScaleCache;
+  }
+  function lilDissolveGLSL(cfgIn) {
+    const cfg2 = cfgIn || lilCfg;
+    const D = cfg2.dissolve || {};
+    const num = (v, d) => v === void 0 || v === null || !isFinite(Number(v)) ? d : Number(v);
+    const mode = Math.round(Math.max(0, Math.min(3, num(D.mode, 0))));
+    if (!mode) return null;
+    const linear = Math.round(num(D.linear, 1)) === 1 ? 1 : 0;
+    const th = num(D.threshold, 0.5);
+    const soft = Math.max(1e-3, Math.abs(num(D.softness, 0.1)));
+    const pos = Array.isArray(D.pos) && D.pos.length >= 4 ? D.pos.map((x) => num(x, 0)) : [0, 0, 0, 0];
+    const col = Array.isArray(D.color) ? D.color : [1, 1, 1];
+    const colV = "vec3(" + [0, 1, 2].map((i) => num(col[i], 1).toFixed(4)).join(", ") + ")";
+    const hasMask = !!D.maskTex;
+    const hasNoise = !!D.noiseTex;
+    const noiseStr = num(D.noiseStrength, 0);
+    let posExpr = "vBa3dPositionOS";
+    if (mode === 3) {
+      const sc = dissolvePosScale();
+      posExpr = "( vBa3dPositionWS - vec3(" + sc.c.map((x) => x.toFixed(4)).join(", ") + ") ) * vec3(" + sc.k.map((x) => x.toFixed(6)).join(", ") + ")";
+    }
+    const L = [];
+    L.push("");
+    L.push("// ===== Dissolve（lil_common_functions.hlsl:626）=====");
+    L.push("{");
+    L.push("	float ba3dDissolveAlpha = 0.0;");
+    L.push("	float ba3dDissolveMaskVal = 1.0;");
+    L.push("	float ba3dSample = 1.0;");
+    if (hasMask) L.push("	ba3dSample = texture2D( ba3dDissolveMask, vBa3dUv ).r;");
+    if (hasNoise) {
+      L.push("	ba3dSample += ( texture2D( ba3dDissolveNoiseMask, vBa3dUv ).r - 0.5 ) * " + noiseStr.toFixed(4) + ";");
+    }
+    if (mode === 1) {
+      L.push("	ba3dDissolveAlpha = 1.0 - saturate( abs( ba3dSample - " + th.toFixed(4) + " ) / " + soft.toFixed(4) + " );");
+      L.push("	ba3dDissolveMaskVal = ba3dSample > " + th.toFixed(4) + " ? 1.0 : 0.0;");
+    } else if (mode === 2) {
+      const px = pos[0], py = pos[1];
+      const pv = "vec2(" + px.toFixed(4) + ", " + py.toFixed(4) + ")";
+      if (linear) {
+        const len = Math.hypot(px, py);
+        const dir = len < 1e-6 ? "vec2( 0.0, -1.0 )" : "normalize( " + pv + " )";
+        L.push("	ba3dDissolveAlpha = dot( vBa3dUv - 0.5, " + dir + " ) + 0.5;");
+      } else {
+        L.push("	ba3dDissolveAlpha = distance( vBa3dUv, " + pv + " );");
+      }
+      L.push("	ba3dDissolveMaskVal *= ba3dDissolveAlpha > " + th.toFixed(4) + " ? 1.0 : 0.0;");
+      L.push("	ba3dDissolveAlpha = 1.0 - saturate( abs( ba3dDissolveAlpha - " + th.toFixed(4) + " ) / " + soft.toFixed(4) + " );");
+    } else {
+      const px = pos[0], py = pos[1], pz = pos[2];
+      const pv = "vec3(" + px.toFixed(4) + ", " + py.toFixed(4) + ", " + pz.toFixed(4) + ")";
+      if (linear) {
+        const len = Math.sqrt(px * px + py * py + pz * pz);
+        const dir = len < 1e-6 ? "vec3( 0.0, -1.0, 0.0 )" : "normalize( " + pv + " )";
+        L.push("	ba3dDissolveAlpha = dot( " + posExpr + ", " + dir + " );");
+      } else {
+        L.push("	ba3dDissolveAlpha = distance( " + posExpr + ", " + pv + " );");
+      }
+      L.push("	ba3dDissolveMaskVal *= ba3dDissolveAlpha > " + th.toFixed(4) + " ? 1.0 : 0.0;");
+      L.push("	ba3dDissolveAlpha = 1.0 - saturate( abs( ba3dDissolveAlpha - " + th.toFixed(4) + " ) / " + soft.toFixed(4) + " );");
+    }
+    L.push("	diffuseColor.a *= ba3dDissolveMaskVal;");
+    L.push("	ba3dDissolveEdge = ba3dDissolveAlpha;");
+    L.push("}");
+    {
+      const sig = mode + "/" + linear + "/" + th.toFixed(3) + "/" + soft.toFixed(3) + "/" + pos.join(",");
+      if (!lilDissolveGLSL.__logged) lilDissolveGLSL.__logged = {};
+      if (!lilDissolveGLSL.__logged[sig]) {
+        lilDissolveGLSL.__logged[sig] = true;
+        console.debug("[dissolve] 生成 GLSL：模式=" + mode + " 线性=" + linear + " 阈值=" + th.toFixed(3) + " 羽化=" + soft.toFixed(3) + " 位置/方向=(" + pos.join(", ") + ") 遮罩=" + (hasMask ? "有" : "无") + " 噪声=" + (hasNoise ? "有(" + noiseStr + ")" : "无"));
+      }
+    }
+    return {
+      before: L.join("\n"),
+      after: "gl_FragColor.rgb += " + colV + " * ba3dDissolveEdge;   // _DissolveColor（加色）",
+      uniforms: { mask: hasMask ? D.maskTex : null, noise: hasNoise ? D.noiseTex : null }
+    };
+  }
+  function syncRenderState() {
+    if (!modelRoot) return;
+    modelRoot.traverse((o) => {
+      if (!o.isMesh || !o.material) return;
+      const mats = Array.isArray(o.material) ? o.material : [o.material];
+      mats.forEach((m) => {
+        if (!m || !m.isMeshToonMaterial) return;
+        applyLilRenderState(m, lilCfgFor(m));
+      });
+    });
+  }
+  function syncDissolveAlphaTest() {
+    if (!modelRoot) return;
+    modelRoot.traverse((o) => {
+      if (!o.isMesh || !o.material) return;
+      const mats = Array.isArray(o.material) ? o.material : [o.material];
+      mats.forEach((m) => {
+        if (!m || !m.isMeshToonMaterial) return;
+        if (m.userData.__ba3dOrigAlphaTest === void 0) {
+          m.userData.__ba3dOrigAlphaTest = m.alphaTest || 0;
+        }
+        const __cf = lilCfgFor(m);
+        const d = __cf.dissolve || {};
+        const on = Math.round(Math.max(0, Math.min(3, Number(d.mode) || 0))) > 0;
+        const __num = (v, dd) => v === void 0 || v === null || !isFinite(Number(v)) ? dd : Number(v);
+        const __tm = Math.round(__num(__cf.transparentMode, -1));
+        const __coRaw = __num(__cf.cutoff, -1);
+        const __coGiven = __coRaw >= 0;
+        const __co = Math.max(0, Math.min(1, __coGiven ? __coRaw : 0.5));
+        const __orig = m.userData.__ba3dOrigAlphaTest || 0;
+        let want;
+        if (shaderMode === "lilToon" && on) {
+          want = Math.max(0.5, __orig);
+        } else if (__tm === 1) {
+          want = __co;
+        } else if (__tm === 0 || __tm >= 2) {
+          want = 0;
+        } else {
+          want = __orig;
+        }
+        if (m.alphaTest !== want) {
+          m.alphaTest = want;
+          m.needsUpdate = true;
+        }
+      });
+    });
+  }
+  function syncStencil() {
+    if (!modelRoot) return;
+    modelRoot.traverse((o) => {
+      if (!o.isMesh || !o.material) return;
+      const mats = Array.isArray(o.material) ? o.material : [o.material];
+      mats.forEach((m) => {
+        if (!m) return;
+        if (o.userData && o.userData.__isLilOutline) {
+          const src = o.parent;
+          const sm = src ? Array.isArray(src.material) ? src.material[0] : src.material : null;
+          const OC = sm && sm.isMeshToonMaterial ? lilCfgFor(sm).outline || {} : {};
+          if (window.__ba3dDebugUI && !syncStencil.__logged) {
+            syncStencil.__logged = true;
+            console.debug("[stencil] 描边分支：parent=" + (src ? src.name || "(无名)" : "无") + " 源材质=" + (sm ? (sm.name || "(无名)") + "(isToon=" + !!sm.isMeshToonMaterial + ")" : "无") + " stencilEnable=" + JSON.stringify(OC.stencilEnable) + " comp=" + JSON.stringify(OC.stencilComp) + " ref=" + JSON.stringify(OC.stencilRef));
+          }
+          applyStencil(m, OC.stencilEnable ? {
+            use: true,
+            ref: OC.stencilRef,
+            readMask: OC.stencilReadMask,
+            writeMask: OC.stencilWriteMask,
+            comp: OC.stencilComp,
+            pass: OC.stencilPass,
+            fail: OC.stencilFail,
+            zfail: OC.stencilZFail
+          } : null, OC.stencilEnable ? "描边/" + (sm && sm.name || "?") : null);
+          return;
+        }
+        if (!m.isMeshToonMaterial) return;
+        applyStencil(m, lilCfgFor(m).stencil, null);
+      });
+    });
+  }
+  function syncLayerDoubleSide() {
+    if (!modelRoot) return;
+    modelRoot.traverse((o) => {
+      if (!o.isMesh || !o.material) return;
+      const mats = Array.isArray(o.material) ? o.material : [o.material];
+      mats.forEach((m) => {
+        if (!m || !m.isMeshToonMaterial) return;
+        if (m.userData.__ba3dOrigSide === void 0) m.userData.__ba3dOrigSide = m.side;
+        const cfg2 = lilCfgFor(m);
+        const cu = Number(cfg2.cull);
+        if (cu >= 0) return;
+        const need = shaderMode === "lilToon" && [cfg2.main2nd, cfg2.main3rd].some((Lc) => Lc && Lc.use && Math.round(Number(Lc.cull) || 0) !== 0);
+        const want = need ? DoubleSide : m.userData.__ba3dOrigSide;
+        if (m.side !== want) {
+          m.side = want;
+          m.needsUpdate = true;
+        }
+      });
+    });
+  }
+  function celFaceRe() {
+    try {
+      return new RegExp(celCfg.facePattern, "i");
+    } catch {
+      return /$^/;
+    }
+  }
+  function fixZeroNormals() {
+    if (!modelRoot) return 0;
+    let fixed = 0;
+    modelRoot.traverse((o) => {
+      if (!o.isMesh || !o.geometry) return;
+      const pos = o.geometry.getAttribute("position");
+      if (!pos) return;
+      const n = o.geometry.getAttribute("normal");
+      if (!n) {
+        o.geometry.computeVertexNormals();
+        fixed++;
+        return;
+      }
+      const step = Math.max(1, Math.floor(n.count / 64));
+      let bad = 0, checked = 0;
+      for (let i = 0; i < n.count; i += step) {
+        const x = n.getX(i), y = n.getY(i), z = n.getZ(i);
+        checked++;
+        if (!isFinite(x) || !isFinite(y) || !isFinite(z) || x * x + y * y + z * z < 1e-12) bad++;
+      }
+      if (checked && bad === checked) {
+        o.geometry.computeVertexNormals();
+        fixed++;
+        console.info("[fixZeroNormals] 重算法线：" + o.name + " (" + n.count + " 顶点)");
+      }
+    });
+    if (fixed) console.info("[fixZeroNormals] 共修复 " + fixed + " 个网格");
+    return fixed;
+  }
+  let boneScaleHideSet = null;
+  const BONE_SCALE_MAX_BONES = 8;
+  let boneScaleTargets = null;
+  function collectBoneScaleTargets() {
+    boneScaleTargets = [];
+    if (!modelRoot) return 0;
+    modelRoot.traverse((o) => {
+      if (!o.isMesh || !o.isSkinnedMesh || !o.skeleton) return;
+      const bones = o.skeleton.bones;
+      if (!bones || !bones.length || bones.length > BONE_SCALE_MAX_BONES) return;
+      if (boneScaleHideSet && boneScaleHideSet.has(o)) return;
+      boneScaleTargets.push(o);
+    });
+    if (boneScaleTargets.length) console.debug("[hideByBoneScale] 候选网格 " + boneScaleTargets.length + " 个（骨头 ≤ " + BONE_SCALE_MAX_BONES + "）");
+    return boneScaleTargets.length;
+  }
+  function applyBoneScaleHide() {
+    if (!cfg.hideByBoneScale || !boneScaleTargets || !boneScaleTargets.length) return;
+    const th = Number(cfg.hideByBoneScale);
+    if (!(th > 0)) return;
+    for (let k = 0; k < boneScaleTargets.length; k++) {
+      const o = boneScaleTargets[k];
+      const bones = o.skeleton.bones;
+      let allSmall = true;
+      for (let i = 0; i < bones.length; i++) {
+        const sc = bones[i].scale;
+        if (sc.x >= th || sc.y >= th || sc.z >= th) {
+          allSmall = false;
+          break;
+        }
+      }
+      o.visible = !allSmall;
+      applyLockedVisibility();
+    }
+  }
+  function applyHideParts() {
+    if (!modelRoot) return 0;
+    if (!cfg.hideParts) return 0;
+    let re;
+    try {
+      re = new RegExp(cfg.hideParts, "i");
+    } catch {
+      console.warn("[hideParts] 非法正则：", cfg.hideParts);
+      return 0;
+    }
+    let n = 0;
+    modelRoot.traverse((o) => {
+      if (!o.isMesh) return;
+      const mats = Array.isArray(o.material) ? o.material : [o.material];
+      const hit = re.test(o.name || "") || mats.some((m) => m && re.test(m.name || ""));
+      if (!hit) return;
+      o.visible = false;
+      n++;
+    });
+    if (n) console.info("[hideParts] 已隐藏", n, "个网格（", cfg.hideParts, "）");
+    return n;
+  }
+  let optionalParts = null;
+  function collectOptionalParts() {
+    optionalParts = [];
+    if (!modelRoot) return 0;
+    modelRoot.traverse((o) => {
+      if (!o.userData || o.userData.optional !== true) return;
+      const meshes = [];
+      o.traverse((c) => {
+        if (c.isMesh) meshes.push(c);
+      });
+      if (!meshes.length) return;
+      const names = /* @__PURE__ */ new Set();
+      o.traverse((c) => {
+        if (c.name) names.add(c.name);
+        if (c.isSkinnedMesh && c.skeleton) c.skeleton.bones.forEach((b) => {
+          if (b && b.name) names.add(b.name);
+        });
+      });
+      const used = /* @__PURE__ */ new Set();
+      for (const clip of clips) {
+        if (clip.tracks.some((t) => names.has(t.name.slice(0, t.name.lastIndexOf("."))))) used.add(clip.name);
+      }
+      optionalParts.push({ name: o.name || "(未命名)", meshes, clips: used, prop: !!o.userData.prop0 });
+      if (!boneScaleHideSet) boneScaleHideSet = /* @__PURE__ */ new Set();
+      for (const m of meshes) boneScaleHideSet.add(m);
+    });
+    if (optionalParts.length) {
+      console.info("[hideOptional] 找到", optionalParts.length, "个可选部件：" + optionalParts.map((p) => p.name + "(" + p.clips.size + " 段动作使用)").join(", "));
+    }
+    return optionalParts.length;
+  }
+  function applyOptionalParts() {
+    if (!optionalParts || !optionalParts.length) return 0;
+    let shown = 0;
+    for (const part of optionalParts) {
+      const on = part.clips.has(currentClipName);
+      for (const m of part.meshes) m.visible = on;
+      if (on) shown++;
+    }
+    applyLockedVisibility();
+    return shown;
+  }
+  function applyAttachProps() {
+    if (!modelRoot) return 0;
+    const list = cfg.attachProps;
+    if (!Array.isArray(list) || !list.length) return 0;
+    let n = 0;
+    for (const it of list) {
+      if (!it || !it.bone || !it.to) continue;
+      const src = modelRoot.getObjectByName(it.bone);
+      const dst = modelRoot.getObjectByName(it.to);
+      if (!src || !dst) {
+        console.warn("[attachProps] 找不到节点：", it.bone, "或", it.to);
+        continue;
+      }
+      if (src === dst || src.parent === dst) continue;
+      let cycle = false;
+      for (let q = dst; q; q = q.parent) if (q === src) {
+        cycle = true;
+        break;
+      }
+      if (cycle) {
+        console.warn("[attachProps] 不能把", it.bone, "挂到自己的子孙", it.to);
+        continue;
+      }
+      modelRoot.updateMatrixWorld(true);
+      dst.attach(src);
+      n++;
+      console.info("[attachProps] 已把", it.bone, "挂到", it.to);
+    }
+    return n;
+  }
+  const FACE_NO_SHADOW_AT = 0.95;
+  function deriveFaceNoShadow() {
+    const c = celCfg.faceShadowMin;
+    const v = c === null || c === void 0 ? celCfg.shadowMin : Number(c);
+    return !(isFinite(v) && v < FACE_NO_SHADOW_AT);
+  }
+  function applyFaceNoShadow() {
+    if (!modelRoot) return 0;
+    const re = celFaceRe();
+    let nCast = 0;
+    let castRe = null;
+    if (cfg.noCastPattern) {
+      try {
+        castRe = new RegExp(cfg.noCastPattern, "i");
+      } catch {
+        castRe = null;
+      }
+    }
+    modelRoot.traverse((o) => {
+      if (!o.isMesh) return;
+      const mats = Array.isArray(o.material) ? o.material : [o.material];
+      const nameHit = (rx) => mats.some((m) => {
+        if (!m) return false;
+        if (rx.test(m.name || "")) return true;
+        const src = m.userData && m.userData.__src;
+        return !!(src && rx.test(src.name || ""));
+      });
+      if (re && nameHit(re)) o.receiveShadow = !cfg.faceNoShadow;
+      if (castRe && nameHit(castRe)) {
+        o.castShadow = false;
+        nCast++;
+      }
+    });
+    return nCast;
+  }
+  function patchShadowSoften(mat, isFace) {
+    mat.userData.__shadowVersion = celProgramVersion;
+    const prevKey = mat.userData.__shadowKeyed ? null : mat.customProgramCacheKey;
+    mat.userData.__shadowKeyed = true;
+    mat.customProgramCacheKey = () => "ba3d-shadow:" + celProgramVersion + ":" + (isFace ? "f" : "b") + (prevKey ? "|" + prevKey.call(mat) : "");
+    const prevOBC = mat.userData.__shadowPatched ? null : mat.onBeforeCompile;
+    mat.userData.__shadowPatched = true;
+    mat.onBeforeCompile = (shader, renderer2) => {
+      if (prevOBC) prevOBC.call(mat, shader, renderer2);
+      const faceShadow = isFace && celCfg.faceShadowMin !== null && celCfg.faceShadowMin !== void 0;
+      const keep = Math.max(0, Math.min(1, Number(faceShadow ? celCfg.faceShadowMin : celCfg.shadowMin)));
+      if (keep > 0) {
+        const dirRaw = "getShadow( directionalShadowMap[ i ], directionalLightShadow.shadowMapSize, directionalLightShadow.shadowBias, directionalLightShadow.shadowRadius, vDirectionalShadowCoord[ i ] )";
+        const spotRaw = "getShadow( spotShadowMap[ i ], spotLightShadow.shadowMapSize, spotLightShadow.shadowBias, spotLightShadow.shadowRadius, vSpotLightCoord[ i ] )";
+        const k = keep.toFixed(4);
+        const soften = (src) => src.split(dirRaw).join("mix( " + k + ", 1.0, " + dirRaw + " )").split(spotRaw).join("mix( " + k + ", 1.0, " + spotRaw + " )");
+        const INCLUDE = "#include <lights_fragment_begin>";
+        const chunk = ShaderChunk && ShaderChunk.lights_fragment_begin || "";
+        const softChunk = chunk ? soften(chunk) : "";
+        const hitChunk = softChunk && softChunk !== chunk && shader.fragmentShader.includes(INCLUDE);
+        if (hitChunk) {
+          shader.fragmentShader = shader.fragmentShader.replace(INCLUDE, softChunk);
+        } else if (shader.fragmentShader.includes(dirRaw)) {
+          shader.fragmentShader = soften(shader.fragmentShader);
+        }
+      }
+    };
+    return mat;
+  }
+  function patchToonMaterial(mat, isFace) {
+    const num = (v, d) => v === void 0 || v === null || !isFinite(Number(v)) ? d : Number(v);
+    mat.userData.__celVersion = celProgramVersion;
+    mat.userData.__celShader = shaderMode;
+    const __cfgM = lilCfgFor(mat);
+    const __hasOv = __cfgM !== lilCfg;
+    {
+      if (mat.userData.__ba3dOrigAlphaTest === void 0) {
+        mat.userData.__ba3dOrigAlphaTest = mat.alphaTest || 0;
+      }
+      {
+        if (mat.userData.__ba3dOrigSide === void 0) {
+          mat.userData.__ba3dOrigSide = mat.side;
+        }
+        const __needDS = shaderMode === "lilToon" && [__cfgM.main2nd, __cfgM.main3rd].some((Lc) => Lc && Lc.use && Math.round(Number(Lc.cull) || 0) !== 0);
+        const __wantSide = __needDS ? DoubleSide : mat.userData.__ba3dOrigSide;
+        if (mat.side !== __wantSide) {
+          mat.side = __wantSide;
+          mat.needsUpdate = true;
+        }
+      }
+      {
+        const __bc = __cfgM.bump || {};
+        const __bUrl = shaderMode === "lilToon" && __bc.use ? __bc.tex : null;
+        const __bTex = __bUrl ? resolveNormalTexture(__bUrl) : null;
+        if (__bTex) {
+          mat.normalMap = __bTex;
+          const __bS = Math.max(-10, Math.min(10, num(__bc.scale, 1)));
+          mat.normalScale.set(__bS, __bS);
+        } else {
+          mat.normalMap = null;
+          mat.normalScale.set(1, 1);
+        }
+        const __b2c = __cfgM.bump2nd || {};
+        const __b2Url = shaderMode === "lilToon" && __b2c.use ? __b2c.tex : null;
+        const __cnUrl = __cfgM.matcap && __cfgM.matcap.customNormal && __cfgM.matcap.bumpMap || __cfgM.matcap2nd && __cfgM.matcap2nd.customNormal && __cfgM.matcap2nd.bumpMap || null;
+        if (!mat.normalMap && (__b2Url || __cnUrl)) {
+          mat.normalMap = normalPlaceholder();
+          mat.normalScale.set(1, 1);
+        }
+        if (window.__ba3dDebugUI && shaderMode === "lilToon") {
+          console.debug("[normal] 1st: use=" + (__bc.use ? 1 : 0) + " tex=" + (__bc.tex ? "有" : "无") + " → 生效=" + (__bUrl ? "是" : "**否（要开「1st 启用」）**") + " scale=" + num(__bc.scale, 1) + " | 2nd: use=" + (__b2c.use ? 1 : 0) + " tex=" + (__b2c.tex ? "有" : "无") + " → 生效=" + (__b2Url ? "是" : "否") + " | tbn=" + (mat.normalMap ? "已启用" : "未启用"));
+        }
+      }
+      applyStencil(mat, __cfgM.stencil, shaderMode === "lilToon" && __cfgM.stencil && __cfgM.stencil.use ? mat.name || "?" : null);
+      applyLilRenderState(mat, __cfgM);
+      const __d0 = Math.round(Math.max(0, Math.min(3, Number((__cfgM.dissolve || {}).mode) || 0)));
+      const __wantAt = shaderMode === "lilToon" && __d0 > 0 ? Math.max(0.5, mat.userData.__ba3dOrigAlphaTest || 0) : mat.userData.__ba3dOrigAlphaTest;
+      if (mat.alphaTest !== __wantAt) {
+        mat.alphaTest = __wantAt;
+        mat.needsUpdate = true;
+      }
+    }
+    mat.customProgramCacheKey = () => "ba3d-cel:" + celProgramVersion + ":" + shaderMode + ":" + (mat.name || "") + ":v" + lilMaterialVersion;
+    mat.onBeforeCompile = (shader) => {
+      if (shaderMode === "none") return;
+      if (window.__ba3dDebugUI && mat.userData.__ba3dDisLog !== shaderMode + ":" + mat.alphaTest) {
+        mat.userData.__ba3dDisLog = shaderMode + ":" + mat.alphaTest;
+        const __dd = __cfgM.dissolve || {};
+        if (Math.round(Number(__dd.mode) || 0) > 0 || mat.alphaTest > 0) {
+          console.debug("[dissolve] mat=" + (mat.name || "?") + " mode=" + Math.round(Number(__dd.mode) || 0) + " alphaTest=" + mat.alphaTest + " defs=" + (shader.defines && shader.defines.USE_ALPHATEST ? "USE_ALPHATEST=有" : "USE_ALPHATEST=无") + " 会注入=" + (shaderMode === "lilToon" && Math.round(Number(__dd.mode) || 0) > 0));
+        }
+      }
+      shader.fragmentShader = shader.fragmentShader.replace(
+        "#include <gradientmap_pars_fragment>",
+        celGradientGLSL(__cfgM, celCfgFor(mat))
+      );
+      if (shader.fragmentShader.includes("#include <color_pars_fragment>")) {
+        shader.fragmentShader = shader.fragmentShader.replace(
+          "#include <color_pars_fragment>",
+          "#include <color_pars_fragment>\nfloat ba3dMaskR( void ) {\n#ifdef USE_COLOR\n	return vColor.r;\n#else\n	return 1.0;\n#endif\n}\nfloat ba3dMaskG( void ) {\n#ifdef USE_COLOR\n	return vColor.g;\n#else\n	return 1.0;\n#endif\n}\nfloat ba3dMaskB( void ) {\n#ifdef USE_COLOR\n	return vColor.b;\n#else\n	return 1.0;\n#endif\n}\n"
+        );
+      }
+      mat.userData.__fragKind = /ba3dLilToon\( t,/.test(shader.fragmentShader) ? "lilToon" : /floor\( t \*/.test(shader.fragmentShader) ? "cel" : "none";
+      mat.userData.__fragShaderAtCompile = shaderMode;
+      shader.vertexShader = shader.vertexShader.replace("#include <common>", "#include <common>\nvarying vec3 vBa3dViewPos;").replace("#include <uv_pars_vertex>", "#include <uv_pars_vertex>\nvarying vec2 vBa3dUv;\n#ifndef USE_UV1\nattribute vec2 uv1;\n#endif\nvarying vec2 vBa3dUv1;\nvarying float vBa3dRightHand;\n\nvarying vec3 vBa3dPositionOS;\nvarying vec3 vBa3dPositionWS;").replace("#include <begin_vertex>", "#include <begin_vertex>\n	vBa3dUv = uv;\n	vBa3dPositionOS = position;\n	vBa3dUv1 = uv1;\n#ifdef USE_TANGENT\n	vBa3dRightHand = ( tangent.w > 0.0 ) ? 1.0 : 0.0;\n#else\n	vBa3dRightHand = 1.0;\n#endif").replace("#include <project_vertex>", "#include <project_vertex>\n	vBa3dViewPos = -mvPosition.xyz;\n	vBa3dPositionWS = ( modelMatrix * vec4( transformed, 1.0 ) ).xyz;");
+      shader.fragmentShader = shader.fragmentShader.replace(
+        "#include <common>",
+        "#include <common>\nvarying vec3 vBa3dViewPos;\nvarying vec2 vBa3dUv;\nvarying vec2 vBa3dUv1;\nvarying float vBa3dRightHand;\nvarying vec3 vBa3dPositionOS;\nvarying vec3 vBa3dPositionWS;\nfloat ba3dDissolveEdge = 0.0;   // Dissolve 边缘因子（末尾加色用）\nvec4 ba3dColor2nd = vec4(1.0);\nfloat ba3dDisEdge2nd = 0.0;\nfloat ba3dDisEdge3rd = 0.0;\nvec3 ba3dShadowN1 = vec3( 0.0, 0.0, 1.0 );\nvec3 ba3dShadowN2 = vec3( 0.0, 0.0, 1.0 );\nvec3 ba3dShadowN3 = vec3( 0.0, 0.0, 1.0 );\nvec4 ba3dColor3rd = vec4(1.0);\nfloat ba3dShadowMaskG = 1.0;\nfloat ba3dLilToonRange( const float value, const float border, const float blur, const float borderRange ) {\n	float bMin = saturate( border - blur * 0.5 - borderRange );\n	float bMax = saturate( border + blur * 0.5 );\n	return saturate( ( value - bMin ) / saturate( bMax - bMin ) );\n}\nfloat ba3dLilToon( const float value, const float border, const float blur ) {\n	float bMin = saturate( border - blur * 0.5 );\n	float bMax = saturate( border + blur * 0.5 );\n	return saturate( ( value - bMin ) / saturate( bMax - bMin ) );\n}\nvec3 ba3dBlend( vec3 dstCol, vec3 srcCol, float srcA, uint blendMode ) {\n	vec3 ad = dstCol + srcCol;\n	vec3 mu = dstCol * srcCol;\n	vec3 outCol = srcCol;\n	if ( blendMode == 1u ) outCol = ad;\n	if ( blendMode == 2u ) outCol = max( ad - mu, dstCol );\n	if ( blendMode == 3u ) outCol = mu;\n	return mix( dstCol, outCol, srcA );\n}\nvec3 ba3dBlend3( vec3 dstCol, vec3 srcCol, vec3 srcA, uint blendMode ) {\n	vec3 ad = dstCol + srcCol;\n	vec3 mu = dstCol * srcCol;\n	vec3 outCol = srcCol;\n	if ( blendMode == 1u ) outCol = ad;\n	if ( blendMode == 2u ) outCol = max( ad - mu, dstCol );\n	if ( blendMode == 3u ) outCol = mu;\n	return mix( dstCol, outCol, srcA );\n}\n"
+      ).replace("#include <normal_fragment_maps>", function() {
+        if (window.__ba3dDebugUI && shaderMode === "lilToon") {
+          const b2d = __cfgM.bump2nd || {};
+          console.debug("[normal2nd] 命中 include=" + shader.fragmentShader.includes("#include <normal_fragment_maps>") + " use=" + (b2d.use ? 1 : 0) + " tex=" + (b2d.tex ? "有" : "无") + " scale=" + num(b2d.scale, 1) + " mask=" + (b2d.scaleMask ? "有" : "无"));
+        }
+        if (shaderMode !== "lilToon") return "#include <normal_fragment_maps>";
+        const b2 = __cfgM.bump2nd || {};
+        if (!b2.use || !b2.tex) return "#include <normal_fragment_maps>";
+        const sc = Math.max(-10, Math.min(10, num(b2.scale, 1)));
+        const hasMask = !!b2.scaleMask;
+        const code = [
+          "#include <normal_fragment_maps>",
+          "// ===== 2nd 法线贴图（lil_common_frag.hlsl:579 · Whiteout blend ✓）=====",
+          "{",
+          "  vec3 ba3dB1n = vec3( 0.0, 0.0, 1.0 );",
+          "#ifdef USE_NORMALMAP_TANGENTSPACE",
+          "  ba3dB1n = texture2D( normalMap, vNormalMapUv ).xyz * 2.0 - 1.0;",
+          "  ba3dB1n.xy *= normalScale;",
+          "#endif",
+          "  vec3 ba3dB2n = texture2D( ba3dBump2ndMap, vBa3dUv ).xyz * 2.0 - 1.0;",
+          "  ba3dB2n.xy *= " + sc.toFixed(4) + (hasMask ? " * texture2D( ba3dBump2ndScaleMask, vBa3dUv ).r" : "") + ";",
+          "  vec3 ba3dBw = vec3( ba3dB1n.xy + ba3dB2n.xy, ba3dB1n.z * ba3dB2n.z );",
+          "  normal = normalize( tbn * normalize( ba3dBw ) );",
+          "}"
+        ].join("\n");
+        return code;
+      }()).replace("#include <dithering_fragment>", function() {
+        const D = __cfgM.dither || {};
+        if (!D.use) return "#include <dithering_fragment>";
+        const mx = Math.max(1, Math.min(255, Number(D.maxValue) || 255));
+        const code = [
+          "// _UseDither：把 alpha 量化成屏幕空间点阵（lil_common_frag.hlsl:524-546）",
+          "{",
+          /**
+           * ⚠️ 采样点用**纹素中心**（+ 0.5）· 而不是 lilToon 字面的 uv/size ✓
+           *
+           *   lilToon:  uint2 uv = (uint2)positionCS.xy % (uint2)size;
+           *             return tex2D(tex, uv / size);        // ← 纹素**左下角**
+           *
+           *   Unity 那边 _DitherTex 一般是 Point 过滤 ⇒ 左下角 = 中心 ⇒ 等价 ✓
+           *   但 three 加载贴图默认是 **LinearFilter** ⇒ 落在角上会**混合 4 个纹素**
+           *   ⇒ 点阵被糊成灰阶 ⇒ 抖动就不成点阵了 ✓
+           *   ⇒ 加 0.5 落到中心 ⇒ Point / Linear 两种过滤下都对 ✓
+           */
+          "  vec2 ba3dDitherCell = mod( floor( gl_FragCoord.xy ), ba3dDitherSize );",
+          "  vec2 ba3dDitherUv = ( ba3dDitherCell + 0.5 ) / ba3dDitherSize;",
+          "  float ba3dDitherV = texture2D( ba3dDitherTex, ba3dDitherUv ).r;",
+          "  gl_FragColor.a = gl_FragColor.a >= ( ba3dDitherV * 255.0 + 1.0 ) / " + (mx + 2).toFixed(1) + " ? 1.0 : 0.0;",
+          "}"
+        ].join("\n");
+        if (typeof console !== "undefined") console.debug("[dither] 已注入 · maxValue=" + mx + " tex=" + (D.url ? "有" : "无（占位 1×1 ⇒ 全 1 ⇒ 阈值恒定）"));
+        return code + "\n#include <dithering_fragment>";
+      }()).replace("#include <dithering_fragment>", function() {
+        const blk = lilShaderGLSL(__cfgM);
+        return blk ? blk + "\n#include <dithering_fragment>" : "#include <dithering_fragment>";
+      }()).replace("#include <common>", function() {
+        const __mt = lilMainTexUVGLSL(__cfgM, true);
+        if (!__mt) return "#include <common>";
+        shader.uniforms.uBa3dTime = ba3dTimeUniform;
+        return "#include <common>\nuniform float uBa3dTime;" + __mt.pre;
+      }()).replace("#include <common>", function() {
+        if (shader.fragmentShader.indexOf("uniform float uBa3dTime;") >= 0) return "#include <common>";
+        shader.uniforms.uBa3dTime = ba3dTimeUniform;
+        return "#include <common>\nuniform float uBa3dTime;";
+      }()).replace("#include <map_fragment>", function() {
+        const __mt = lilMainTexUVGLSL(__cfgM);
+        if (!__mt) return "#include <map_fragment>";
+        const code = [
+          "#ifdef USE_MAP",
+          __mt.useUV ? "	vec2 ba3dUvMain2 = ba3dMainUvScroll( vMapUv );" : "	vec2 ba3dUvMain2 = vMapUv;",
+          "	vec4 sampledDiffuseColor = texture2D( map, ba3dUvMain2 );",
+          "#ifdef DECODE_VIDEO_TEXTURE",
+          "	sampledDiffuseColor = vec4( mix( pow( sampledDiffuseColor.rgb * 0.9478672986 + vec3( 0.0521327014 ), vec3( 2.4 ) ), sampledDiffuseColor.rgb * 0.0773993808, vec3( lessThanEqual( sampledDiffuseColor.rgb, vec3( 0.04045 ) ) ) ), sampledDiffuseColor.w );",
+          "#endif",
+          "	diffuseColor *= sampledDiffuseColor;",
+          "#endif"
+        ];
+        if (__mt.useHSV) {
+          code.push("// _MainTexHSVG（lil_common_frag.hlsl:317 ✓）");
+          code.push("diffuseColor.rgb = ba3dToneCorrectionMain( diffuseColor.rgb, vec4( " + __mt.H.toFixed(6) + ", " + __mt.S.toFixed(6) + ", " + __mt.V.toFixed(6) + ", " + __mt.G.toFixed(6) + " ) );");
+        }
+        const out = code.join("\n");
+        const bad = ["lerp(", "frac(", "atan2(", "tex2D(", "mul("].filter((x) => out.includes(x));
+        if (bad.length) console.error("[mainTex] 注入后出现 HLSL 写法 " + JSON.stringify(bad) + " · 会编译失败！");
+        return out;
+      }());
+      {
+        const __dUrl = __cfgM.dither && __cfgM.dither.url || null;
+        const __dTex = __dUrl ? resolveMatCapTexture(__dUrl) : null;
+        shader.uniforms.ba3dDitherTex = { value: __dTex || layerPlaceholder() };
+        const img = __dTex && __dTex.image;
+        shader.uniforms.ba3dDitherSize = {
+          value: new Vector2(img && img.width || 1, img && img.height || 1)
+        };
+        shader.fragmentShader = shader.fragmentShader.replace(
+          "#include <common>",
+          "#include <common>\nuniform sampler2D ba3dDitherTex;\nuniform vec2 ba3dDitherSize;"
+        );
+      }
+      {
+        const __capUrl = __cfgM.matcap && __cfgM.matcap.url || null;
+        const __capTex = __capUrl ? resolveMatCapTexture(__capUrl) : null;
+        shader.uniforms.ba3dMatCap = { value: __capTex || layerPlaceholder() };
+        shader.fragmentShader = shader.fragmentShader.replace(
+          "#include <common>",
+          "#include <common>\nuniform sampler2D ba3dMatCap;"
+        );
+      }
+      {
+        const __cap2Url = __cfgM.matcap2nd && __cfgM.matcap2nd.url || null;
+        const __cap2Tex = __cap2Url ? resolveMatCapTexture(__cap2Url) : null;
+        shader.uniforms.ba3dMatCap2nd = { value: __cap2Tex || layerPlaceholder() };
+        shader.fragmentShader = shader.fragmentShader.replace(
+          "#include <common>",
+          "#include <common>\nuniform sampler2D ba3dMatCap2nd;"
+        );
+      }
+      for (const [uni, url] of [
+        ["ba3dMatCapBlendMask", __cfgM.matcap && __cfgM.matcap.blendMask || null],
+        ["ba3dMatCap2ndBlendMask", __cfgM.matcap2nd && __cfgM.matcap2nd.blendMask || null],
+        ["ba3dEmissionBlendMask", __cfgM.emission && __cfgM.emission.blendMask || null],
+        ["ba3dEmission2ndBlendMask", __cfgM.emission2nd && __cfgM.emission2nd.blendMask || null]
+      ]) {
+        if (!url) continue;
+        const t = resolveMaskTexture(url);
+        shader.uniforms[uni] = { value: t || dissolvePlaceholder("mask") };
+        shader.fragmentShader = shader.fragmentShader.replace(
+          "#include <common>",
+          "#include <common>\nuniform sampler2D " + uni + ";"
+        );
+      }
+      for (const [uni, url, kind] of [
+        ["ba3dBump2ndMap", shaderMode === "lilToon" && __cfgM.bump2nd && __cfgM.bump2nd.use ? __cfgM.bump2nd.tex : null, "normal"],
+        ["ba3dBump2ndScaleMask", __cfgM.bump2nd && __cfgM.bump2nd.scaleMask || null, "mask"],
+        // MatCap 的自定义法线（替代 _MatCapBumpMap ✗ 也是数据贴图 ✓）
+        ["ba3dMatCapBumpMap", shaderMode === "lilToon" && __cfgM.matcap && __cfgM.matcap.customNormal ? __cfgM.matcap.bumpMap : null, "normal"],
+        ["ba3dMatCap2ndBumpMap", shaderMode === "lilToon" && __cfgM.matcap2nd && __cfgM.matcap2nd.customNormal ? __cfgM.matcap2nd.bumpMap : null, "normal"]
+      ]) {
+        if (!url) continue;
+        const t = kind === "normal" ? resolveNormalTexture(url) : resolveMaskTexture(url);
+        shader.uniforms[uni] = { value: t || (kind === "normal" ? normalPlaceholder() : dissolvePlaceholder("mask")) };
+        shader.fragmentShader = shader.fragmentShader.replace(
+          "#include <common>",
+          "#include <common>\nuniform sampler2D " + uni + ";"
+        );
+      }
+      const __emiUrl = __cfgM.emission && __cfgM.emission.tex || null;
+      const __emiTex = __emiUrl ? resolveEmissionTexture(__emiUrl) : null;
+      if (__emiUrl) {
+        shader.uniforms.ba3dEmissionMap = { value: __emiTex || dissolvePlaceholder("mask") };
+        shader.fragmentShader = shader.fragmentShader.replace(
+          "#include <common>",
+          "#include <common>\nuniform sampler2D ba3dEmissionMap;"
+        );
+      }
+      const __emi2Url = __cfgM.emission2nd && __cfgM.emission2nd.tex || null;
+      const __emi2Tex = __emi2Url ? resolveEmissionTexture(__emi2Url) : null;
+      if (__emi2Url) {
+        shader.uniforms.ba3dEmission2ndMap = { value: __emi2Tex || dissolvePlaceholder("mask") };
+        shader.fragmentShader = shader.fragmentShader.replace(
+          "#include <common>",
+          "#include <common>\nuniform sampler2D ba3dEmission2ndMap;"
+        );
+      }
+      {
+        const __alphaRender = mat.alphaTest > 0 || mat.transparent === true;
+        const __layers = [
+          { which: "3rd", res: shaderMode === "lilToon" ? lilMainLayerGLSL(__cfgM, "3rd", __alphaRender) : null },
+          { which: "2nd", res: shaderMode === "lilToon" ? lilMainLayerGLSL(__cfgM, "2nd", __alphaRender) : null }
+        ];
+        for (const it of __layers) {
+          if (!it.res) continue;
+          if (it.res.uniforms.tex) {
+            const t = resolveLayerTexture(it.res.uniforms.tex);
+            const uni = it.which === "3rd" ? "ba3dMain3rdTex" : "ba3dMain2ndTex";
+            shader.uniforms[uni] = { value: t || layerPlaceholder() };
+            shader.fragmentShader = shader.fragmentShader.replace(
+              "#include <common>",
+              "#include <common>\nuniform sampler2D " + uni + ";"
+            );
+          }
+          if (it.res.uniforms.mask) {
+            const t = resolveLayerTexture(it.res.uniforms.mask);
+            const uni = it.which === "3rd" ? "ba3dMain3rdBlendMask" : "ba3dMain2ndBlendMask";
+            shader.uniforms[uni] = { value: t || layerPlaceholder() };
+            shader.fragmentShader = shader.fragmentShader.replace(
+              "#include <common>",
+              "#include <common>\nuniform sampler2D " + uni + ";"
+            );
+          }
+          for (const [kind, uni] of [
+            ["disMask", it.which === "3rd" ? "ba3dMain3rdDisMask" : "ba3dMain2ndDisMask"],
+            ["disNoise", it.which === "3rd" ? "ba3dMain3rdDisNoise" : "ba3dMain2ndDisNoise"]
+          ]) {
+            const url = it.res.uniforms[kind];
+            if (!url) continue;
+            const t = resolveMaskTexture(url);
+            shader.uniforms[uni] = { value: t || dissolvePlaceholder("mask") };
+            shader.fragmentShader = shader.fragmentShader.replace(
+              "#include <common>",
+              "#include <common>\nuniform sampler2D " + uni + ";"
+            );
+          }
+          const __hasInc = shader.fragmentShader.indexOf("#include <lights_fragment_begin>") >= 0;
+          if (__hasInc && it.res.afterMaterial) {
+            shader.fragmentShader = shader.fragmentShader.replace(
+              "#include <lights_fragment_begin>",
+              "#include <lights_fragment_begin>\n" + it.res.afterMaterial
+            );
+          }
+          shader.fragmentShader = shader.fragmentShader.replace(
+            "#include <lights_fragment_begin>",
+            it.res.before + "\n#include <lights_fragment_begin>"
+          );
+          if (typeof console !== "undefined") {
+            const __ok = shader.fragmentShader.indexOf("ba3dLc") >= 0;
+            console.debug("[inject] " + mat.name + " 层" + it.which + " | 命中 include=" + __hasInc + " | before 长度=" + it.res.before.length + " | 注入后含 ba3dLc=" + __ok + (__hasInc ? "" : "  ✗✗ include 没找到 ⇒ 什么都没注入！"));
+          }
+          shader.fragmentShader = shader.fragmentShader.replace(
+            "#include <dithering_fragment>",
+            it.res.after + "\n#include <dithering_fragment>"
+          );
+        }
+      }
+      if (shaderMode === "lilToon") {
+        const __mss = Math.max(0, Math.min(1, __cfgM.shadowMainStrength === void 0 ? 0 : Number(__cfgM.shadowMainStrength)));
+        if (__mss > 0) {
+          shader.fragmentShader = shader.fragmentShader.replace(
+            "#include <dithering_fragment>",
+            "// _ShadowMainStrength：阴影侧再乘一次主色（albedo）\ngl_FragColor.rgb = mix( gl_FragColor.rgb, gl_FragColor.rgb * diffuseColor.rgb,\n  ( 1.0 - ba3dShadowMaskG ) * " + __mss.toFixed(4) + " );\n#include <dithering_fragment>"
+          );
+        }
+      }
+      if (shaderMode === "lilToon") {
+        if (shaderMode === "lilToon" || shaderMode === "cel") {
+          if (cfg.lightClampOn) {
+            const __lmin = Math.max(0, Math.min(1, Number(cfg.lightMinLimit) || 0));
+            const __lmax = Math.max(0.01, Math.min(4, Number(cfg.lightMaxLimit) || 1));
+            const __FROM = "vec3 irradiance = getGradientIrradiance( geometryNormal, directLight.direction ) * directLight.color;";
+            const __CHUNK = "#include <lights_toon_pars_fragment>";
+            const __TO = "vec3 irradiance = getGradientIrradiance( geometryNormal, directLight.direction ) * clamp( directLight.color, vec3( " + __lmin.toFixed(4) + " ), vec3( " + __lmax.toFixed(4) + " ) );";
+            const __src = ShaderChunk && ShaderChunk.lights_toon_pars_fragment || "";
+            if (shader.fragmentShader.indexOf(__CHUNK) >= 0 && __src.indexOf(__FROM) >= 0) {
+              shader.fragmentShader = shader.fragmentShader.replace(__CHUNK, __src.replace(__FROM, __TO));
+              if (window.__ba3dDebugUI) console.debug("[lightClamp] min=" + __lmin + " max=" + __lmax + " 已注入 ✓（夹纯光照 · 不含 albedo ✓）");
+            } else if (window.__ba3dDebugUI) {
+              console.debug("[lightClamp] ✗ 注入失败：include=" + (shader.fragmentShader.indexOf(__CHUNK) >= 0) + " chunk=" + (__src.indexOf(__FROM) >= 0));
+            }
+          }
+        }
+        const INCLUDE = "#include <lights_fragment_begin>";
+        const chunk = ShaderChunk && ShaderChunk.lights_fragment_begin || "";
+        const dirRaw = "getShadow( directionalShadowMap[ i ], directionalLightShadow.shadowMapSize, directionalLightShadow.shadowBias, directionalLightShadow.shadowRadius, vDirectionalShadowCoord[ i ] )";
+        const spotRaw = "getShadow( spotShadowMap[ i ], spotLightShadow.shadowMapSize, spotLightShadow.shadowBias, spotLightShadow.shadowRadius, vSpotLightCoord[ i ] )";
+        const neutral = (src) => src.split(dirRaw).join("( " + dirRaw + " * 0.0 + 1.0 )").split(spotRaw).join("( " + spotRaw + " * 0.0 + 1.0 )");
+        shader.fragmentShader = shader.fragmentShader.replace(
+          "#include <shadowmap_pars_fragment>",
+          "#include <shadowmap_pars_fragment>\n#define receiveShadow true\n#include <shadowmask_pars_fragment>\n"
+        );
+        const __ambKeep = Math.max(0, Math.min(1, Number(__cfgM.shadowAmbient !== void 0 ? __cfgM.shadowAmbient : 1)));
+        const ambLine = __ambKeep < 1 ? "reflectedLight.indirectDiffuse *= mix( " + __ambKeep.toFixed(4) + ", 1.0, ba3dShadowMaskG );   // 阴影环境光\n" : "";
+        if (chunk && shader.fragmentShader.includes(INCLUDE)) {
+          shader.fragmentShader = shader.fragmentShader.replace(
+            INCLUDE,
+            "ba3dShadowMaskG = getShadowMask();   // 投影只走这条路（见上面说明）\n" + /**
+             * 三层阴影各自的法线（lil_common_frag.hlsl:928-931）
+             *   N1 = lerp( fd.origN, fd.N, _ShadowNormalStrength );
+             *   N2 = lerp( fd.origN, fd.N, _Shadow2ndNormalStrength );
+             *   N3 = lerp( fd.origN, fd.N, _Shadow3rdNormalStrength );
+             *
+             * ⚠️ 这里能拿到 nonPerturbedNormal 和 normal · 因为 normal_fragment_begin 更早
+             *    而 getGradientIrradiance 是在下面的 #include <lights_fragment_begin> 里被调的
+             *    ⇒ 顺序正确
+             * ⚠️ 三个强度都是 1（默认）时**一个字符都不发** · 零开销、零行为变化
+             */
+            function() {
+              if (shaderMode !== "lilToon") return "";
+              const g = (k, d) => Math.max(0, Math.min(1, __cfgM[k] === void 0 ? d : Number(__cfgM[k])));
+              const s1 = g("shadowNormalStrength", 1);
+              const s2 = g("shadow2ndNormalStrength", 1);
+              const s3 = g("shadow3rdNormalStrength", 1);
+              if (s1 === 1 && s2 === 1 && s3 === 1) return "";
+              if (window.__ba3dDebugUI) console.debug("[shadow] 法线强度 1st=" + s1 + " 2nd=" + s2 + " 3rd=" + s3);
+              return "ba3dShadowN1 = normalize( mix( normalize( nonPerturbedNormal ), normal, " + s1.toFixed(4) + " ) );\nba3dShadowN2 = normalize( mix( normalize( nonPerturbedNormal ), normal, " + s2.toFixed(4) + " ) );\nba3dShadowN3 = normalize( mix( normalize( nonPerturbedNormal ), normal, " + s3.toFixed(4) + " ) );\n";
+            }() + neutral(chunk) + "\n" + ambLine
+          );
+        } else {
+          shader.fragmentShader = shader.fragmentShader.replace(
+            INCLUDE,
+            "ba3dShadowMaskG = getShadowMask();\n" + ambLine + INCLUDE
+          );
+        }
+        if (window.__ba3dDebugUI && patchToonMaterial.__shadowLogged !== shaderMode) {
+          patchToonMaterial.__shadowLogged = shaderMode;
+          const f2 = shader.fragmentShader;
+          console.debug("[lilShadow] includeFound=" + f2.includes("#include <lights_fragment_begin>") + " chunkLen=" + chunk.length + " chunkHasDirShadow=" + chunk.includes("directionalShadowMap") + " maskDeclared=" + f2.includes("ba3dShadowMaskG") + " assignInjected=" + f2.includes("ba3dShadowMaskG = getShadowMask()") + " maskChunkIn=" + f2.includes("shadowmask_pars_fragment") + " neutralApplied=" + f2.includes("* 0.0 + 1.0") + " receiveDefine=" + f2.includes("#define receiveShadow true"));
+        }
+      }
+      {
+        const __D = __cfgM.dissolve || {};
+        const __dmode = Math.round(Math.max(0, Math.min(3, Number(__D.mode) || 0)));
+        if (shaderMode === "lilToon" && __dmode > 0) {
+          const dis = lilDissolveGLSL(__cfgM);
+          if (dis) {
+            if (dis.uniforms.mask) {
+              const t = resolveDissolveTexture(dis.uniforms.mask);
+              shader.uniforms.ba3dDissolveMask = { value: t || dissolvePlaceholder("mask") };
+              shader.fragmentShader = shader.fragmentShader.replace(
+                "#include <common>",
+                "#include <common>\nuniform sampler2D ba3dDissolveMask;"
+              );
+            }
+            if (dis.uniforms.noise) {
+              const t = resolveDissolveTexture(dis.uniforms.noise);
+              shader.uniforms.ba3dDissolveNoiseMask = { value: t || dissolvePlaceholder("noise") };
+              shader.fragmentShader = shader.fragmentShader.replace(
+                "#include <common>",
+                "#include <common>\nuniform sampler2D ba3dDissolveNoiseMask;"
+              );
+            }
+            const IN = "#include <alphatest_fragment>";
+            if (shader.fragmentShader.includes(IN)) {
+              shader.fragmentShader = shader.fragmentShader.replace(IN, dis.before + "\n" + IN);
+            } else if (shader.fragmentShader.includes("#include <color_fragment>")) {
+              shader.fragmentShader = shader.fragmentShader.replace(
+                "#include <color_fragment>",
+                "#include <color_fragment>\n" + dis.before
+              );
+            }
+            shader.fragmentShader = shader.fragmentShader.replace(
+              "#include <dithering_fragment>",
+              dis.after + "\n#include <dithering_fragment>"
+            );
+          }
+        }
+      }
+      if (shaderMode !== "lilToon" && isFace && celCfg.faceLight) {
+        shader.vertexShader = shader.vertexShader.replace(
+          "#include <normal_vertex>",
+          "#include <normal_vertex>\n	vNormal = vec3( 0.0, 0.0, 1.0 );"
+        );
+      }
+      if (shaderMode !== "lilToon") {
+        const faceShadow = isFace && celCfg.faceShadowMin !== null && celCfg.faceShadowMin !== void 0;
+        const keep = Math.max(0, Math.min(1, Number(faceShadow ? celCfg.faceShadowMin : celCfg.shadowMin)));
+        if (keep > 0) {
+          const dirRaw = "getShadow( directionalShadowMap[ i ], directionalLightShadow.shadowMapSize, directionalLightShadow.shadowBias, directionalLightShadow.shadowRadius, vDirectionalShadowCoord[ i ] )";
+          const spotRaw = "getShadow( spotShadowMap[ i ], spotLightShadow.shadowMapSize, spotLightShadow.shadowBias, spotLightShadow.shadowRadius, vSpotLightCoord[ i ] )";
+          const k = keep.toFixed(4);
+          const soften = (src) => src.split(dirRaw).join("mix( " + k + ", 1.0, " + dirRaw + " )").split(spotRaw).join("mix( " + k + ", 1.0, " + spotRaw + " )");
+          const INCLUDE = "#include <lights_fragment_begin>";
+          const chunk = ShaderChunk && ShaderChunk.lights_fragment_begin || "";
+          const softChunk = chunk ? soften(chunk) : "";
+          const hitChunk = softChunk && softChunk !== chunk && shader.fragmentShader.includes(INCLUDE);
+          if (hitChunk) {
+            shader.fragmentShader = shader.fragmentShader.replace(INCLUDE, softChunk);
+          } else if (shader.fragmentShader.includes(dirRaw)) {
+            shader.fragmentShader = soften(shader.fragmentShader);
+          }
+        }
+      }
+    };
+  }
+  function toUnlitMaterial(src) {
+    const t = new MeshBasicMaterial({
+      color: src.color ? src.color.clone() : new Color(16777215),
+      map: src.map || null,
+      alphaMap: src.alphaMap || null,
+      transparent: !!src.transparent,
+      opacity: src.opacity !== void 0 ? src.opacity : 1,
+      alphaTest: src.alphaTest || 0,
+      side: src.side,
+      vertexColors: !!src.vertexColors,
+      depthWrite: src.depthWrite !== false,
+      toneMapped: false
+      // unlit 的定义就是"不参与色调映射"
+    });
+    t.name = (src.name || "mat") + "_Unlit";
+    t.userData.__unlit = true;
+    t.userData.__src = src;
+    return t;
   }
   function toToonMaterial(src) {
     const t = new MeshToonMaterial({
       color: src.color ? src.color.clone() : new Color(16777215),
       map: src.map || null,
-      gradientMap: getToonGradient(),
+      // 不再给 gradientMap —— 分档改由注入的 getGradientIrradiance 计算
       emissive: src.emissive ? src.emissive.clone() : new Color(0),
+      // ★ 必须一并复制 emissiveIntensity ✗
+      //   实测 Maca.fbx：原材质 emissive=[0.604,0.604,0.604] em intensity=0（无自发光 ✓）
+      //   只复制 emissive 会让新材质用默认强度 1 ✗ → 模型被加一层 60% 灰白 ✗✗
+      //   而且自发光**不受灯光影响** ✗ 表现就是"拖光照亮度滑块也没用" ✓
+      emissiveIntensity: src.emissiveIntensity !== void 0 ? src.emissiveIntensity : 1,
       emissiveMap: src.emissiveMap || null,
       alphaMap: src.alphaMap || null,
       normalMap: src.normalMap || null,
@@ -26495,26 +33918,878 @@ function createViewer(container, opts = {}) {
     t.name = (src.name || "mat") + "_Toon";
     t.userData.__toon = true;
     t.userData.__src = src;
+    patchToonMaterial(t, celFaceRe().test(src.name || ""));
     return t;
   }
+  function shaderActive() {
+    return renderMode === "toon" && shaderMode !== "none";
+  }
+  function shadingLabel() {
+    return shaderActive() ? "cel" : renderMode;
+  }
+  function setShadingLegacy(mode) {
+    if (mode === "unlit") {
+      renderMode = "unlit";
+      shaderMode = "none";
+    } else if (mode === "cel") {
+      renderMode = "toon";
+      shaderMode = "cel";
+    } else if (mode === "toon") {
+      renderMode = "toon";
+    } else {
+      renderMode = "pbr";
+      shaderMode = "none";
+    }
+    return { render: renderMode, shader: shaderMode };
+  }
   function applyShading(mode) {
-    shadingMode = mode === "cel" ? "cel" : "pbr";
-    if (!modelRoot) return shadingMode;
+    setShadingLegacy(mode);
+    return applyRender(renderMode);
+  }
+  function lilOutlineVertGLSL(o) {
+    const vc = Math.round(o.vertexR2Width || 0);
+    const L = [];
+    L.push("// ===== lilToon 描边位移 =====");
+    L.push("{");
+    L.push("	float ba3dOW = uOutlineWidth * 0.01;");
+    L.push("	float ba3dScale = length( modelMatrix[ 0 ].xyz );");
+    L.push("	ba3dOW /= max( ba3dScale, 1e-6 );");
+    if (o.widthMask) {
+      L.push("#ifdef USE_UV");
+      L.push("	ba3dOW *= texture2D( uOutlineWidthMask, vUv ).r;");
+      L.push("#endif");
+    }
+    if (vc === 1) {
+      L.push("#ifdef USE_COLOR");
+      L.push("	ba3dOW *= color.r;");
+      L.push("#endif");
+    }
+    if (vc === 2) {
+      L.push("#ifdef USE_COLOR");
+      L.push("	ba3dOW *= color.a;");
+      L.push("#endif");
+    }
+    L.push("	vec4 ba3dMVP = modelViewMatrix * vec4( transformed, 1.0 );");
+    if (o.fixWidthMode === "screen") {
+      L.push("	ba3dOW *= mix( 1.0, -ba3dMVP.z, uOutlineFixWidth );");
+    } else {
+      L.push("	ba3dOW *= mix( 1.0, saturate( -ba3dMVP.z ), uOutlineFixWidth );");
+    }
+    if (vc === 2) {
+      L.push("#ifdef USE_COLOR");
+      L.push("	vec3 ba3dON = normalize( color.rgb * 2.0 - 1.0 );");
+      L.push("#else");
+      L.push("	vec3 ba3dON = objectNormal;");
+      L.push("#endif");
+    } else {
+      L.push("	vec3 ba3dON = objectNormal;");
+    }
+    if (o.vectorTex) {
+      const uvName = ["vUv", "vUv1", "vUv2", "vUv3"][Math.round(o.vectorUVMode || 0)] || "vUv";
+      L.push("#ifdef USE_UV");
+      L.push("	vec3 ba3dVT = texture2D( uOutlineVectorTex, " + uvName + " ).rgb * 2.0 - 1.0;");
+      L.push("	ba3dVT.xy *= uOutlineVectorScale;");
+      L.push("#ifdef USE_TANGENT");
+      L.push("	{");
+      L.push("		vec3 ba3dT = normalize( objectTangent );");
+      L.push("		vec3 ba3dN0 = normalize( objectNormal );");
+      L.push("		vec3 ba3dB = normalize( cross( ba3dN0, ba3dT ) );");
+      L.push("		ba3dON = normalize( ba3dT * ba3dVT.x + ba3dB * ba3dVT.y + ba3dN0 * ba3dVT.z );");
+      L.push("	}");
+      L.push("#else");
+      L.push("	{");
+      L.push("		vec3 ba3dN0 = normalize( objectNormal );");
+      L.push("		vec3 ba3dUp = abs( ba3dN0.y ) < 0.99 ? vec3( 0.0, 1.0, 0.0 ) : vec3( 1.0, 0.0, 0.0 );");
+      L.push("		vec3 ba3dT = normalize( cross( ba3dUp, ba3dN0 ) );");
+      L.push("		vec3 ba3dB = cross( ba3dN0, ba3dT );");
+      L.push("		ba3dON = normalize( ba3dT * ba3dVT.x + ba3dB * ba3dVT.y + ba3dN0 * ba3dVT.z );");
+      L.push("	}");
+      L.push("#endif");
+      L.push("#endif");
+    }
+    L.push("	transformed += ba3dON * ba3dOW;");
+    L.push("	if ( uOutlineZBias != 0.0 ) {");
+    L.push("		vec3 ba3dV = uCameraPosOS - transformed;");
+    L.push("		transformed -= normalize( ba3dV ) * uOutlineZBias;");
+    L.push("	}");
+    L.push("}");
+    return L.join("\n");
+  }
+  function lilOutlineLitVertexGLSL() {
+    return [
+      "// 受光：传世界空间法线（objectNormal 已被 skinnormal_vertex 蒙皮过）",
+      "vOutlineNormal = normalize( mat3( modelMatrix ) * objectNormal );"
+    ].join("\n");
+  }
+  function lilOutlineLitFragmentGLSL(o) {
+    return [
+      "{",
+      "  vec3 ba3dN = normalize( vOutlineNormal );",
+      "  vec3 ba3dL = normalize( uOutlineLitDir );",
+      "  float ba3dNdotL = dot( ba3dN, ba3dL );",
+      "  vec3 ba3dLitCol = uOutlineLitApplyTex ? diffuseColor.rgb * uOutlineLitColor.rgb : uOutlineLitColor.rgb;",
+      "  float ba3dLitF = saturate( ba3dNdotL * uOutlineLitScale + uOutlineLitOffset ) * uOutlineLitColor.a;",
+      o && o.litShadowDebug ? "  ba3dLitCol = vec3( abs(ba3dNdotL), ba3dLitF, 0.0 ); ba3dLitF = 1.0;   // 诊断：R=|NdotL| G=litF（不含阴影）" : o && o.litShadowReceive ? "  ba3dLitF *= ba3dOutlineShadow();   // _OutlineLitShadowReceive（自算 PCF）" : "",
+      "  // 描边色只在这里乘一次（对应 lilToon 的 col.rgb * _OutlineColor.rgb）",
+      o && o.shaderColorMult ? "  diffuseColor.rgb = mix( diffuseColor.rgb * uOutlineColor.rgb, ba3dLitCol, ba3dLitF );   // 再乘一次（可选 ✗ 受光色会被染）" : "  diffuseColor.rgb = mix( diffuseColor.rgb, ba3dLitCol, ba3dLitF );",
+      "}"
+    ].join("\n");
+  }
+  const lilOutlineTexCache = /* @__PURE__ */ new Map();
+  const lilOutlineTexLoading = /* @__PURE__ */ new Set();
+  function resolveOutlineTexture(url) {
+    if (!url || typeof url !== "string") return null;
+    if (lilOutlineTexCache.has(url)) return lilOutlineTexCache.get(url);
+    if (lilOutlineTexLoading.has(url)) return null;
+    lilOutlineTexLoading.add(url);
+    const tl = new TextureLoader(loadingManager);
+    tl.load(
+      url,
+      (tex) => {
+        tex.colorSpace = SRGBColorSpace;
+        lilOutlineTexCache.set(url, tex);
+        lilOutlineTexLoading.delete(url);
+        console.debug("[outline] 贴图已加载：" + url);
+        applyLilOutline();
+      },
+      void 0,
+      () => {
+        lilOutlineTexLoading.delete(url);
+        console.warn("[outline] 贴图加载失败：" + url);
+      }
+    );
+    return null;
+  }
+  const lilMatCapCache = /* @__PURE__ */ new Map();
+  const lilMatCapLoading = /* @__PURE__ */ new Set();
+  function resolveMatCapTexture(url) {
+    if (!url || typeof url !== "string") return null;
+    if (lilMatCapCache.has(url)) return lilMatCapCache.get(url);
+    if (lilMatCapLoading.has(url)) return null;
+    lilMatCapLoading.add(url);
+    const real = typeof resolveMappedUrl === "function" ? resolveMappedUrl(url) : url;
+    new TextureLoader(loadingManager).load(
+      real,
+      (tex) => {
+        tex.colorSpace = SRGBColorSpace;
+        lilMatCapCache.set(url, tex);
+        lilMatCapLoading.delete(url);
+        console.debug("[matcap] 贴图已加载：" + url);
+        if (modelRoot) applyRender(renderMode);
+      },
+      void 0,
+      () => {
+        lilMatCapLoading.delete(url);
+        console.warn("[matcap] 贴图加载失败：" + url);
+      }
+    );
+    return null;
+  }
+  const lilEmissionCache = /* @__PURE__ */ new Map();
+  const lilEmissionLoading = /* @__PURE__ */ new Set();
+  function resolveEmissionTexture(url) {
+    if (!url || typeof url !== "string") return null;
+    if (lilEmissionCache.has(url)) return lilEmissionCache.get(url);
+    if (lilEmissionLoading.has(url)) return null;
+    lilEmissionLoading.add(url);
+    const real = typeof resolveMappedUrl === "function" ? resolveMappedUrl(url) : url;
+    new TextureLoader(loadingManager).load(
+      real,
+      (tex) => {
+        tex.colorSpace = SRGBColorSpace;
+        lilEmissionCache.set(url, tex);
+        lilEmissionLoading.delete(url);
+        console.debug("[emission] 贴图已加载：" + url);
+        if (modelRoot) applyRender(renderMode);
+      },
+      void 0,
+      () => {
+        lilEmissionLoading.delete(url);
+        console.warn("[emission] 贴图加载失败：" + url);
+      }
+    );
+    return null;
+  }
+  const lilLayerCache = /* @__PURE__ */ new Map();
+  const lilLayerLoading = /* @__PURE__ */ new Set();
+  function resolveLayerTexture(url) {
+    if (!url || typeof url !== "string") return null;
+    if (lilLayerCache.has(url)) return lilLayerCache.get(url);
+    if (lilLayerLoading.has(url)) return null;
+    lilLayerLoading.add(url);
+    const real = typeof resolveMappedUrl === "function" ? resolveMappedUrl(url) : url;
+    new TextureLoader(loadingManager).load(
+      real,
+      (tex) => {
+        tex.colorSpace = SRGBColorSpace;
+        lilLayerCache.set(url, tex);
+        lilLayerLoading.delete(url);
+        console.debug("[layer] 贴图已加载：" + url);
+        if (modelRoot) applyRender(renderMode);
+      },
+      void 0,
+      () => {
+        lilLayerLoading.delete(url);
+        console.warn("[layer] 贴图加载失败：" + url);
+      }
+    );
+    return null;
+  }
+  let __ba3dLayerWhite = null;
+  function layerPlaceholder() {
+    if (!__ba3dLayerWhite) {
+      __ba3dLayerWhite = new DataTexture(new Uint8Array([255, 255, 255, 255]), 1, 1);
+      __ba3dLayerWhite.colorSpace = SRGBColorSpace;
+      __ba3dLayerWhite.needsUpdate = true;
+    }
+    return __ba3dLayerWhite;
+  }
+  let __ba3dWhiteTex = null;
+  let __ba3dGrayTex = null;
+  function dissolvePlaceholder(kind) {
+    if (kind === "noise") {
+      if (!__ba3dGrayTex) {
+        __ba3dGrayTex = new DataTexture(new Uint8Array([128, 128, 128, 255]), 1, 1);
+        __ba3dGrayTex.colorSpace = NoColorSpace;
+        __ba3dGrayTex.needsUpdate = true;
+      }
+      return __ba3dGrayTex;
+    }
+    if (!__ba3dWhiteTex) {
+      __ba3dWhiteTex = new DataTexture(new Uint8Array([255, 255, 255, 255]), 1, 1);
+      __ba3dWhiteTex.colorSpace = NoColorSpace;
+      __ba3dWhiteTex.needsUpdate = true;
+    }
+    return __ba3dWhiteTex;
+  }
+  const lilDissolveCache = /* @__PURE__ */ new Map();
+  const lilDissolveLoading = /* @__PURE__ */ new Set();
+  const STENCIL_COMP_MAP = [
+    AlwaysStencilFunc,
+    NeverStencilFunc,
+    LessStencilFunc,
+    EqualStencilFunc,
+    LessEqualStencilFunc,
+    GreaterStencilFunc,
+    NotEqualStencilFunc,
+    GreaterEqualStencilFunc,
+    AlwaysStencilFunc
+    // 8 Always（lilToon 默认 ✓）
+  ];
+  const STENCIL_OP_MAP = [
+    KeepStencilOp,
+    ZeroStencilOp,
+    ReplaceStencilOp,
+    IncrementStencilOp,
+    DecrementStencilOp,
+    InvertStencilOp,
+    IncrementWrapStencilOp,
+    DecrementWrapStencilOp
+    // 7 DecrWrap
+  ];
+  function applyLilRenderState(mat, cfg2) {
+    if (!mat || !cfg2) return;
+    const num = (v, d) => v === void 0 || v === null || !isFinite(Number(v)) ? d : Number(v);
+    const ud = mat.userData;
+    if (ud.__ba3dOrigAlphaTest === void 0) ud.__ba3dOrigAlphaTest = mat.alphaTest || 0;
+    if (ud.__ba3dOrigTransparent === void 0) ud.__ba3dOrigTransparent = !!mat.transparent;
+    if (ud.__ba3dOrigDepthWrite === void 0) ud.__ba3dOrigDepthWrite = mat.depthWrite !== false;
+    if (ud.__ba3dOrigSide === void 0) ud.__ba3dOrigSide = mat.side;
+    const tm = Math.round(num(cfg2.transparentMode, -1));
+    const co = Math.max(0, Math.min(1, num(cfg2.cutoff, 0.5)));
+    const cu = Math.round(num(cfg2.cull, -1));
+    if (tm >= 0) {
+      if (tm >= 3 && !ud.__ba3dTMWarned) {
+        ud.__ba3dTMWarned = true;
+        console.debug("[renderState] " + (mat.name || "?") + " 的 _TransparentMode=" + tm + "（Refraction/Fur/FurCutout/Gem ✓）在 Web 侧没有对应 shader ⇒ 按 Transparent 处理 ✓");
+      }
+      if (tm === 0) {
+        mat.transparent = false;
+        mat.depthWrite = true;
+      } else if (tm === 1) {
+        mat.transparent = false;
+        mat.depthWrite = true;
+      } else {
+        mat.transparent = true;
+        mat.depthWrite = false;
+      }
+    }
+    if (cu >= 0) {
+      const want = cu === 0 ? DoubleSide : cu === 1 ? BackSide : FrontSide;
+      if (mat.side !== want) mat.side = want;
+    }
+    mat.needsUpdate = true;
+  }
+  const ba3dTimeUniform = { value: 0 };
+  function lilMainTexUVGLSL(M, quiet) {
+    if (!M) return null;
+    const num = (v, d) => v === void 0 || v === null || !isFinite(Number(v)) ? d : Number(v);
+    const hv = Array.isArray(M.mainTexHSVG) ? M.mainTexHSVG : [0, 1, 1, 1];
+    const sr = Array.isArray(M.mainTexScrollRotate) ? M.mainTexScrollRotate : [0, 0, 0, 0];
+    const H = num(hv[0], 0), S = num(hv[1], 1), V = num(hv[2], 1), G = num(hv[3], 1);
+    const sx = num(sr[0], 0), sy = num(sr[1], 0), ang = num(sr[2], 0), aspd = num(sr[3], 0);
+    const hsvDefault = H === 0 && S === 1 && V === 1 && G === 1;
+    const srDefault = sx === 0 && sy === 0 && ang === 0 && aspd === 0;
+    if (hsvDefault && srDefault) return null;
+    const L = [];
+    L.push("");
+    L.push("// ══ _MainTexHSVG / _MainTex_ScrollRotate（lil_common_frag.hlsl:263 / :317）══");
+    if (!srDefault) {
+      L.push("vec2 ba3dRotateUVmain( vec2 uv, float angle ) {");
+      L.push("	float si = sin( angle ); float co = cos( angle );");
+      L.push("	vec2 o = uv - 0.5;");
+      L.push("	return vec2( o.x * co - o.y * si, o.x * si + o.y * co ) + 0.5;");
+      L.push("}");
+      L.push("vec2 ba3dMainUvScroll( vec2 uv ) {");
+      L.push("	vec2 o = ba3dRotateUVmain( uv, " + ang.toFixed(6) + " + " + aspd.toFixed(6) + " * uBa3dTime );");
+      L.push("	o += fract( vec2( " + sx.toFixed(6) + ", " + sy.toFixed(6) + " ) * uBa3dTime );");
+      L.push("	return o;");
+      L.push("}");
+    }
+    if (!hsvDefault) {
+      L.push("vec3 ba3dToneCorrectionMain( vec3 c, vec4 hsvg ) {");
+      L.push("	c = pow( abs( c ), vec3( hsvg.w ) );");
+      L.push("	vec4 p = ( c.b > c.g ) ? vec4( c.bg, -1.0, 2.0 / 3.0 ) : vec4( c.gb, 0.0, -1.0 / 3.0 );");
+      L.push("	vec4 q = ( p.x > c.r ) ? vec4( p.xyw, c.r ) : vec4( c.r, p.yzx );");
+      L.push("	float d = q.x - min( q.w, q.y );");
+      L.push("	float e = 1.0e-10;");
+      L.push("	vec3 hsv = vec3( abs( q.z + ( q.w - q.y ) / ( 6.0 * d + e ) ), d / ( q.x + e ), q.x );");
+      L.push("	hsv = vec3( hsv.x + hsvg.x, saturate( hsv.y * hsvg.y ), saturate( hsv.z * hsvg.z ) );");
+      L.push("	return hsv.z - hsv.z * hsv.y + hsv.z * hsv.y * saturate( abs( fract( hsv.x + vec3( 1.0, 2.0 / 3.0, 1.0 / 3.0 ) ) * 6.0 - 3.0 ) - 1.0 );");
+      L.push("}");
+    }
+    const out = L.join("\n");
+    if (!quiet && typeof console !== "undefined") console.debug("[mainTex] HSVG=(" + H + "," + S + "," + V + "," + G + ") ScrollRotate=(" + sx + "," + sy + "," + ang + "," + aspd + ") ⇒ " + (srDefault ? "不改 UV" : "改 UV") + " / " + (hsvDefault ? "不改色" : "改色"));
+    return { pre: out, useUV: !srDefault, useHSV: !hsvDefault, H, S, V, G };
+  }
+  function applyStencil(mat, cfg2, tag) {
+    if (!mat || !mat.isMaterial) return;
+    const KEYS = [
+      "stencilWrite",
+      "stencilRef",
+      "stencilFunc",
+      "stencilFuncMask",
+      "stencilWriteMask",
+      "stencilFail",
+      "stencilZFail",
+      "stencilZPass"
+    ];
+    if (mat.userData.__ba3dOrigStencil === void 0) {
+      const o2 = {};
+      for (const k of KEYS) o2[k] = mat[k];
+      mat.userData.__ba3dOrigStencil = o2;
+    }
+    const o = mat.userData.__ba3dOrigStencil;
+    const on = !!(cfg2 && cfg2.use);
+    if (!on) {
+      for (const k of KEYS) mat[k] = o[k];
+      return;
+    }
+    const cl = (v, lo, hi, d) => {
+      const n2 = Number(v);
+      return isFinite(n2) ? Math.max(lo, Math.min(hi, Math.round(n2))) : d;
+    };
+    const nv = {
+      stencilWrite: true,
+      stencilRef: cl(cfg2.ref, 0, 255, 0),
+      stencilFuncMask: cl(cfg2.readMask, 0, 255, 255),
+      stencilWriteMask: cl(cfg2.writeMask, 0, 255, 255),
+      stencilFunc: STENCIL_COMP_MAP[cl(cfg2.comp, 0, 8, 8)],
+      stencilFail: STENCIL_OP_MAP[cl(cfg2.fail, 0, 7, 0)],
+      stencilZFail: STENCIL_OP_MAP[cl(cfg2.zfail, 0, 7, 0)],
+      stencilZPass: STENCIL_OP_MAP[cl(cfg2.pass, 0, 7, 0)]
+    };
+    for (const k of KEYS) mat[k] = nv[k];
+    if (tag) console.debug("[stencil] " + tag + "：ref=" + nv.stencilRef + " comp=" + nv.stencilFunc + " pass=" + nv.stencilZPass + " fail=" + nv.stencilFail + " zfail=" + nv.stencilZFail + " readMask=" + nv.stencilFuncMask + " writeMask=" + nv.stencilWriteMask);
+  }
+  function resolveNormalTexture(url) {
+    return resolveDissolveTexture(url);
+  }
+  function normalPlaceholder() {
+    if (normalPlaceholder.__t) return normalPlaceholder.__t;
+    const d = new Uint8Array([128, 128, 255, 255]);
+    const t = new DataTexture(d, 1, 1, RGBAFormat);
+    t.colorSpace = NoColorSpace;
+    t.needsUpdate = true;
+    normalPlaceholder.__t = t;
+    return t;
+  }
+  function resolveMaskTexture(url) {
+    return resolveDissolveTexture(url);
+  }
+  function resolveDissolveTexture(url) {
+    if (!url || typeof url !== "string") return null;
+    if (lilDissolveCache.has(url)) return lilDissolveCache.get(url);
+    if (lilDissolveLoading.has(url)) return null;
+    lilDissolveLoading.add(url);
+    const real = typeof resolveMappedUrl === "function" ? resolveMappedUrl(url) : url;
+    new TextureLoader(loadingManager).load(
+      real,
+      (tex) => {
+        tex.colorSpace = NoColorSpace;
+        lilDissolveCache.set(url, tex);
+        lilDissolveLoading.delete(url);
+        console.debug("[dissolve] 贴图已加载：" + url);
+        if (modelRoot) applyRender(renderMode);
+      },
+      void 0,
+      () => {
+        lilDissolveLoading.delete(url);
+        console.warn("[dissolve] 贴图加载失败：" + url);
+      }
+    );
+    return null;
+  }
+  function lilOutlineKey(o) {
+    return "ba3d-lilOutline:" + celProgramVersion + ":" + (o.widthMask ? "m" : "-") + ":" + Math.round(o.vertexR2Width || 0) + ":" + (o.cull || "back") + ":" + (o.fixWidthMode === "screen" ? "sc" : "lt") + ":" + (o.litEnable !== false ? "lit" : "-") + ":" + (o.__tex ? "T" : "-") + (o.__mask ? "M" : "-") + (o.litApplyTex ? "A" : "-") + (o.__vec ? "V" + Math.round(o.vectorUVMode || 0) : "") + (o.litShadowReceive ? "S" : "-") + (o.litShadowDebug ? "D" : "") + (o.shaderColorMult ? "C" : "");
+  }
+  const LIGHT_UNIFORM_STUBS = [
+    "ambientLightColor",
+    "lightProbe",
+    "directionalLights",
+    "directionalLightShadows",
+    "spotLights",
+    "spotLightShadows",
+    "rectAreaLights",
+    "ltc_1",
+    "ltc_2",
+    "pointLights",
+    "pointLightShadows",
+    "hemisphereLights",
+    "directionalShadowMap",
+    "directionalShadowMatrix",
+    "spotShadowMap",
+    "spotLightMatrix",
+    "spotLightMap",
+    "pointShadowMap",
+    "pointLightMatrix"
+  ];
+  const SHADOW_UNIFORM_KEYS = [
+    "directionalShadowMap",
+    "directionalShadowMatrix",
+    "directionalLightShadows",
+    "directionalLights",
+    "spotShadowMap",
+    "spotLightMatrix",
+    "spotLightShadows",
+    "pointShadowMap",
+    "pointLightMatrix",
+    "pointLightShadows",
+    "ambientLightColor",
+    "hemisphereLights"
+  ];
+  function makeLilOutlineMaterial(o, srcMat) {
+    const __dSrc = Array.isArray(srcMat) ? srcMat[0] : srcMat;
+    const __dCfg = __dSrc && __dSrc.isMeshToonMaterial ? lilCfgFor(__dSrc) : lilCfg;
+    const __dRes = shaderMode === "lilToon" ? lilDissolveGLSL(__dCfg) : null;
+    const __src0 = Array.isArray(srcMat) ? srcMat[0] : srcMat;
+    const __srcTransparent = !!(__src0 && __src0.transparent === true);
+    const __oAlpha = o.color[3];
+    const mat = new MeshBasicMaterial({
+      color: new Color(o.color[0], o.color[1], o.color[2]),
+      // 描边色（受光块会被 uOutlineColor 再乘一次 ✗ 待修）
+      side: o.cull === "front" ? FrontSide : BackSide,
+      transparent: o.color[3] < 1 || __srcTransparent,
+      opacity: __oAlpha,
+      depthWrite: !__srcTransparent,
+      // ★ 透明源 ⇒ 不写深度 ⇒ 不遮挡本体
+      toneMapped: true
+    });
+    mat.receiveShadow = true;
+    const __st = Array.isArray(o.texST) ? o.texST : [1, 1, 0, 0];
+    const __sr = Array.isArray(o.texScrollRotate) ? o.texScrollRotate : [0, 0, 0, 0];
+    const __hv = Array.isArray(o.texHSVG) ? o.texHSVG : [0, 1, 1, 1];
+    const __numO = (v, d) => v === void 0 || v === null || !isFinite(Number(v)) ? d : Number(v);
+    const __texXf = __numO(__st[0], 1) !== 1 || __numO(__st[1], 1) !== 1 || __numO(__st[2], 0) !== 0 || __numO(__st[3], 0) !== 0 || __numO(__sr[0], 0) !== 0 || __numO(__sr[1], 0) !== 0 || __numO(__sr[2], 0) !== 0 || __numO(__sr[3], 0) !== 0 || __numO(__hv[0], 0) !== 0 || __numO(__hv[1], 1) !== 1 || __numO(__hv[2], 1) !== 1 || __numO(__hv[3], 1) !== 1;
+    if (o.__tex && !__texXf) mat.map = o.__tex;
+    o.tex = o.tex || null;
+    mat.name = "ba3d-lilOutline";
+    applyStencil(mat, o.stencilEnable ? {
+      use: true,
+      ref: o.stencilRef,
+      readMask: o.stencilReadMask,
+      writeMask: o.stencilWriteMask,
+      comp: o.stencilComp,
+      pass: o.stencilPass,
+      fail: o.stencilFail,
+      zfail: o.stencilZFail
+    } : null, "描边");
+    if (__dRes) {
+      mat.userData.__ba3dOrigAlphaTest = mat.alphaTest || 0;
+      mat.alphaTest = Math.max(0.5, mat.alphaTest || 0);
+    }
+    const wm = o.__mask || null;
+    mat.onBeforeCompile = (shader) => {
+      if (__texXf && o.__tex) {
+        shader.uniforms.uBa3dTime = { value: 0 };
+        shader.uniforms.ba3dOutlineTex = { value: o.__tex };
+        shader.vertexShader = shader.vertexShader.replace("#include <uv_pars_vertex>", "#include <uv_pars_vertex>\nvarying vec2 vBa3dOTexUv;").replace("#include <begin_vertex>", "#include <begin_vertex>\n	vBa3dOTexUv = uv;");
+        shader.fragmentShader = shader.fragmentShader.replace("#include <common>", "#include <common>\nvarying vec2 vBa3dOTexUv;\nuniform float uBa3dTime;\nuniform sampler2D ba3dOutlineTex;\nvec2 ba3dRotateUV( vec2 uv, float angle ) {\n	float si = sin( angle ); float co = cos( angle );\n	vec2 o = uv - 0.5;\n	return vec2( o.x * co - o.y * si, o.x * si + o.y * co ) + 0.5;\n}\nvec3 ba3dToneCorrection( vec3 c, vec4 hsvg ) {\n	c = pow( abs( c ), vec3( hsvg.w ) );   // GLSL ES 1.00 没有 pow(genType,float)\n	vec4 p = ( c.b > c.g ) ? vec4( c.bg, -1.0, 2.0 / 3.0 ) : vec4( c.gb, 0.0, -1.0 / 3.0 );\n	vec4 q = ( p.x > c.r ) ? vec4( p.xyw, c.r ) : vec4( c.r, p.yzx );\n	float d = q.x - min( q.w, q.y );\n	float e = 1.0e-10;\n	vec3 hsv = vec3( abs( q.z + ( q.w - q.y ) / ( 6.0 * d + e ) ), d / ( q.x + e ), q.x );\n	hsv = vec3( hsv.x + hsvg.x, saturate( hsv.y * hsvg.y ), saturate( hsv.z * hsvg.z ) );\n	return hsv.z - hsv.z * hsv.y + hsv.z * hsv.y * saturate( abs( fract( hsv.x + vec3( 1.0, 2.0 / 3.0, 1.0 / 3.0 ) ) * 6.0 - 3.0 ) - 1.0 );\n}\n").replace("#include <map_fragment>", "#include <map_fragment>\n" + function() {
+          return [
+            "// _OutlineTex 的自定义采样（ST / 滚动旋转 / HSV）",
+            "{",
+            "	vec2 uvO = vBa3dOTexUv * vec2( " + __numO(__st[0], 1).toFixed(6) + ", " + __numO(__st[1], 1).toFixed(6) + " )",
+            "		+ vec2( " + __numO(__st[2], 0).toFixed(6) + ", " + __numO(__st[3], 0).toFixed(6) + " );",
+            "	uvO = ba3dRotateUV( uvO, " + __numO(__sr[2], 0).toFixed(6) + " + " + __numO(__sr[3], 0).toFixed(6) + " * uBa3dTime )",
+            "		+ fract( vec2( " + __numO(__sr[0], 0).toFixed(6) + ", " + __numO(__sr[1], 0).toFixed(6) + " ) * uBa3dTime );",
+            "	vec4 tO = texture2D( ba3dOutlineTex, uvO );",
+            "	tO.rgb = ba3dToneCorrection( tO.rgb, vec4( " + __numO(__hv[0], 0).toFixed(6) + ", " + __numO(__hv[1], 1).toFixed(6) + ", " + __numO(__hv[2], 1).toFixed(6) + ", " + __numO(__hv[3], 1).toFixed(6) + " ) );",
+            "	diffuseColor *= tO;",
+            "}"
+          ].join("\n");
+        }());
+        {
+          const __bad = ["lerp(", "frac(", "atan2(", "tex2D(", "mul("].filter((x) => shader.fragmentShader.indexOf(x) >= 0);
+          if (__bad.length) {
+            console.error("[lilToon] 描边贴图变换：注入后出现 HLSL 写法 " + JSON.stringify(__bad) + " ✗ 着色器会编译失败！");
+          }
+        }
+      }
+      if (__dRes) {
+        if (__dRes.uniforms.mask) {
+          const t = resolveDissolveTexture(__dRes.uniforms.mask);
+          shader.uniforms.ba3dDissolveMask = { value: t || dissolvePlaceholder("mask") };
+        }
+        if (__dRes.uniforms.noise) {
+          const t = resolveDissolveTexture(__dRes.uniforms.noise);
+          shader.uniforms.ba3dDissolveNoiseMask = { value: t || dissolvePlaceholder("noise") };
+        }
+        shader.vertexShader = shader.vertexShader.replace(
+          "#include <uv_pars_vertex>",
+          "#include <uv_pars_vertex>\nvarying vec2 vBa3dUv;\nvarying vec3 vBa3dPositionOS;\nvarying vec3 vBa3dPositionWS;"
+        ).replace(
+          "#include <begin_vertex>",
+          "#include <begin_vertex>\n	vBa3dUv = uv;\n	vBa3dPositionOS = position;"
+        ).replace(
+          "#include <project_vertex>",
+          "#include <project_vertex>\n	vBa3dPositionWS = ( modelMatrix * vec4( transformed, 1.0 ) ).xyz;"
+        );
+        let __decl = "#include <common>\nvarying vec2 vBa3dUv;\nvarying vec3 vBa3dPositionOS;\nvarying vec3 vBa3dPositionWS;\nfloat ba3dDissolveEdge = 0.0;";
+        if (__dRes.uniforms.mask) __decl += "\nuniform sampler2D ba3dDissolveMask;";
+        if (__dRes.uniforms.noise) __decl += "\nuniform sampler2D ba3dDissolveNoiseMask;";
+        shader.fragmentShader = shader.fragmentShader.replace("#include <common>", __decl).replace(
+          "#include <alphatest_fragment>",
+          __dRes.before + "\n#include <alphatest_fragment>"
+        ).replace(
+          "#include <dithering_fragment>",
+          __dRes.after + "\n#include <dithering_fragment>"
+        );
+      }
+      shader.uniforms.uOutlineWidth = { value: o.width };
+      shader.uniforms.uOutlineFixWidth = { value: o.fixWidth };
+      shader.uniforms.uOutlineZBias = { value: o.zBias };
+      shader.uniforms.uCameraPosOS = { value: new Vector3() };
+      if (wm) shader.uniforms.uOutlineWidthMask = { value: wm };
+      if (o.__vec) {
+        shader.uniforms.uOutlineVectorTex = { value: o.__vec };
+        if (false) {
+          for (const k of LIGHT_UNIFORM_STUBS) {
+            if (!shader.uniforms[k]) shader.uniforms[k] = { value: null };
+          }
+          mat.isMeshToonMaterial = true;
+          shader.uniforms.receiveShadow = { value: true };
+        }
+        shader.uniforms.uOutlineVectorScale = { value: o.vectorScale !== void 0 ? o.vectorScale : 1 };
+      }
+      if (o.litEnable !== false) {
+        const lc = o.litColor || [1, 0.2, 0, 0];
+        shader.uniforms.uOutlineLitColor = { value: new Vector4(lc[0], lc[1], lc[2], lc[3] !== void 0 ? lc[3] : 0) };
+        shader.uniforms.uOutlineLitScale = { value: o.litScale !== void 0 ? o.litScale : 10 };
+        shader.uniforms.uOutlineLitOffset = { value: o.litOffset !== void 0 ? o.litOffset : -8 };
+        shader.uniforms.uOutlineLitDir = { value: new Vector3(0, 1, 0) };
+        shader.uniforms.uOutlineLitApplyTex = { value: !!(o.litApplyTex && o.__tex) };
+        shader.uniforms.uOutlineColor = { value: new Vector4(o.color[0], o.color[1], o.color[2], o.color[3] !== void 0 ? o.color[3] : 1) };
+        shader.vertexShader = shader.vertexShader.replace("#include <common>", "#include <common>\nvarying vec3 vOutlineNormal;\n").replace("#include <skinning_vertex>", "#include <skinning_vertex>\n" + lilOutlineLitVertexGLSL() + "\n");
+        shader.fragmentShader = shader.fragmentShader.replace(
+          "#include <common>",
+          "#include <common>\nvarying vec3 vOutlineNormal;\nuniform vec4  uOutlineLitColor;\nuniform float uOutlineLitScale;\nuniform float uOutlineLitOffset;\nuniform vec3  uOutlineLitDir;\nuniform bool  uOutlineLitApplyTex;\nuniform vec4  uOutlineColor;\n"
+        ).replace("#include <color_fragment>", "#include <color_fragment>\n" + lilOutlineLitFragmentGLSL(o) + "\n");
+      }
+      if (false) {
+        shader.vertexShader = shader.vertexShader.replace("#include <common>", "#include <common>\n#include <packing>\n#include <shadowmap_pars_vertex>").replace("#include <worldpos_vertex>", "#include <worldpos_vertex>\n#include <shadowmap_vertex>");
+        shader.fragmentShader = shader.fragmentShader.replace(
+          "#include <common>",
+          "#include <common>\n#include <packing>\n#include <shadowmap_pars_fragment>\n#define receiveShadow true\n#include <shadowmask_pars_fragment>"
+        );
+      }
+      shader.uniforms.uOutlineShadowMap = { value: null };
+      shader.uniforms.uOutlineShadowMatrix = { value: new Matrix4() };
+      shader.uniforms.uOutlineShadowBias = { value: 0 };
+      shader.uniforms.uOutlineShadowRadius = { value: 1 };
+      shader.uniforms.uOutlineShadowMapSize = { value: new Vector2(512, 512) };
+      shader.vertexShader = shader.vertexShader.replace("#include <common>", "#include <common>\nuniform mat4 uOutlineShadowMatrix;\nvarying vec4 vOutlineShadowCoord;\n").replace("#include <project_vertex>", "#include <project_vertex>\nvOutlineShadowCoord = uOutlineShadowMatrix * modelMatrix * vec4( transformed, 1.0 );\n");
+      shader.fragmentShader = shader.fragmentShader.replace("#include <common>", "#include <common>\n#include <packing>\nuniform sampler2D uOutlineShadowMap;\nuniform float uOutlineShadowBias;\nuniform float uOutlineShadowRadius;\nuniform vec2  uOutlineShadowMapSize;\nvarying vec4  vOutlineShadowCoord;\nfloat ba3dOutlineShadow() {\n  vec3 c = vOutlineShadowCoord.xyz / vOutlineShadowCoord.w;\n  c.z += uOutlineShadowBias;\n  if ( c.x < 0.0 || c.x > 1.0 || c.y < 0.0 || c.y > 1.0 || c.z > 1.0 ) return 1.0;\n  vec2 t = uOutlineShadowRadius / uOutlineShadowMapSize;\n  float sh = 0.0;\n  for ( int i = -1; i <= 1; i ++ ) {\n    for ( int j = -1; j <= 1; j ++ ) {\n      vec2 uv = clamp( c.xy + vec2( float( i ), float( j ) ) * t, vec2( 0.0 ), vec2( 1.0 ) );\n      sh += step( c.z, unpackRGBAToDepth( texture2D( uOutlineShadowMap, uv ) ) );\n    }\n  }\n  return sh / 9.0;\n}\n");
+      shader.vertexShader = shader.vertexShader.replace(
+        "#include <common>",
+        "#include <common>\nuniform float uOutlineWidth;\nuniform float uOutlineFixWidth;\nuniform float uOutlineZBias;\nuniform vec3  uCameraPosOS;\n" + (wm ? "uniform sampler2D uOutlineWidthMask;\n" : "") + (o.__vec ? "uniform sampler2D uOutlineVectorTex;\nuniform float uOutlineVectorScale;\n" : "")
+      ).replace(
+        "#include <skinning_vertex>",
+        "#include <skinning_vertex>\n" + lilOutlineVertGLSL(o)
+      );
+      shader.vertexShader = shader.vertexShader.replace(
+        "#if defined ( USE_ENVMAP ) || defined ( USE_SKINNING )",
+        "#if 1   // ba3d: 强制编译法线三件套，描边需要 objectNormal"
+      );
+      if (!shader.vertexShader.includes("#include <skinning_vertex>")) {
+        shader.vertexShader = shader.vertexShader.replace(
+          "#include <begin_vertex>",
+          "#include <begin_vertex>\n" + lilOutlineVertGLSL(o)
+        );
+      }
+      mat.userData.__shaderRef = shader;
+    };
+    mat.customProgramCacheKey = () => lilOutlineKey(o);
+    mat.userData.__lilOutlineKey = lilOutlineKey(o);
+    return mat;
+  }
+  function setVisibleDeep(o, on) {
+    o.visible = !!on;
+    if (!on) return;
+    let p = o.parent;
+    while (p && p !== modelRoot) {
+      if (!p.visible) p.visible = true;
+      p = p.parent;
+    }
+  }
+  const meshLocked = /* @__PURE__ */ new Map();
+  function applyLockedVisibility() {
+    if (!modelRoot || meshLocked.size === 0) return 0;
+    let hit = 0;
+    modelRoot.traverse((o) => {
+      if (!o.isMesh || o.userData.__isLilOutline) return;
+      const key = meshPathOf(o);
+      if (meshLocked.has(key)) {
+        setVisibleDeep(o, meshLocked.get(key));
+        hit++;
+      }
+    });
+    return hit;
+  }
+  function meshPathOf(o) {
+    const segs = [];
+    let p = o;
+    while (p && p !== modelRoot) {
+      segs.unshift(p.name || "(未命名)");
+      p = p.parent;
+    }
+    return segs.join("/");
+  }
+  function applyLilOutline() {
+    syncDissolveAlphaTest();
+    syncRenderState();
+    syncLayerDoubleSide();
+    syncStencil();
+    applyOutlineParams();
+    if (!modelRoot) return false;
+    const cfgCache = /* @__PURE__ */ new Map();
+    const resolveFor = (matName) => {
+      const ck = matName || "";
+      if (cfgCache.has(ck)) return cfgCache.get(ck);
+      const root = matName ? lilCfgFor({ name: matName }) : lilCfg;
+      const oo = Object.assign({}, root && root.outline ? root.outline : {});
+      oo.__tex = resolveOutlineTexture(oo.tex);
+      oo.__mask = resolveOutlineTexture(oo.widthMask);
+      oo.__vec = resolveOutlineTexture(oo.vectorTex);
+      oo.widthMask = typeof oo.widthMask === "string" && oo.widthMask ? oo.widthMask : oo.widthMask || null;
+      cfgCache.set(ck, oo);
+      return oo;
+    };
+    const oGlobal = resolveFor(null);
+    const onGlobal = shaderActive() && shaderMode === "lilToon" && !!oGlobal.enable;
+    const keyGlobal = onGlobal ? lilOutlineKey(oGlobal) : "";
+    let anyOn = onGlobal;
+    let made = 0, removed = 0;
+    const meshList = [];
+    modelRoot.traverse((m) => {
+      if (m.isMesh && !m.userData.__isLilOutline) meshList.push(m);
+    });
+    for (const m of meshList) {
+      const _mn0 = (Array.isArray(m.material) ? m.material[0] && m.material[0].name : m.material && m.material.name) || "";
+      const o = _mn0 ? resolveFor(_mn0) : oGlobal;
+      const __srcMat0 = Array.isArray(m.material) ? m.material[0] : m.material;
+      const __srcTransparent = !!(__srcMat0 && __srcMat0.transparent === true);
+      const __flagOff = !!(__srcMat0 && __srcMat0.userData && __srcMat0.userData.outlineParameters && __srcMat0.userData.outlineParameters.visible === false);
+      const __skip = __flagOff && (__srcTransparent ? !!o.skipTransparent : true);
+      const on = !__skip && shaderActive() && shaderMode === "lilToon" && !!o.enable;
+      const key = on ? lilOutlineKey(o) : "";
+      if (on) anyOn = true;
+      const _matName = (Array.isArray(m.material) ? m.material[0] && m.material[0].name : m.material && m.material.name) || "";
+      if (o.skipPattern) {
+        let re = null;
+        try {
+          re = new RegExp(o.skipPattern, "i");
+        } catch (e) {
+          re = null;
+        }
+        const _path = (() => {
+          const segs = [];
+          let p = m;
+          while (p && p !== modelRoot) {
+            segs.unshift(p.name || "");
+            p = p.parent;
+          }
+          return segs.join("/");
+        })();
+        if (re && re.test(m.name || "")) {
+          const ex0 = m.children.find((c) => c.userData && c.userData.__isLilOutline);
+          if (ex0) {
+            m.remove(ex0);
+            if (ex0.material) ex0.material.dispose();
+            removed++;
+          }
+          continue;
+        }
+      }
+      const existing = m.children.find((c) => c.userData && c.userData.__isLilOutline);
+      if (!on) {
+        if (existing) {
+          if (existing.parent) existing.parent.remove(existing);
+          if (existing.material) existing.material.dispose();
+          m.userData.__lilOutlineChild = null;
+          removed++;
+        }
+        continue;
+      }
+      if (existing && existing.material && existing.material.userData.__lilOutlineKey === key) {
+        const mm = existing.material;
+        mm.color.setRGB(o.color[0], o.color[1], o.color[2]);
+        mm.opacity = o.color[3];
+        mm.transparent = o.color[3] < 1;
+        mm.side = o.cull === "front" ? FrontSide : BackSide;
+        {
+          const __sm = Array.isArray(m.material) ? m.material[0] : m.material;
+          const __dd = __sm && __sm.isMeshToonMaterial ? lilCfgFor(__sm).dissolve || {} : {};
+          const __dOn = shaderMode === "lilToon" && Math.round(Math.max(0, Math.min(3, Number(__dd.mode) || 0))) > 0;
+          const __orig = mm.userData.__ba3dOrigAlphaTest !== void 0 ? mm.userData.__ba3dOrigAlphaTest : mm.alphaTest || 0;
+          const __want = __dOn ? Math.max(0.5, __orig) : __orig;
+          if (mm.alphaTest !== __want) {
+            mm.alphaTest = __want;
+            mm.needsUpdate = true;
+          }
+        }
+        const sh = mm.userData && mm.userData.__shaderRef;
+        if (sh && sh.uniforms) {
+          if (sh.uniforms.uOutlineWidth) sh.uniforms.uOutlineWidth.value = o.width;
+          if (sh.uniforms.uOutlineFixWidth) sh.uniforms.uOutlineFixWidth.value = o.fixWidth;
+          if (sh.uniforms.uOutlineZBias) sh.uniforms.uOutlineZBias.value = o.zBias;
+          if (sh.uniforms.uOutlineVectorScale) sh.uniforms.uOutlineVectorScale.value = o.vectorScale !== void 0 ? o.vectorScale : 1;
+        }
+        continue;
+      }
+      if (existing) {
+        if (existing.parent) existing.parent.remove(existing);
+        if (existing.material) existing.material.dispose();
+      }
+      const om = m.isSkinnedMesh ? new SkinnedMesh(m.geometry, makeLilOutlineMaterial(o, m.material)) : new Mesh(m.geometry, makeLilOutlineMaterial(o, m.material));
+      om.userData.__isLilOutline = true;
+      om.receiveShadow = true;
+      om.renderOrder = -1;
+      om.castShadow = false;
+      om.receiveShadow = false;
+      om.frustumCulled = m.frustumCulled;
+      if (m.isSkinnedMesh) {
+        om.bind(m.skeleton, m.bindMatrix);
+        om.bindMode = m.bindMode;
+      }
+      m.add(om);
+      m.userData.__lilOutlineChild = om;
+      made++;
+    }
+    return anyOn;
+  }
+  function updateLilOutlineCamera() {
+    if (!modelRoot) return;
+    modelRoot.traverse((m) => {
+      if (!m.userData || !m.userData.__isLilOutline || !m.material) return;
+      const sh = m.material.userData && m.material.userData.__shaderRef;
+      if (!sh || !sh.uniforms.uCameraPosOS) return;
+      m.updateWorldMatrix(true, false);
+      const inv = new Matrix4().copy(m.matrixWorld).invert();
+      sh.uniforms.uCameraPosOS.value.setFromMatrixPosition(camera.matrixWorld).applyMatrix4(inv);
+      if (sh.uniforms.uOutlineLitDir && keyLight) {
+        const lp = keyLight.getWorldPosition(new Vector3());
+        const tp = m.getWorldPosition(new Vector3());
+        sh.uniforms.uOutlineLitDir.value.copy(lp).sub(tp).normalize();
+        if (sh.uniforms.uOutlineShadowMatrix && keyLight && keyLight.castShadow && keyLight.shadow && keyLight.shadow.map && keyLight.shadow.map.texture) {
+          const sc = keyLight.shadow.camera;
+          const biasM = new Matrix4().set(
+            0.5,
+            0,
+            0,
+            0.5,
+            0,
+            0.5,
+            0,
+            0.5,
+            0,
+            0,
+            0.5,
+            0.5,
+            0,
+            0,
+            0,
+            1
+          );
+          const mtx = new Matrix4().copy(keyLight.shadow.matrix);
+          sh.uniforms.uOutlineShadowMatrix.value.copy(mtx);
+          sh.uniforms.uOutlineShadowMap.value = keyLight.shadow.map.texture;
+          sh.uniforms.uOutlineShadowBias.value = keyLight.shadow.bias;
+          sh.uniforms.uOutlineShadowMapSize.value.set(keyLight.shadow.mapSize.x, keyLight.shadow.mapSize.y);
+          const __cfgO = lilCfgFor({ name: m.material && m.material.name || "" }).outline || {};
+          const __blur = __cfgO.litShadowBlur !== void 0 ? Number(__cfgO.litShadowBlur) : 1;
+          sh.uniforms.uOutlineShadowRadius.value = Math.max(0, (keyLight.shadow.radius || 1) * __blur);
+          if (sh.uniforms.uBa3dTime) sh.uniforms.uBa3dTime.value = performance.now() / 1e3;
+        }
+        if (sh.uniforms.directionalShadowMatrix) {
+          let src = null;
+          modelRoot.traverse((x) => {
+            if (src || !x.isMesh || !x.material) return;
+            if (x.userData && x.userData.__isLilOutline) return;
+            const p = renderer.properties.get(x.material);
+            if (p && p.uniforms && p.uniforms.directionalShadowMatrix) src = p.uniforms;
+          });
+          if (src) {
+            for (const k of SHADOW_UNIFORM_KEYS) {
+              if (src[k] && sh.uniforms[k]) sh.uniforms[k].value = src[k].value;
+            }
+          }
+        }
+      }
+    });
+  }
+  function applyRender(mode) {
+    renderMode = mode === "unlit" ? "unlit" : mode === "toon" ? "toon" : "pbr";
+    if (renderMode !== "toon" && shaderMode !== "none") {
+      if (renderMode === "pbr" && shaderMode !== "none") {
+        console.debug("[render] render=" + renderMode + " 时着色器不生效（当前 shader=" + shaderMode + "）");
+      }
+    }
+    if (!modelRoot) return renderMode;
     modelRoot.traverse((o) => {
       if (!o.isMesh || !o.material) return;
       const isArr = Array.isArray(o.material);
       const mats = isArr ? o.material : [o.material];
       const next = mats.map((m) => {
         if (m.userData && m.userData.__mouth) return m;
-        if (shadingMode === "cel") {
-          if (m.userData && m.userData.__toon) return m;
-          if (m.isMeshBasicMaterial) return m;
-          return toToonMaterial(m);
+        const src = m.userData && m.userData.__src ? m.userData.__src : m;
+        if (renderMode === "unlit") {
+          if (m.userData && m.userData.__unlit && m.userData.__src === src) return m;
+          return toUnlitMaterial(src);
         }
-        return m.userData && m.userData.__src ? m.userData.__src : m;
+        if (renderMode === "toon") {
+          if (m.userData && m.userData.__toon && m.userData.__src === src && m.userData.__celVersion === celProgramVersion && m.userData.__celShader === shaderMode) return m;
+          if (src.isMeshBasicMaterial) return src;
+          return toToonMaterial(src);
+        }
+        if (src && (!src.userData.__shadowVersion || src.userData.__shadowVersion !== celProgramVersion)) {
+          patchShadowSoften(src, celFaceRe().test(src.name || ""));
+        }
+        return src;
       });
       o.material = isArr ? next : next[0];
     });
+    applyLilOutline();
+    applyLockedVisibility();
     if (mouthMesh) {
       if (mouthMat) mouthMat.dispose();
       mouthMat = makeMouthMaterial();
@@ -26531,30 +34806,103 @@ function createViewer(container, opts = {}) {
     }
     applyLightingPreset(currentLighting);
     applyOutlineParams();
-    return shadingMode;
-  }
-  function applyLightingPreset(name) {
-    const p = LIGHTING_PRESETS[name];
-    if (!p) return null;
-    const cel = shadingMode === "cel";
-    hemi.color.set(p.hemi.sky);
-    hemi.groundColor.set(p.hemi.ground);
-    hemi.intensity = p.hemi.intensity * (cel ? 1.25 : 1);
-    keyLight.color.set(p.key.color);
-    keyLight.intensity = p.key.intensity * (cel ? 0.8 : 1);
-    keyLight.position.set(p.key.position[0], p.key.position[1], p.key.position[2]);
-    rimLight.color.set(p.rim.color);
-    rimLight.intensity = p.rim.intensity * (cel ? 0.95 : 1);
-    fillLight.color.set(p.fill.color);
-    fillLight.intensity = p.fill.intensity * (cel ? 1 : 1);
-    renderer.toneMappingExposure = p.exposure * (cel ? 0.9 : 1);
-    currentLighting = name;
-    return name;
+    return renderMode;
   }
   const OUTLINE_DEFAULT = { thickness: 4e-3, color: [0.1, 0.07, 0.11], alpha: 1 };
   let outlineEffect = null;
   let outlineOn = true;
   const outlineParams = Object.assign({}, OUTLINE_DEFAULT);
+  function applyShader(mode) {
+    const next = mode === "lilToon" ? "lilToon" : mode === "cel" ? "cel" : "none";
+    const changed = next !== shaderMode;
+    shaderMode = next;
+    if (next === "lilToon" && outlineOn && !lilCfg.outline.enable) {
+      const th = Number(outlineParams.thickness) || OUTLINE_DEFAULT.thickness;
+      const cl = Array.isArray(outlineParams.color) ? outlineParams.color : OUTLINE_DEFAULT.color;
+      const al = outlineParams.alpha === void 0 ? 1 : Number(outlineParams.alpha);
+      lilCfg.outline.enable = true;
+      lilCfg.outline.width = Math.max(0.05, Math.min(10, th * 100));
+      lilCfg.outline.color = [Number(cl[0]) || 0, Number(cl[1]) || 0, Number(cl[2]) || 0, isFinite(al) ? al : 1];
+      lilMaterialVersion++;
+      celProgramVersion++;
+      console.debug("[shader] 已自动接管描边 → lilToon 反壳：width=" + lilCfg.outline.width.toFixed(3) + "（由 cel thickness " + th + " 换算 ✗ ×100 ✓）color=" + JSON.stringify(lilCfg.outline.color));
+    }
+    if (shaderMode !== "none" && renderMode !== "toon") {
+      console.debug("[shader] " + shaderMode + " 需要 toon 材质 → render 自动设为 toon");
+      renderMode = "toon";
+      applyRender("toon");
+      return shaderMode;
+    }
+    if (!modelRoot) return shaderMode;
+    if (changed) applyRender(renderMode);
+    modelRoot.traverse((o) => {
+      if (!o.isMesh || !o.material) return;
+      const ms = Array.isArray(o.material) ? o.material : [o.material];
+      ms.forEach((m) => {
+        if (m) m.needsUpdate = true;
+      });
+    });
+    if (shaderMode === "lilToon") applyLilOutline();
+    console.debug("[shader] 已切到 " + shaderMode + "（材质已标记重编译）");
+    return shaderMode;
+  }
+  let lastLighting = null;
+  let lightingApplyCount = 0;
+  function applyLightingPreset(name) {
+    const p = LIGHTING_PRESETS[name];
+    if (!p) return null;
+    const cel = shaderActive();
+    hemi.color.set(p.hemi.sky);
+    hemi.groundColor.set(p.hemi.ground);
+    hemi.intensity = p.hemi.intensity * (cel ? 0.48 : 1);
+    keyLight.color.set(p.key.color);
+    keyLight.intensity = p.key.intensity * (cel ? 1.22 : 1);
+    keyLight.position.set(p.key.position[0], p.key.position[1], p.key.position[2]);
+    rimLight.color.set(p.rim.color);
+    rimLight.intensity = p.rim.intensity * (cel ? 0.15 : 1);
+    fillLight.color.set(p.fill.color);
+    fillLight.intensity = p.fill.intensity * (cel ? 0.15 : 1);
+    renderer.toneMappingExposure = p.exposure * (cel ? 1.15 : 1);
+    if (typeof updateLightHelper === "function") updateLightHelper();
+    const ls = Number(cfg.lightingScale);
+    if (ls > 0 && ls !== 1) {
+      hemi.intensity *= ls;
+      keyLight.intensity *= ls;
+      rimLight.intensity *= ls;
+      fillLight.intensity *= ls;
+    }
+    const tm = cel ? LinearToneMapping : p.toneMapping === "linear" ? LinearToneMapping : ACESFilmicToneMapping;
+    if (renderer.toneMapping !== tm) {
+      renderer.toneMapping = tm;
+      if (modelRoot) {
+        modelRoot.traverse((o) => {
+          if (!o.isMesh || !o.material) return;
+          const mats = Array.isArray(o.material) ? o.material : [o.material];
+          mats.forEach((m) => {
+            if (m) m.needsUpdate = true;
+          });
+        });
+      }
+      celProgramVersion++;
+    }
+    currentLighting = name;
+    cfg.lightingPreset = name;
+    lightingApplyCount++;
+    lastLighting = {
+      call: lightingApplyCount,
+      preset: name,
+      cel,
+      toneMapping: renderer.toneMapping,
+      exposure: Number(renderer.toneMappingExposure.toFixed(6)),
+      exposureRaw: p.exposure,
+      hemi: Number(hemi.intensity.toFixed(6)),
+      key: Number(keyLight.intensity.toFixed(6)),
+      rim: Number(rimLight.intensity.toFixed(6)),
+      fill: Number(fillLight.intensity.toFixed(6)),
+      lightingScale: Number(cfg.lightingScale) || 1
+    };
+    return name;
+  }
   function getOutlineEffect() {
     if (outlineEffect) return outlineEffect;
     outlineEffect = new OutlineEffect(renderer, {
@@ -26565,6 +34913,11 @@ function createViewer(container, opts = {}) {
     });
     return outlineEffect;
   }
+  function outlineActive() {
+    if (cfg.__isFbx) return false;
+    if (shaderActive() && shaderMode === "lilToon") return false;
+    return outlineOn;
+  }
   function applyOutlineParams() {
     const base = {
       thickness: outlineParams.thickness,
@@ -26572,10 +34925,20 @@ function createViewer(container, opts = {}) {
       alpha: outlineParams.alpha,
       visible: outlineOn
     };
+    let skipRe = null;
+    if (cfg.outlineSkipPattern) {
+      try {
+        skipRe = new RegExp(cfg.outlineSkipPattern, "i");
+      } catch {
+        skipRe = null;
+      }
+    }
     const visit = (m, off) => {
       if (!m || !m.userData) return;
       m.userData.outlineParameters = Object.assign({}, m.userData.outlineParameters, base);
-      if (off || m.transparent === true) m.userData.outlineParameters.visible = false;
+      if (off || m.transparent === true || skipRe && skipRe.test(m.name || "")) {
+        m.userData.outlineParameters.visible = false;
+      }
     };
     if (modelRoot) {
       modelRoot.traverse((o) => {
@@ -26805,17 +35168,228 @@ function createViewer(container, opts = {}) {
     renderer.setClearColor(bgColor, 1);
     return bgColor.getHex();
   }
+  function applyLilConfig(o, matName) {
+    if (!o || typeof o !== "object") return;
+    const perMat = !!matName;
+    if (perMat && !lilCfgByMaterial[matName]) lilCfgByMaterial[matName] = {};
+    const T = perMat ? lilCfgByMaterial[matName] : lilCfg;
+    const sub = (k) => {
+      if (!T[k]) T[k] = {};
+      return T[k];
+    };
+    const num = (v) => typeof v === "number" && isFinite(v) ? v : void 0;
+    for (const k of [
+      "useShadow",
+      "shadowStrength",
+      "shadowBorder",
+      "shadowBlur",
+      "shadow2ndBorder",
+      "shadow2ndBlur",
+      "shadow3rdBorder",
+      "shadow3rdBlur",
+      "shadowBorderRange",
+      "shadowMainStrength",
+      "shadowReceive",
+      "shadow2ndReceive",
+      "shadow3rdReceive",
+      "shadowAmbient",
+      // 渲染状态（lilToon 的 _TransparentMode / _Cutoff / _Cull ✗ 默认 -1 = 不改 ✓）
+      "transparentMode",
+      "cutoff",
+      "cull"
+    ]) {
+      const v = num(o[k]);
+      if (v !== void 0) T[k] = v;
+    }
+    for (const k of ["mainTexHSVG", "mainTexScrollRotate"]) {
+      const src4 = o[k];
+      if (!src4) continue;
+      if (!Array.isArray(T[k])) T[k] = k === "mainTexHSVG" ? [0, 1, 1, 1] : [0, 0, 0, 0];
+      if (Array.isArray(src4)) {
+        for (let i = 0; i < 4 && i < src4.length; i++) {
+          const n = num(src4[i]);
+          if (n !== void 0) T[k][i] = n;
+        }
+      } else if (typeof src4 === "object") {
+        for (const kk of Object.keys(src4)) {
+          const i = Number(kk);
+          if (!isFinite(i) || i < 0 || i > 3) continue;
+          const n = num(src4[kk]);
+          if (n !== void 0) T[k][i] = n;
+        }
+      }
+    }
+    const arr3 = (v) => Array.isArray(v) && v.length >= 3 && v.every((x) => typeof x === "number") ? v.length >= 4 ? v.slice(0, 4) : v.slice(0, 3) : null;
+    for (const k of ["shadowColor", "shadow2ndColor"]) {
+      const v = arr3(o[k]);
+      if (v) T[k] = v;
+    }
+    if (o.shadow3rdColor === null) T.shadow3rdColor = null;
+    else {
+      const v = arr3(o.shadow3rdColor);
+      if (v) T.shadow3rdColor = v;
+    }
+    for (const group of [
+      "rim",
+      "matcap",
+      "emission",
+      "emission2nd",
+      "backlight",
+      "outline",
+      "dissolve",
+      "main2nd",
+      "main3rd",
+      "matcap2nd",
+      "stencil",
+      "bump",
+      "bump2nd",
+      "reflection",
+      "dither"
+    ]) {
+      const src = o[group];
+      if (!src || typeof src !== "object") continue;
+      const G = sub(group);
+      for (const k of Object.keys(src)) {
+        if (!(k in lilCfg[group])) continue;
+        if (k === "url") {
+          G[k] = src[k] || null;
+          continue;
+        }
+        if (k === "tex") {
+          G[k] = src[k] || null;
+          continue;
+        }
+        if (k === "maskTex" || k === "noiseTex" || k === "blendMask" || k === "dissolveMask" || k === "dissolveNoiseMask" || k === "scaleMask" || k === "bumpMap") {
+          G[k] = src[k] || null;
+          continue;
+        }
+        if (k === "mul") {
+          G[k] = !!src[k];
+          continue;
+        }
+        if (k === "use") {
+          G[k] = !!src[k];
+          continue;
+        }
+        if (k === "tex" && (group === "main2nd" || group === "main3rd")) {
+          G.tex = src[k] || null;
+          if (src[k]) G.use = true;
+          continue;
+        }
+        if (k === "customNormal") {
+          G[k] = !!src[k];
+          continue;
+        }
+        if (k === "skipTransparent") {
+          G[k] = !!src[k];
+          continue;
+        }
+        if (k === "isDecal" || k === "isLeftOnly" || k === "isRightOnly" || k === "shouldCopy" || k === "shouldFlipMirror" || k === "shouldFlipCopy") {
+          G[k] = !!src[k];
+          continue;
+        }
+        const v = num(src[k]);
+        if (v !== void 0) G[k] = v;
+      }
+      const c = arr3(src.color);
+      if (c) G.color = c;
+      if (group === "outline") {
+        const a4 = (v) => Array.isArray(v) && v.length >= 4 && v.every((x) => typeof x === "number" && isFinite(x)) ? v.slice(0, 4) : null;
+        for (const k of ["texST", "texScrollRotate", "texHSVG"]) {
+          const v4 = a4(src[k]);
+          if (v4) G[k] = v4;
+        }
+      }
+      if (group === "dissolve") {
+        const p4 = (v) => Array.isArray(v) && v.length >= 4 && v.every((x) => typeof x === "number" && isFinite(x)) ? v.slice(0, 4) : null;
+        const pv = p4(src.pos);
+        if (pv) G.pos = pv;
+      }
+      if (group === "main2nd" || group === "main3rd") {
+        const p4 = (v) => Array.isArray(v) && v.length >= 4 && v.every((x) => typeof x === "number" && isFinite(x)) ? v.slice(0, 4) : null;
+        for (const k of [
+          "dissolvePos",
+          "dissolveMaskST",
+          "dissolveNoiseMaskST",
+          "dissolveNoiseScrollRotate",
+          "decalAnimation",
+          "decalSubParam",
+          "texST"
+        ]) {
+          const srcV = src[k];
+          const v4 = p4(srcV);
+          if (v4) {
+            G[k] = v4;
+          } else if (srcV && typeof srcV === "object" && !Array.isArray(srcV)) {
+            if (!Array.isArray(G[k])) {
+              const isST = k === "texST" || k === "dissolveMaskST" || k === "dissolveNoiseMaskST";
+              const base = lilCfg["main2nd"] && Array.isArray(lilCfg["main2nd"][k]) ? lilCfg["main2nd"][k] : null;
+              G[k] = base ? base.slice() : isST ? [1, 1, 0, 0] : [0, 0, 0, 0];
+            }
+            for (const kk of Object.keys(srcV)) {
+              const i4 = Number(kk);
+              if (!isFinite(i4) || i4 < 0 || i4 > 3) continue;
+              const n = Number(srcV[kk]);
+              if (isFinite(n)) G[k][i4] = n;
+            }
+          }
+        }
+        const dc = arr3(src.dissolveColor);
+        if (dc) G.dissolveColor = dc;
+      }
+      const ic = arr3(src.indirColor);
+      if (ic) G.indirColor = ic;
+      if (group === "outline") {
+        const c4 = (v) => Array.isArray(v) && v.length >= 4 && v.every((x) => typeof x === "number" && isFinite(x)) ? v.slice(0, 4) : null;
+        const v4 = c4(src.color);
+        if (v4) G.color = v4;
+        const l4 = c4(src.litColor);
+        if (l4) G.litColor = l4;
+        for (const k of ["tex", "widthMask", "cull", "skipPattern", "fixWidthMode", "vectorTex", "vectorUVMode"]) {
+          if (src[k] !== void 0) G[k] = typeof src[k] === "string" && src[k] ? src[k] : typeof src[k] === "number" ? src[k] : null;
+        }
+        if (src.enable !== void 0) G.enable = !!src.enable;
+        if (src.stencilEnable !== void 0) G.stencilEnable = !!src.stencilEnable;
+        if (src.litEnable !== void 0) G.litEnable = !!src.litEnable;
+        if (src.litShadowReceive !== void 0) G.litShadowReceive = !!src.litShadowReceive;
+        if (src.litShadowDebug !== void 0) G.litShadowDebug = !!src.litShadowDebug;
+        if (src.shaderColorMult !== void 0) G.shaderColorMult = !!src.shaderColorMult;
+        if (src.litApplyTex !== void 0) G.litApplyTex = !!src.litApplyTex;
+      }
+    }
+    if (!perMat && o.enabled !== void 0) {
+      lilCfg.enabled = !!o.enabled;
+      if (lilCfg.enabled) shaderMode = "lilToon";
+      else if (shaderMode === "lilToon") shaderMode = "cel";
+    }
+    lilMaterialVersion++;
+    celProgramVersion++;
+    applyLilOutline();
+    console.debug("[lilToon] 已应用配置" + (perMat ? "（材质 " + matName + "）" : "") + "：enabled=" + lilCfg.enabled + " → shader=" + shaderMode);
+  }
   function applyConfigPreLoad(c) {
     if (!c) return;
     const m = c.model || {};
+    if (c.__rawUrls) {
+      cfg.__urlRaw = Object.assign({}, c.__rawUrls);
+    }
     if (m.url) cfg.modelUrl = m.url;
-    if (m.mouthAtlas) mouthAtlasUrl = m.mouthAtlas;
+    if (c.__rawUrls) {
+      cfg.__urlResolved = {
+        modelUrl: cfg.modelUrl,
+        mouthAtlas: m.mouthAtlas || mouthAtlasUrl
+      };
+    }
+    if (m.mouthAtlas) {
+      mouthAtlasUrl = m.mouthAtlas;
+      cfg.mouthAtlasUrl = m.mouthAtlas;
+    }
   }
   function applyConfigPostLoad(c) {
     if (!c) return;
     const r = c.renderer || {};
-    const l = c.lighting || {};
-    const b = c.background || {};
+    const l = c.lighting || r.lighting || {};
+    const b = c.background || r.background || {};
     const p = c.pivot || {};
     if (r.targetHeight !== void 0) cfg.targetHeight = Number(r.targetHeight) || cfg.targetHeight;
     if (r.fov !== void 0) {
@@ -26834,10 +35408,53 @@ function createViewer(container, opts = {}) {
         });
       }
     }
+    if (r.shadowBias !== void 0) {
+      cfg.shadowBias = Number(r.shadowBias);
+      keyLight.shadow.bias = cfg.shadowBias;
+    }
+    if (r.shadowNormalBias !== void 0) {
+      cfg.shadowNormalBias = Number(r.shadowNormalBias);
+      keyLight.shadow.normalBias = cfg.shadowNormalBias;
+    }
+    if (r.modelOffset && typeof r.modelOffset === "object") {
+      setModelOffset({
+        x: Number(r.modelOffset.x) || 0,
+        y: Number(r.modelOffset.y) || 0,
+        z: Number(r.modelOffset.z) || 0
+      });
+    }
+    if (r.lightState && typeof r.lightState === "object") {
+      try {
+        setLightState(r.lightState);
+      } catch (e) {
+        console.warn("[config] lightState 套用失败：", e);
+      }
+    }
+    if (r.lilToon !== void 0 && typeof r.lilToon === "object" && (r.lilToon.config || r.lilToon.byMaterial)) {
+      applyLilConfig(r.lilToon);
+      if (r.lilToonByMaterial) this.setLilCfgByMaterial(r.lilToonByMaterial);
+      console.debug("[config] 检测到**旧版内嵌**的 lilToon 参数 ⇒ 已兼容套用 ✓");
+    }
+    if (r.textureBase !== void 0) cfg.textureBase = r.textureBase || null;
+    if (r.textureMap !== void 0) cfg.textureMap = r.textureMap && typeof r.textureMap === "object" ? r.textureMap : null;
+    if (r.modelRotation !== void 0) {
+      cfg.modelRotation = Array.isArray(r.modelRotation) && r.modelRotation.length === 3 ? r.modelRotation : null;
+    }
     if (r.framing !== void 0) cfg.framing = r.framing === "tight" ? "tight" : "auto";
     if (r.framingReferenceHeight !== void 0) cfg.framingReferenceHeight = Number(r.framingReferenceHeight) || 0;
     if (r.modelHeightPx !== void 0) cfg.modelHeightPx = Number(r.modelHeightPx) || 0;
     if (r.framingOffsetY !== void 0) cfg.framingOffsetY = Number(r.framingOffsetY) || 0;
+    if (cfg.__framingOffsetForced && cfg.__framingOffsetYForced !== void 0) {
+      cfg.framingOffsetY = cfg.__framingOffsetYForced;
+      console.debug("[embed] 取景垂直偏移按容器指定：" + cfg.framingOffsetY + "px ✓");
+    }
+    if (r.modelOffset && typeof r.modelOffset === "object") {
+      setModelOffset({
+        x: Number(r.modelOffset.x) || 0,
+        y: Number(r.modelOffset.y) || 0,
+        z: Number(r.modelOffset.z) || 0
+      });
+    }
     if (r.stripRootMotion !== void 0) cfg.stripRootMotion = !!r.stripRootMotion;
     if (r.pressHoldMs !== void 0) cfg.pressHoldMs = Math.max(0, Number(r.pressHoldMs) || 0);
     if (Array.isArray(r.mouthUv) && r.mouthUv.length === 4) cfg.mouthUv = r.mouthUv.map(Number);
@@ -26848,14 +35465,49 @@ function createViewer(container, opts = {}) {
     if (p.x !== void 0) pivotX = Number(p.x) || 0;
     if (p.z !== void 0) pivotZ = Number(p.z) || 0;
     frameModel();
-    if (r.shading) applyShading(r.shading);
+    if (r.celSteps !== void 0 || r.celDark !== void 0 || r.celShadowTint !== void 0 || r.celShadowMin !== void 0 || r.celFaceShadowMin !== void 0 || r.celFaceLight !== void 0 || r.facePattern !== void 0) {
+      setCelParams({
+        steps: r.celSteps,
+        dark: r.celDark,
+        shadowTint: r.celShadowTint,
+        shadowMin: r.celShadowMin,
+        faceShadowMin: r.celFaceShadowMin,
+        faceLight: r.celFaceLight,
+        facePattern: r.facePattern
+      });
+    }
+    if (r.shading !== void 0 && r.render === void 0 && r.shader === void 0) {
+      setShadingLegacy(r.shading);
+    }
+    if (r.render !== void 0) {
+      renderMode = r.render === "unlit" ? "unlit" : r.render === "toon" ? "toon" : "pbr";
+    }
+    if (r.shader !== void 0) {
+      shaderMode = r.shader === "lilToon" ? "lilToon" : r.shader === "cel" ? "cel" : "none";
+    }
+    cfg.faceNoShadow = deriveFaceNoShadow();
+    if (r.outlineSkipPattern !== void 0) cfg.outlineSkipPattern = r.outlineSkipPattern || null;
+    if (r.attachProps !== void 0) cfg.attachProps = Array.isArray(r.attachProps) ? r.attachProps : null;
+    if (r.hideParts !== void 0) cfg.hideParts = r.hideParts || null;
+    if (r.hideOptional !== void 0) cfg.hideOptional = !!r.hideOptional;
+    if (r.hideByBoneScale !== void 0) cfg.hideByBoneScale = Math.max(0, Number(r.hideByBoneScale) || 0);
+    if (r.lightingScale !== void 0) cfg.lightingScale = Number(r.lightingScale) > 0 ? Number(r.lightingScale) : 1;
+    if (r.lightClampOn !== void 0) cfg.lightClampOn = !!r.lightClampOn;
+    if (r.lightMinLimit !== void 0) cfg.lightMinLimit = Math.max(0, Math.min(1, Number(r.lightMinLimit) || 0));
+    if (r.lightMaxLimit !== void 0) cfg.lightMaxLimit = Math.max(0, Math.min(4, Number(r.lightMaxLimit) || 1));
+    if (r.transparentMode !== void 0) cfg.transparentMode = Math.max(-1, Math.min(6, Math.round(Number(r.transparentMode)) || 0));
+    if (r.cutoff !== void 0) cfg.cutoff = Math.max(0, Math.min(1, Number(r.cutoff) || 0));
+    if (r.cull !== void 0) cfg.cull = Math.max(-1, Math.min(2, Math.round(Number(r.cull)) || 0));
+    if (Array.isArray(r.mainTexHSVG)) cfg.mainTexHSVG = r.mainTexHSVG.slice(0, 4).map(Number);
+    if (Array.isArray(r.mainTexScrollRotate)) cfg.mainTexScrollRotate = r.mainTexScrollRotate.slice(0, 4).map(Number);
+    if (r.noCastPattern !== void 0) cfg.noCastPattern = r.noCastPattern || null;
+    applyFaceNoShadow();
     if (r.outline !== void 0) outlineOn = !!r.outline;
     if (r.outlineThickness !== void 0) outlineParams.thickness = Number(r.outlineThickness);
     if (r.outlineColor !== void 0) outlineParams.color = r.outlineColor;
     if (r.outlineAlpha !== void 0) outlineParams.alpha = Number(r.outlineAlpha);
     applyOutlineParams();
     if (l.preset && LIGHTING_PRESETS[l.preset]) applyLightingPreset(l.preset);
-    if (l.exposure !== void 0) renderer.toneMappingExposure = Number(l.exposure);
     if (b.transparent === false && b.color !== void 0 && b.color !== null) applyBackground(b.color);
     else applyBackground("transparent");
     const a = c.animation || {};
@@ -26870,25 +35522,155 @@ function createViewer(container, opts = {}) {
       }
     }
   }
-  async function resolveConfig() {
-    if (!cfg.configUrl) return cfg.config || null;
-    const abs = new URL(cfg.configUrl, document.baseURI).href;
-    const res = await fetch(abs, { cache: "no-cache" });
-    if (!res.ok) throw new Error("配置读取失败：" + abs + " (" + res.status + ")");
-    const json = await res.json();
-    const base = new URL(".", abs).href;
+  async function sniffIsFbx(url) {
+    if (!url) return false;
+    const looksLike = (buf) => {
+      const head = new Uint8Array(buf, 0, Math.min(32, buf.byteLength));
+      let str = "";
+      for (let i = 0; i < head.length; i++) str += String.fromCharCode(head[i]);
+      const fbx = /^Kaydara FBX Binary/.test(str) || /^; FBX/.test(str);
+      console.info("[viewer] 容器格式嗅探：" + (fbx ? "FBX" : "glTF/其它") + '（文件头 "' + str.slice(0, 23).replace(/[^\x20-\x7e]/g, ".") + '"）');
+      return fbx;
+    };
+    try {
+      const res = await fetch(url, { headers: { Range: "bytes=0-31" } });
+      if (!res.ok) return false;
+      const buf = await res.arrayBuffer();
+      if (buf.byteLength <= 32) return looksLike(buf);
+      const blob = await res.blob();
+      return looksLike(await blob.slice(0, 32).arrayBuffer());
+    } catch (e) {
+      console.warn("[viewer] 格式嗅探失败，按 glTF 处理：", e);
+      return false;
+    }
+  }
+  function fixConfigUrls(json, absConfigUrl) {
+    const base = new URL(".", absConfigUrl).href;
     const fixUrl = (p) => {
       if (typeof p !== "string" || !p) return p;
       if (/^(?:[a-z][a-z0-9+.-]*:|\/\/)/i.test(p)) return p;
       return new URL(p, base).href;
     };
-    if (json.model) {
+    if (json && json.model) {
+      json.__rawUrls = {
+        modelUrl: json.model.url,
+        mouthAtlas: json.model.mouthAtlas
+      };
       if (json.model.url) json.model.url = fixUrl(json.model.url);
       if (json.model.mouthAtlas) json.model.mouthAtlas = fixUrl(json.model.mouthAtlas);
     }
+    if (json && json.renderer) {
+      if (json.renderer.textureBase) json.renderer.textureBase = fixUrl(json.renderer.textureBase);
+      const tm = json.renderer.textureMap;
+      if (tm && typeof tm === "object") {
+        for (const k of Object.keys(tm)) tm[k] = fixUrl(tm[k]);
+      }
+    }
     return json;
   }
-  const loader = new GLTFLoader();
+  function autoConfigGuess() {
+    const u = cfg.modelUrl;
+    if (typeof u !== "string" || !u) return null;
+    if (/^(?:blob:|data:)/i.test(u)) return null;
+    if (!/\.(?:glb|gltf)(?:[?#]|$)/i.test(u)) return null;
+    const guess = u.replace(/\.(?:glb|gltf)(?=[?#]|$)/i, ".json");
+    if (guess === u) return null;
+    return new URL(guess, document.baseURI).href;
+  }
+  async function resolveConfig() {
+    if (cfg.configUrl) {
+      const abs = new URL(cfg.configUrl, document.baseURI).href;
+      const res = await fetch(abs, { cache: "no-cache" });
+      if (!res.ok) throw new Error("配置读取失败：" + abs + " (" + res.status + ")");
+      return fixConfigUrls(await res.json(), abs);
+    }
+    if (cfg.config) return cfg.config;
+    if (cfg.autoConfig === false) return null;
+    const guess = autoConfigGuess();
+    if (!guess) return null;
+    try {
+      const res = await fetch(guess, { cache: "no-cache" });
+      if (!res.ok) return null;
+      const json = await res.json();
+      console.debug("[autoConfig] 已自动加载同名配置：" + guess);
+      return fixConfigUrls(json, guess);
+    } catch (e) {
+      return null;
+    }
+  }
+  const loadingManager = new LoadingManager();
+  function resolveMappedUrl(v) {
+    if (typeof v !== "string" || !v) return v;
+    if (/^(?:[a-z][a-z0-9+.-]*:|\/\/)/i.test(v)) return v;
+    try {
+      return new URL(v, document.baseURI).href;
+    } catch {
+      return v;
+    }
+  }
+  function rewriteTextureUrl(rawUrl) {
+    let url = String(rawUrl == null ? "" : rawUrl);
+    if (!url) return url;
+    if (url.indexOf("data:") === 0) return url;
+    if (url.indexOf("blob:") === 0) {
+      const tail = url.split("/").pop() || "";
+      if (!/\.[a-z0-9]{2,5}$/i.test(tail)) return url;
+      url = url.replace(/^blob:(?:[a-z][a-z0-9+.-]*:\/\/[^/]*)?\//i, "");
+    }
+    url = url.replace(/\\/g, "/");
+    url = url.replace(/^[a-zA-Z]:\//, "");
+    const base = url.split("/").pop() || "";
+    const noQuery = url.split("?")[0];
+    const baseNoQuery = base.split("?")[0];
+    const map = cfg.textureMap;
+    if (map) {
+      let hit = map[url] || map[noQuery] || map[baseNoQuery] || map[String(rawUrl)] || map[String(rawUrl).split("?")[0]] || map[String(rawUrl).replace(/\\/g, "/").split("/").pop()];
+      if (!hit && baseNoQuery) {
+        const stem = baseNoQuery.replace(/\.[a-z0-9]+$/i, "").toLowerCase();
+        for (const key of Object.keys(map)) {
+          const kStem = String(key).replace(/\\/g, "/").split("/").pop().replace(/\.[a-z0-9]+$/i, "").toLowerCase();
+          if (kStem && kStem === stem) {
+            hit = map[key];
+            console.debug("[texture] 按主名匹配：" + baseNoQuery + " → " + key);
+            break;
+          }
+        }
+      }
+      if (hit) return resolveMappedUrl(hit);
+    }
+    if (/\.psd$/i.test(baseNoQuery) && baseNoQuery) {
+      const stem = baseNoQuery.replace(/\.psd$/i, "");
+      const dir = (cfg.modelUrl || "").split("?")[0].replace(/[^/]*$/, "");
+      if (dir) {
+        const cands = [
+          dir + "../TEX/" + stem + ".png",
+          dir + "TEX/" + stem + ".png",
+          dir + "../Textures/" + stem + ".png",
+          dir + "Textures/" + stem + ".png",
+          dir + "../tex/" + stem + ".png",
+          dir + "tex/" + stem + ".png",
+          dir + stem + ".png",
+          dir + "../" + stem + ".png"
+        ];
+        console.debug("[texture] .psd 自动改写候选：" + cands[0] + "（若 404 会依次尝试其它 ✗）");
+        return resolveMappedUrl(cands[0]);
+      }
+    }
+    const tb = cfg.textureBase;
+    if (tb && baseNoQuery) {
+      const looksForeign = !/^\.{0,2}\//.test(url) || /^[a-zA-Z]:/.test(String(rawUrl));
+      if (looksForeign) return resolveMappedUrl(tb.replace(/\/?$/, "/") + baseNoQuery);
+    }
+    return url;
+  }
+  loadingManager.setURLModifier(rewriteTextureUrl);
+  loadingManager.onLoad = () => {
+    if (!modelRoot) return;
+    console.debug("[viewer] 全部资源加载完成 → 重建材质以带上异步到货的贴图");
+    celProgramVersion++;
+    applyRender(renderMode);
+  };
+  const loader = new GLTFLoader(loadingManager);
   async function load() {
     let conf = null;
     try {
@@ -26897,11 +35679,31 @@ function createViewer(container, opts = {}) {
       console.warn("[viewer] 配置读取失败，使用默认值：", e);
     }
     applyConfigPreLoad(conf);
+    if (shaderMode === "lilToon" && lilCfg.matcap && lilCfg.matcap.url) {
+      resolveMatCapTexture(lilCfg.matcap.url);
+    }
+    const byName = cfg.modelName || "";
+    let isFbx = /\.fbx(?:[?#]|$)/i.test(byName) || /\.fbx(?:[?#]|$)/i.test(cfg.modelUrl || "");
+    const extKnown = /\.fbx(?:[?#]|$)/i.test(byName) || /\.(?:glb|gltf)(?:[?#]|$)/i.test(byName) || isFbx || /\.(?:glb|gltf)(?:[?#]|$)/i.test(cfg.modelUrl || "");
+    if (!extKnown) isFbx = await sniffIsFbx(cfg.modelUrl);
+    cfg.__isFbx = isFbx;
+    const mdl = isFbx ? new FBXLoader(loadingManager) : loader;
+    if (isFbx && cfg.textureBase) mdl.setResourcePath(resolveMappedUrl(cfg.textureBase));
     const info = await new Promise((resolve, reject) => {
-      loader.load(
+      mdl.load(
         cfg.modelUrl,
-        (gltf) => {
+        (result) => {
+          const gltf = isFbx ? { scene: result.scene || result, animations: result.animations || [] } : result;
           modelRoot = gltf.scene;
+          if (Array.isArray(cfg.modelRotation) && cfg.modelRotation.length === 3) {
+            const d2r = MathUtils.degToRad;
+            modelRoot.rotation.set(
+              d2r(Number(cfg.modelRotation[0]) || 0),
+              d2r(Number(cfg.modelRotation[1]) || 0),
+              d2r(Number(cfg.modelRotation[2]) || 0)
+            );
+            console.info("[viewer] 已应用 modelRotation =", cfg.modelRotation);
+          }
           let meshCount = 0;
           let triCount = 0;
           modelRoot.traverse((obj) => {
@@ -26917,6 +35719,31 @@ function createViewer(container, opts = {}) {
               const mats = Array.isArray(obj.material) ? obj.material : [obj.material];
               mats.forEach((m) => {
                 if (m.map) m.map.colorSpace = SRGBColorSpace;
+                if (obj.geometry && !obj.geometry.userData.__ba3dUvCheck) {
+                  obj.geometry.userData.__ba3dUvCheck = true;
+                  const g = obj.geometry;
+                  const a1 = g.attributes && g.attributes.uv1;
+                  const at = g.attributes && g.attributes.tangent;
+                  const nm = m.name || obj.name || "?";
+                  if (!a1) {
+                    console.debug("[uv-check] " + nm + "：**没有 uv1 属性** ⇒ Decal 用 uvMode=1 会采到固定点 ⇒ 请改用 uvMode=0 测 ✓");
+                  } else {
+                    const arr = a1.array;
+                    const n = a1.count;
+                    const step = Math.max(1, Math.floor(n / 200));
+                    let minx = Infinity, maxx = -Infinity, miny = Infinity, maxy = -Infinity;
+                    for (let vi = 0; vi < n; vi += step) {
+                      const x = arr[vi * 2], y = arr[vi * 2 + 1];
+                      if (x < minx) minx = x;
+                      if (x > maxx) maxx = x;
+                      if (y < miny) miny = y;
+                      if (y > maxy) maxy = y;
+                    }
+                    const span = Math.max(maxx - minx, maxy - miny);
+                    console.debug("[uv-check] " + nm + "：uv1 存在 · 采样 " + Math.ceil(n / step) + "/" + n + " 点 · x∈[" + minx.toFixed(4) + "," + maxx.toFixed(4) + "] y∈[" + miny.toFixed(4) + "," + maxy.toFixed(4) + "] 跨度=" + span.toFixed(4) + (span < 1e-3 ? " ⇒ **退化（几乎单点）** ⇒ Decal 会变成一片平色 ✓" : " ⇒ 正常 ✓"));
+                  }
+                  console.debug("[uv-check] " + nm + "：切线 " + (at ? "有（w 可用于 isRightHand ✓）" : "**没有** ⇒ 单侧显示不生效（vBa3dRightHand 恒为 1 ✓）"));
+                }
                 if (m.emissiveMap) m.emissiveMap.colorSpace = SRGBColorSpace;
                 m.side = FrontSide;
                 if (m.transparent) {
@@ -26925,7 +35752,7 @@ function createViewer(container, opts = {}) {
                     m.transparent = false;
                     m.depthWrite = true;
                     m.alphaTest = 0;
-                    console.info(
+                    console.debug(
                       "[material] BLEND 但实为不透明贴图，已按不透明处理：",
                       m.name,
                       "（中间 alpha 占比 " + (st.partial * 100).toFixed(1) + "%）"
@@ -26949,11 +35776,42 @@ function createViewer(container, opts = {}) {
           scene.add(modelRoot);
           bindHaloToHead();
           frameModel();
-          fixMouth();
+          if (mouthAtlasUrl) {
+            fixMouth();
+          } else {
+            console.debug("[fixMouth] 未指定嘴部图集（model.mouthAtlas / data-ba3d-mouth）→ 跳过嘴部修复。若该模型的嘴本来就是独立网格或由 morph target 驱动，这是正确行为。");
+          }
           applyVisibilityRules();
           hintVisibilityRules();
-          applyShading(shadingMode);
+          applyRender(renderMode);
+          applyLightingPreset(currentLighting);
+          fixZeroNormals();
+          applyAttachProps();
+          applyHideParts();
+          if (cfg.hideOptional) {
+            collectOptionalParts();
+            applyOptionalParts();
+          }
+          modelRoot.traverse((o) => {
+            if (!o.isMesh || !o.material) return;
+            const mats = Array.isArray(o.material) ? o.material : [o.material];
+            mats.forEach((m) => {
+              if (!m || !m.map) return;
+              const img = m.map.image;
+              if (!img || img.width === 0 && img.height === 0) {
+                console.warn("[texture] 贴图无图像数据，已置空以避免全黑：", m.name, m.map.name || "");
+                m.map = null;
+                m.needsUpdate = true;
+              }
+            });
+          });
+          collectBoneScaleTargets();
+          prepareRootCompensation();
+          applySceneHelpers();
+          applyGroundOffset();
           applyOutlineParams();
+          cfg.faceNoShadow = deriveFaceNoShadow();
+          applyFaceNoShadow();
           modelRoot.traverse((o) => {
             if (o.isSkinnedMesh) {
               o.boundingBox = null;
@@ -26994,7 +35852,7 @@ function createViewer(container, opts = {}) {
     });
     const v3 = (v) => "[" + v.toArray().map((n) => +n.toFixed(2)).join(",") + "]";
     console.info(
-      "[viewer] 加载完成 | 模型=" + cfg.modelUrl + " | 图集=" + mouthAtlasUrl + " | 图集已加载=" + !!(mouthTex && mouthTex.image) + " | 嘴部材质=" + (mouthMat && mouthMat.type) + " | 坏纹理=" + (noImg.length ? noImg.join(",") : "无") + " | 包围盒=" + v3(size) + " | 相机=" + v3(camera.position) + " | 注视=" + v3(controls.target) + " | 画布=" + renderer.domElement.width + "x" + renderer.domElement.height + " | 容器=" + container.clientWidth + "x" + container.clientHeight + " | 渲染=" + shadingMode + " | 描边=" + outlineOn + " | 背景透明=" + bgTransparent + " | 网格=" + info.meshes
+      "[viewer] 加载完成 | 模型=" + cfg.modelUrl + " | 图集=" + (mouthAtlasUrl || "(未配置，不做嘴部修复)") + " | 图集已加载=" + !!(mouthTex && mouthTex.image) + " | 嘴部材质=" + (mouthMat && mouthMat.type) + " | 坏纹理=" + (noImg.length ? noImg.join(",") : "无") + " | 包围盒=" + v3(size) + " | 相机=" + v3(camera.position) + " | 注视=" + v3(controls.target) + " | 画布=" + renderer.domElement.width + "x" + renderer.domElement.height + " | 容器=" + container.clientWidth + "x" + container.clientHeight + " | 渲染=" + shadingLabel() + " | 描边=" + outlineOn + " | 背景透明=" + bgTransparent + " | 网格=" + info.meshes
     );
     requestCanvasSample();
     return Object.assign({}, info, { config: conf });
@@ -27027,7 +35885,7 @@ function createViewer(container, opts = {}) {
         maxRGB = Math.max(maxRGB, px[i], px[i + 1], px[i + 2]);
         sum += px[i] + px[i + 1] + px[i + 2];
       }
-      console.info(
+      console.debug(
         "[viewer] 首帧中心像素：maxA=" + maxA + " maxRGB=" + maxRGB + " 亮度合计=" + sum + " 画布=" + w + "x" + h
       );
     } catch (e) {
@@ -27039,6 +35897,10 @@ function createViewer(container, opts = {}) {
     requestAnimationFrame(animate);
     const dt = clock.getDelta();
     if (mixer) mixer.update(dt);
+    applyRootCompensation();
+    applyGroundOffset();
+    maybeAutoSnapGround();
+    applyBoneScaleHide();
     if (mouthMat && mouthBone && mouthUV) {
       const driven = mouthDriverClips ? mouthDriverClips.has(currentClipName) : true;
       let cell;
@@ -27060,8 +35922,11 @@ function createViewer(container, opts = {}) {
       modelRoot.rotation.y += dt * cfg.autoRotateSpeed;
     }
     controls.update();
-    if (outlineOn) getOutlineEffect().render(scene, camera);
+    updateLilOutlineCamera();
+    drawViewGizmo();
+    if (outlineActive()) getOutlineEffect().render(scene, camera);
     else renderer.render(scene, camera);
+    ba3dTimeUniform.value = performance.now() / 1e3;
     maybeSampleCanvas();
   }
   animate();
@@ -27138,18 +36003,1126 @@ function createViewer(container, opts = {}) {
     applyLighting(name) {
       return applyLightingPreset(name);
     },
+    /**
+     * 卡通着色的可调参数：
+     *   steps       明暗分档数（2 = 硬边两级，越大越接近平滑）
+     *   dark        最暗档亮度（1.0 = 全亮）
+     *   shadowTint  暗部色调 [r,g,b]（0~1），null = 只变暗不变色
+     *   faceLight   面部光照修正开关（脸/眼/眉法线强制朝向摄像机）
+     *   facePattern 哪些材质名算"脸"（正则片段）
+     */
+    getCel() {
+      return celSnapshot();
+    },
+    /** 改卡通着色参数（传子集即可）；会重建卡通材质并重编译 shader */
+    setCel(o) {
+      setCelParams(o);
+      return celSnapshot();
+    },
+    /**
+     * 阴影自检 —— 把决定「脸上到底有没有影」的每一项都读出来。
+     *
+     * 在页面控制台执行 viewer.shadowReport()，或直接在载入后看控制台自动打印的那份。
+     * 最关键的字段是 **shadowMapAllocated**：
+     *   为 null  → 阴影贴图**从未被渲染过**，说明根本没有任何物体在投影（或灯没生效）
+     *   非 null  → 贴图已生成，问题在接收/着色侧
+     */
+    shadowReport() {
+      const faceRe = celFaceRe();
+      const rep = {
+        "阴影总开关 renderer.shadowMap.enabled": renderer.shadowMap.enabled,
+        "阴影类型 shadowMap.type": renderer.shadowMap.type,
+        "主光 castShadow": keyLight.castShadow,
+        "主光在场景里": !!keyLight.parent,
+        "主光位置": keyLight.position.toArray().map((v) => +v.toFixed(2)),
+        "主光 target 在场景里": !!(keyLight.target && keyLight.target.parent),
+        "★ 阴影贴图已分配（null=从未渲染）": !!keyLight.shadow.map,
+        "阴影贴图尺寸": keyLight.shadow.mapSize.toArray(),
+        "bias / normalBias": [keyLight.shadow.bias, keyLight.shadow.normalBias],
+        "阴影相机 l/r/t/b/n/f": [
+          keyLight.shadow.camera.left,
+          keyLight.shadow.camera.right,
+          keyLight.shadow.camera.top,
+          keyLight.shadow.camera.bottom,
+          keyLight.shadow.camera.near,
+          keyLight.shadow.camera.far
+        ],
+        "faceNoShadow": cfg.faceNoShadow,
+        "渲染模式": shadingLabel(),
+        "celSteps / celDark": [celCfg.steps, celCfg.dark],
+        "celShadowMin / celFaceShadowMin": [celCfg.shadowMin, celCfg.faceShadowMin],
+        "当前动作": currentClipName
+      };
+      const meshes = [];
+      if (modelRoot) {
+        modelRoot.traverse((o) => {
+          if (!o.isMesh) return;
+          const mats = Array.isArray(o.material) ? o.material : [o.material];
+          const names = mats.map((m) => m && m.name || "");
+          const isFace = names.some((n) => faceRe.test(n));
+          const isHair = names.some((n) => /hair/i.test(n));
+          if (!isFace && !isHair) return;
+          meshes.push({
+            "网格": o.name,
+            "类别": isFace ? "face" : "hair",
+            "receiveShadow": o.receiveShadow,
+            "castShadow": o.castShadow,
+            "材质": names[0] || "",
+            "蒙皮": !!o.isSkinnedMesh,
+            "可见": o.visible
+          });
+        });
+      }
+      rep["面部/头发网格"] = meshes;
+      return rep;
+    },
+    /**
+     * 列出当前模型的全部网格及其"身体覆盖范围" —— 用来判断哪些部件**可以被单独隐藏**。
+     *
+     * 为什么需要它：这批 BA 模型的衣物**大多和皮肤在同一个网格/材质里**
+     * （例如 CH0155_Body 一个网格覆盖 4%~77%，即脚到脖子，Skin 和 衣服共用一张图集），
+     * 所以「脱衣」一般做不到 —— 没有素体 ✗。
+     * 但确实有少数模型把衣物拆成了独立网格（如某泳装模型的 *_Alpha 叠加层，
+     * 以及带 switch* 标记的变体部件），这些就能用 hideParts 单独藏掉。
+     *
+     * 用法：控制台执行
+     *     console.table(viewer.listParts())
+     * 看 spanPct（占角色高度的百分比）与 material：
+     *     spanPct 很大（>70%）且材质名是 Body/Skin  → 多半是"皮肤+衣物"合体，藏不得
+     *     spanPct 中等、材质名像 Alpha/Cloth/xx02  → 候选，可用 hideParts 试
+     */
+    listParts() {
+      const out = [];
+      if (!modelRoot) return out;
+      modelRoot.updateMatrixWorld(true);
+      const usedBoxWorld = (mesh) => {
+        const g = mesh.geometry;
+        const pos = g.getAttribute("position");
+        if (!pos) return null;
+        const idx = /* @__PURE__ */ new Set();
+        if (g.index) {
+          const ix = g.index;
+          for (let i = 0; i < ix.count; i++) idx.add(ix.getX(i));
+        } else {
+          for (let i = 0; i < pos.count; i++) idx.add(i);
+        }
+        const bb = new Box3();
+        const v = new Vector3();
+        for (const i of idx) {
+          v.fromBufferAttribute(pos, i);
+          if (mesh.isSkinnedMesh && mesh.getVertexPosition) mesh.getVertexPosition(i, v);
+          v.applyMatrix4(mesh.matrixWorld);
+          if (isFinite(v.x) && isFinite(v.y) && isFinite(v.z)) bb.expandByPoint(v);
+        }
+        return { bb, used: idx.size, total: pos.count };
+      };
+      const all = new Box3();
+      modelRoot.traverse((o) => {
+        if (!o.isMesh || !o.geometry) return;
+        const r = usedBoxWorld(o);
+        if (r && !r.bb.isEmpty()) all.union(r.bb);
+      });
+      const H = Math.max(1e-6, all.max.y - all.min.y);
+      modelRoot.traverse((o) => {
+        if (!o.isMesh || !o.geometry) return;
+        const r = usedBoxWorld(o);
+        if (!r || r.bb.isEmpty()) return;
+        const bb = r.bb;
+        const mats = Array.isArray(o.material) ? o.material : [o.material];
+        const name = mats.map((m) => m && m.name || "").join("|");
+        out.push({
+          mesh: o.name,
+          material: name,
+          spanPct: +((bb.max.y - bb.min.y) / H * 100).toFixed(1),
+          bottomPct: +((bb.min.y - all.min.y) / H * 100).toFixed(1),
+          topPct: +((bb.max.y - all.min.y) / H * 100).toFixed(1),
+          widthPct: +((bb.max.x - bb.min.x) / H * 100).toFixed(1),
+          usedVerts: r.used,
+          totalVerts: r.total,
+          tris: Math.round(o.geometry.index ? o.geometry.index.count / 3 : r.total / 3),
+          visible: o.visible
+        });
+      });
+      out.sort((a, b) => b.spanPct - a.spanPct);
+      return out;
+    },
+    /** 打光预设的整体亮度倍率 */
+    getLightingScale() {
+      return Number(cfg.lightingScale) || 1;
+    },
+    /** 光照夹取（lilToon 的 _LightMinLimit / _LightMaxLimit ✗ 可选 ✓） */
+    getLightClamp() {
+      return { on: !!cfg.lightClampOn, min: Number(cfg.lightMinLimit), max: Number(cfg.lightMaxLimit) };
+    },
+    setLightClamp(o) {
+      o = o || {};
+      if (o.on !== void 0) cfg.lightClampOn = !!o.on;
+      if (o.min !== void 0) cfg.lightMinLimit = Math.max(0, Math.min(1, Number(o.min) || 0));
+      if (o.max !== void 0) cfg.lightMaxLimit = Math.max(0, Math.min(4, Number(o.max) || 1));
+      celProgramVersion++;
+      if (modelRoot) applyRender(renderMode);
+      return this.getLightClamp();
+    },
+    setLightingScale(v) {
+      const n = Number(v);
+      cfg.lightingScale = n > 0 ? n : 1;
+      applyLightingPreset(currentLighting);
+      return cfg.lightingScale;
+    },
+    /** 当前模型识别出的「可选部件」（GLB extras.optional）及其使用情况 */
+    getOptionalParts() {
+      return (optionalParts || []).map((p) => ({
+        name: p.name,
+        prop: p.prop,
+        usedBy: p.clips.size,
+        visible: p.meshes.some((m) => m.visible)
+      }));
+    },
+    /** 面部是否不接收阴影（白昼下头发投在脸上的影） */
+    getFaceNoShadow() {
+      let noRecv = 0, noCast = 0;
+      if (modelRoot) modelRoot.traverse((o) => {
+        if (!o.isMesh) return;
+        if (!o.receiveShadow) noRecv++;
+        if (o.castShadow === false) noCast++;
+      });
+      return {
+        enabled: !!cfg.faceNoShadow,
+        pattern: celCfg.facePattern,
+        noCastPattern: cfg.noCastPattern,
+        meshes: noRecv,
+        // 当前不接收阴影的网格数
+        noCastMeshes: noCast
+      };
+    },
     /** 渲染模式：'pbr' | 'cel' */
     getShading() {
-      return shadingMode;
+      return shadingLabel();
     },
+    /** ⚠️ 旧 API。渲染现在是两个正交的轴（render + shader），这里返回合并后的列表以兼容 */
     getShadingModes() {
       return [
         { key: "pbr", label: "原始（PBR）" },
-        { key: "cel", label: "卡通（Cel）" }
+        { key: "cel", label: "卡通（Cel）" },
+        { key: "unlit", label: "无光照（Unlit）" }
       ];
     },
     setShading(mode) {
       return applyShading(mode);
+    },
+    // —— 渲染轴 ①：材质模型 ——
+    getRenderModes() {
+      return [
+        { key: "pbr", label: "原始（PBR）" },
+        { key: "toon", label: "卡通材质（Toon）" },
+        { key: "unlit", label: "无光照（Unlit）" }
+      ];
+    },
+    getRender() {
+      return renderMode;
+    },
+    setRender(mode) {
+      return applyRender(mode);
+    },
+    // —— 渲染轴 ②：着色器 ——
+    getShaderModes() {
+      return [
+        { key: "none", label: "不注入（原生）" },
+        { key: "cel", label: "Cel 分档" },
+        { key: "lilToon", label: "lilToon 风格" }
+      ];
+    },
+    getShader() {
+      return shaderMode;
+    },
+    setShader(mode) {
+      return applyShader(mode);
+    },
+    /** 两轴一起读，便于界面同步 */
+    getRenderState() {
+      return { render: renderMode, shader: shaderMode };
+    },
+    // —— lilToon 参数：读取 / 修改 / 导出 ——
+    /** lilToon 官方预设清单（供界面做下拉 ✗） */
+    getLilPresets() {
+      return LIL_PRESETS.map((p) => ({ key: p.n, label: p.l }));
+    },
+    /**
+     * 套用 lilToon 官方预设（数据来自 lilToon/Presets/*.asset ✗ 见 LIL_PRESETS）。
+     *
+     * 流程：
+     *   ① 自动切到 shader='lilToon'（预设只对 lilToon 有意义 ✗）
+     *   ② **先把四个特性关掉** ✗ 再套预设 ✓
+     *      否则上一个预设开着的 rim ✗ 在切换到没有 rim 的预设时会残留 ✓
+     *   ③ 套用预设字段 ✗ 重建材质 ✓
+     */
+    applyLilPreset(name, matName) {
+      if (name === "__default__") {
+        if (shaderMode !== "lilToon") applyShader("lilToon");
+        if (matName) {
+          delete lilCfgByMaterial[matName];
+        } else {
+          const d = JSON.parse(JSON.stringify(LIL_DEFAULTS));
+          for (const k of Object.keys(lilCfg)) delete lilCfg[k];
+          Object.assign(lilCfg, d);
+        }
+        lilMaterialVersion++;
+        celProgramVersion++;
+        applyLilOutline();
+        if (modelRoot) applyRender(renderMode);
+        console.debug("[lilToon] 已重置为默认" + (matName ? "（材质 " + matName + " 的覆盖已清除）" : "（全局）"));
+        return "__default__";
+      }
+      const p = LIL_PRESETS.find((x) => x.n === name);
+      if (!p) {
+        console.warn("[lilToon] 没有这个预设：" + name);
+        return null;
+      }
+      if (shaderMode !== "lilToon") applyShader("lilToon");
+      applyLilConfig({ rim: { blend: 0 }, matcap: { blend: 0 }, emission: { blend: 0 } }, matName);
+      const patch = {};
+      for (const key of Object.keys(p)) {
+        if (key === "n" || key === "l") continue;
+        patch[key] = p[key];
+      }
+      applyLilConfig(patch, matName);
+      if (modelRoot) applyRender(renderMode);
+      console.debug("[lilToon] 已套用预设「" + p.l + "」(" + p.n + ")" + (matName ? " → 材质 " + matName : " → 全局"));
+      return p.n;
+    },
+    /**
+     * 列出模型里的全部网格（部件面板用）。
+     *   [{ name, visible, material, triangles, isSkinned, hasOutline, skipped }]
+     *
+     * 名字取网格的 name（three 里通常就是 FBX/GLB 的节点名）；重名时补上序号。
+     */
+    /**
+     * 从 modelRoot 到该节点的名字链（如 Body/mouth）。
+     *
+     * ⚠️ 必须是**模块级**函数：listMeshes / setMeshVisible / isolateMeshes 都要用，
+     *    之前把它定义在 listMeshes 内部，setMeshVisible 引用它就报 ReferenceError，
+     *    表现是部件面板里的显示/隐藏勾选完全失效。
+     */
+    // （下面这几个方法通过闭包里的 meshPathOf 使用它，定义在 createViewer 作用域内）
+    listMeshes() {
+      const out = [];
+      if (!modelRoot) return out;
+      const seen = /* @__PURE__ */ new Map();
+      modelRoot.traverse((o) => {
+        if (!o.isMesh || o.userData.__isLilOutline) return;
+        let nm = o.name || "(未命名)";
+        const c = (seen.get(nm) || 0) + 1;
+        seen.set(nm, c);
+        if (c > 1) nm = nm + " #" + c;
+        const m = Array.isArray(o.material) ? o.material[0] : o.material;
+        out.push({
+          name: nm,
+          path: meshPathOf(o),
+          visible: o.visible,
+          material: m && m.name || "",
+          triangles: o.geometry && o.geometry.index ? Math.round(o.geometry.index.count / 3) : o.geometry && o.geometry.attributes && o.geometry.attributes.position ? Math.round(o.geometry.attributes.position.count / 3) : 0,
+          isSkinned: !!o.isSkinnedMesh,
+          hasOutline: !!(o.children && o.children.some((x) => x.userData && x.userData.__isLilOutline))
+        });
+      });
+      return out;
+    },
+    /** 设置某个网格的可见性（按 listMeshes() 返回的名字 ✗ 支持同名 #n 后缀 ✓） */
+    setMeshVisible(name, on) {
+      if (!modelRoot) return false;
+      let hit = false;
+      const seen = /* @__PURE__ */ new Map();
+      modelRoot.traverse((o) => {
+        if (!o.isMesh || o.userData.__isLilOutline) return;
+        let nm = o.name || "(未命名)";
+        const c = (seen.get(nm) || 0) + 1;
+        seen.set(nm, c);
+        if (c > 1) nm = nm + " #" + c;
+        const key = meshPathOf(o);
+        if (nm === name || key === name) {
+          setVisibleDeep(o, !!on);
+          hit = true;
+          if (meshLocked.has(meshPathOf(o))) meshLocked.set(meshPathOf(o), !!on);
+        }
+      });
+      return hit;
+    },
+    /** 读锁定表：{ path: boolean } */
+    getMeshLocks() {
+      const o = {};
+      meshLocked.forEach((v, k) => {
+        o[k] = v;
+      });
+      return o;
+    },
+    /**
+     * 锁定/解锁某个部件的可见性。
+     *   on = true/false → 锁定为该可见性（之后自动逻辑不再改动它）
+     *   on = null       → 解锁
+     */
+    setMeshLocked(name, on) {
+      if (on === null || on === void 0) meshLocked.delete(name);
+      else meshLocked.set(name, !!on);
+      return this.getMeshLocks();
+    },
+    /**
+     * 全部显示 / 全部隐藏。
+     *
+     * ⚠️ 同时**锁定**每个部件（写入 meshLocked）。
+     *
+     * 原因：applyOptionalParts（可选部件，随动作变化）和 hideByBoneScale 之类的
+     * 自动逻辑会在之后把某些网格重新设回可见 —— 实测「全隐」之后
+     * CH0155_Milk_Outline / CH0155_Star 这类可选部件又会冒出来。
+     * 全隐/全显是用户的**明确意图**，所以锁定它们，锁图标会亮起（可见、可解锁）。
+     */
+    setAllMeshesVisible(on) {
+      if (!modelRoot) return 0;
+      let n = 0;
+      meshLocked.clear();
+      const seen0 = /* @__PURE__ */ new Map();
+      modelRoot.traverse((o) => {
+        if (!o.isMesh || o.userData.__isLilOutline) return;
+        let nm = o.name || "(未命名)";
+        const c = (seen0.get(nm) || 0) + 1;
+        seen0.set(nm, c);
+        if (c > 1) nm = nm + " #" + c;
+        setVisibleDeep(o, !!on);
+        n++;
+        meshLocked.set(meshPathOf(o), !!on);
+      });
+      return n;
+    },
+    /** 只显示指定名字的网格（isolate ✗ 传空数组则全部显示 ✓） */
+    isolateMeshes(names) {
+      if (!modelRoot) return 0;
+      const set = new Set(names || []);
+      const all = set.size === 0;
+      let n = 0;
+      const seen = /* @__PURE__ */ new Map();
+      modelRoot.traverse((o) => {
+        if (!o.isMesh || o.userData.__isLilOutline) return;
+        let nm = o.name || "(未命名)";
+        const c = (seen.get(nm) || 0) + 1;
+        seen.set(nm, c);
+        if (c > 1) nm = nm + " #" + c;
+        const vis = all || set.has(nm) || set.has(meshPathOf(o));
+        setVisibleDeep(o, vis);
+        n++;
+      });
+      return n;
+    },
+    /**
+     * 导出模型的完整层级（诊断用）。
+     *
+     * 用途：搞清「部件面板没列全 / 全隐还有东西没藏 / 全显还有东西没出来」这类问题
+     *   —— 到底是哪些对象没被 listMeshes 覆盖到。
+     *
+     *   console.table(viewer.debugTree())
+     */
+    /**
+     * ★ 量「脚与地面的缝」（页面控制台：`viewer.probeGround()` ✓）
+     *
+     * 返回 `{ minY, groundY, gap, sampled, meshes }`：
+     *   `gap > 0` ⇒ 悬空（脚在 y=0 之上 ✓）
+     *   `gap < 0` ⇒ 陷进地面 ✓
+     *   `gap ≈ 0` ⇒ 正好接地 ✓
+     *
+     * ⇒ 量到多少 ✗ 就把 `-gap` 填进面板的「落地微调」✓
+     */
+    probeGround(perMesh) {
+      return measurePosedBottom(modelRoot, perMesh);
+    },
+    /** ★ 修正模型位置 XYZ（世界单位 ✗ 移动的是模型本体 ✓）*/
+    getModelOffset() {
+      return getModelOffset();
+    },
+    setModelOffset(p) {
+      return setModelOffset(p);
+    },
+    /** ★ 动作 / 编辑 模式（edit = 暂停 + T-POSE 或 _Cam 动作 ✓）*/
+    getSceneMode() {
+      return readSceneMode();
+    },
+    setSceneMode(m) {
+      return setSceneMode(m, this);
+    },
+    /** ★ 显示模式（'view' / 'edit'）—— 动作模式的别名 ✗ 但会顺带套辅助显示 ✓ */
+    getDisplayMode() {
+      return { mode: (cfg.sceneMode || "action") === "edit" ? "edit" : "view", helpers: this.getSceneHelpers() };
+    },
+    setDisplayMode(m) {
+      if (m !== "edit") {
+        if ((cfg.sceneMode || "action") === "edit") setSceneMode("action", this);
+        else applyHelperPreset("view");
+      } else {
+        setSceneMode("edit", this);
+      }
+      return this.getDisplayMode();
+    },
+    /** 重套当前模式的辅助预设（面板上的「恢复默认」✓）*/
+    resetHelpers() {
+      return applyHelperPreset((cfg.sceneMode || "action") === "edit" ? "edit" : "view");
+    },
+    /** 当前有没有可用的「编辑姿势」动作 ✓ */
+    findEditPose() {
+      return findEditPoseClip();
+    },
+    /** ★ 当前正在播放的动作名（工具栏下拉应该跟着它 ✓）*/
+    getCurrentAnimation() {
+      return currentClipName || null;
+    },
+    /**
+     * ★ 姿势指纹 —— 把所有骨骼的世界坐标加起来做个和。
+     *
+     * ⚠️ 给自动化测试用的：**读状态会骗人**（`currentClipName` 换了 ✗ 画面没换 ✓）
+     *   所以要比「骨骼实际在哪」✗ 这才是权威的「姿势变没变」判据 ✓
+     */
+    /**
+     * ⚠️ 只用**平均坐标**太钝 —— 114 根骨骼里腿/躯干占多数 ✗
+     *   `Cafe_Idle` 和 `Exs_Cutin_Cam` 的平均值只差 0.007 ✓
+     * ⇒ 改成导出**全部骨骼坐标**✗ 让调用方算「最大单骨位移」✓
+     */
+    poseBones() {
+      if (!modelRoot) return null;
+      modelRoot.updateMatrixWorld(true);
+      const out = [];
+      const v = new Vector3();
+      modelRoot.traverse((o) => {
+        if (!o.isBone) return;
+        o.getWorldPosition(v);
+        out.push([+v.x.toFixed(4), +v.y.toFixed(4), +v.z.toFixed(4)]);
+      });
+      return out;
+    },
+    poseFingerprint() {
+      if (!modelRoot) return null;
+      modelRoot.updateMatrixWorld(true);
+      let sx = 0, sy = 0, sz = 0, n = 0;
+      const v = new Vector3();
+      modelRoot.traverse((o) => {
+        if (!o.isBone) return;
+        o.getWorldPosition(v);
+        sx += v.x;
+        sy += v.y;
+        sz += v.z;
+        n++;
+      });
+      if (!n) return null;
+      return { n, x: +(sx / n).toFixed(5), y: +(sy / n).toFixed(5), z: +(sz / n).toFixed(5) };
+    },
+    /** ★ 场景辅助显示（坐标轴 / 网格 / 主光指示 ✓）*/
+    getSceneHelpers() {
+      return {
+        showAxes: !!cfg.showAxes,
+        showGrid: !!cfg.showGrid,
+        showLightHelper: !!cfg.showLightHelper,
+        showViewGizmo: !!cfg.showViewGizmo,
+        axesLength: cfg.axesLength,
+        gridSize: cfg.gridSize,
+        gridDivisions: cfg.gridDivisions
+      };
+    },
+    setSceneHelpers(o) {
+      if (o) {
+        if (o.showAxes !== void 0) cfg.showAxes = !!o.showAxes;
+        if (o.showGrid !== void 0) cfg.showGrid = !!o.showGrid;
+        if (o.showLightHelper !== void 0) cfg.showLightHelper = !!o.showLightHelper;
+        if (o.showViewGizmo !== void 0) cfg.showViewGizmo = !!o.showViewGizmo;
+        if (o.axesLength !== void 0) cfg.axesLength = Number(o.axesLength) || 1.6;
+        if (o.gridSize !== void 0) cfg.gridSize = Number(o.gridSize) || 8;
+        if (o.gridDivisions !== void 0) cfg.gridDivisions = Number(o.gridDivisions) || 16;
+        const needRebuild = o.axesLength !== void 0 && axesHelper || o.gridSize !== void 0 && gridHelper || o.gridDivisions !== void 0 && gridHelper;
+        if (needRebuild) {
+          if (axesHelper) {
+            helpers.remove(axesHelper);
+            disposeDeep(axesHelper);
+            axesHelper = null;
+          }
+          if (gridHelper) {
+            helpers.remove(gridHelper);
+            disposeDeep(gridHelper);
+            gridHelper = null;
+          }
+        }
+        applySceneHelpers();
+      }
+      return this.getSceneHelpers();
+    },
+    /** ★ 相机编辑（位置 / 目标 / 距离 / fov ✓）*/
+    getCameraState() {
+      return readCameraState();
+    },
+    setCameraState(o) {
+      return writeCameraState(o);
+    },
+    /** 轴对齐视角：front / back / left / right / top / bottom ✓ */
+    setViewPreset(name) {
+      return applyViewPreset(name);
+    },
+    /** ★ 光照编辑（方位角 / 仰角 / 强度 / 颜色 / 环境光 ✓）*/
+    getLightState() {
+      return readLightState();
+    },
+    setLightState(o) {
+      return writeLightState(o);
+    },
+    /**
+     * ★ 取景微调（运行时 ✓）—— 用户调「倒地动作压到画面下方」时用 ✓
+     *
+     * `framingOffsetY` 单位是 CSS 像素 ✗ **正值 = 取景下移 ⇒ 画面内容上移** ✓
+     * `modelHeightPx` 是「角色在画面上占多少像素高」✗ 调小 = 整体拉远 ⇒ 上下余量都变大 ✓
+     */
+    getFraming() {
+      return { framing: cfg.framing, framingOffsetY: cfg.framingOffsetY, modelHeightPx: cfg.modelHeightPx, targetHeight: cfg.targetHeight, framingReferenceHeight: cfg.framingReferenceHeight };
+    },
+    setFraming(o) {
+      if (!o) return this.getFraming();
+      if (o.framing !== void 0) cfg.framing = o.framing;
+      if (o.framingOffsetY !== void 0) cfg.framingOffsetY = Number(o.framingOffsetY) || 0;
+      if (o.modelHeightPx !== void 0) cfg.modelHeightPx = Number(o.modelHeightPx) || 0;
+      if (o.targetHeight !== void 0) cfg.targetHeight = Number(o.targetHeight) || cfg.targetHeight;
+      if (o.framingReferenceHeight !== void 0) cfg.framingReferenceHeight = Number(o.framingReferenceHeight) || 0;
+      frameModel();
+      return this.getFraming();
+    },
+    /**
+     * ★★ 取景余量诊断 —— 「当前姿势有没有超出画面」（页面控制台 ✓）
+     *
+     * ⚠️ 为什么需要：`frameModel` 用的是 `fitToView` 时缓存的 `contentBox` ✓
+     *   而**自动贴地会把模型整体下移**（`groundOffsetY` ✓）⇒
+     *   缓存的框和实际位置差一个偏移 ⇒ 取景可能偏上/偏下 ✓
+     *   而且不同动作的高度本来就不同（跳跃 / 蹲下 ✓）✓
+     *
+     * 做法：把当前姿势的**蒙皮包围盒**投到 NDC ✓
+     *   `|ndc| <= 1` ⇒ 在画面里 ✗ 超出就是被裁了 ✓
+     *
+     * @returns {{minY:number,maxY:number,ndcTop:number,ndcBottom:number,marginTop:number,marginBottom:number,clipped:boolean}}
+     */
+    frameFitReport(perMesh) {
+      const limit = perMesh || 2e3;
+      const p = measurePosedBottom(modelRoot, limit);
+      if (!modelRoot || p.minY === null) return { clipped: false, reason: "量不到顶点" };
+      const v = new Vector3();
+      let minX = Infinity, maxX = -Infinity, minY = Infinity, maxY = -Infinity, n = 0;
+      camera.updateMatrixWorld(true);
+      camera.updateProjectionMatrix();
+      modelRoot.updateMatrixWorld(true);
+      modelRoot.traverse((o) => {
+        if (!o.isMesh || !o.visible) return;
+        if (o.userData && o.userData.__isLilOutline) return;
+        const pos = o.geometry && o.geometry.attributes && o.geometry.attributes.position;
+        if (!pos || !pos.count) return;
+        const step = Math.max(1, Math.floor(pos.count / limit));
+        for (let k = 0; k < pos.count; k += step) {
+          v.fromBufferAttribute(pos, k);
+          if (o.isSkinnedMesh && typeof o.applyBoneTransform === "function") o.applyBoneTransform(k, v);
+          else if (o.isSkinnedMesh && typeof o.boneTransform === "function") o.boneTransform(k, v);
+          v.applyMatrix4(o.matrixWorld);
+          v.project(camera);
+          if (v.z < -1 || v.z > 1) continue;
+          if (v.x < minX) minX = v.x;
+          if (v.x > maxX) maxX = v.x;
+          if (v.y < minY) minY = v.y;
+          if (v.y > maxY) maxY = v.y;
+          n++;
+        }
+      });
+      if (!n) return { clipped: false, reason: "没有有效顶点" };
+      const r4 = (x) => +x.toFixed(4);
+      const marginX = Math.min(1 - Math.abs(minX), 1 - Math.abs(maxX));
+      const marginY = Math.min(1 - Math.abs(minY), 1 - Math.abs(maxY));
+      const clippedX = minX < -1 || maxX > 1;
+      const clippedY = minY < -1 || maxY > 1;
+      return {
+        sampled: n,
+        ndcMinX: r4(minX),
+        ndcMaxX: r4(maxX),
+        ndcMinY: r4(minY),
+        ndcMaxY: r4(maxY),
+        marginX: r4(marginX),
+        marginY: r4(marginY),
+        clippedX,
+        clippedY,
+        clipped: clippedX || clippedY
+      };
+    },
+    /** 供面板在自动贴地后同步滑杆（避免两边显示不一致 ✓）*/
+    onGroundOffsetChange(fn) {
+      window.__ba3dSyncGroundUI = fn;
+    },
+    getGroundOffset() {
+      return Number(cfg.groundOffsetY) || 0;
+    },
+    setGroundOffset(y) {
+      if (modelRoot) modelRoot.userData.__autoSnapSkip = true;
+      const __y = Number(y) || 0;
+      cfg.groundOffsetY = __y;
+      setModelOffset({ y: __y });
+      frameModel();
+      return this.probeGround();
+    },
+    /** 按当前姿势自动把脚踩到地上（量一次 ✗ 补偿回去 ✓）*/
+    snapToGround() {
+      const p = this.probeGround();
+      if (p.gap === null) return p;
+      return this.setGroundOffset((Number(cfg.groundOffsetY) || 0) - p.gap);
+    },
+    debugTree() {
+      const out = [];
+      if (!modelRoot) return out;
+      const walk = (o, depth) => {
+        const m = Array.isArray(o.material) ? o.material[0] : o.material;
+        out.push({
+          缩进: "  ".repeat(depth),
+          名称: o.name || "(未命名)",
+          类型: o.type,
+          是网格: !!o.isMesh,
+          是蒙皮: !!o.isSkinnedMesh,
+          可见: o.visible,
+          材质: m ? m.name || m.type : "",
+          子节点数: o.children.length,
+          是描边: !!(o.userData && o.userData.__isLilOutline)
+        });
+        for (const c of o.children) walk(c, depth + 1);
+      };
+      walk(modelRoot, 0);
+      return out;
+    },
+    /** lilToon 描边配置（读 / 写），写后自动重建描边网格 */
+    /** 取描边配置（合并后）✗ 传 matName 则取该材质最终生效的值 ✓ */
+    getLilOutline(matName) {
+      const src = matName ? lilCfgFor({ name: matName }) : lilCfg;
+      return JSON.parse(JSON.stringify(src && src.outline || {}));
+    },
+    setLilOutline(o, matName) {
+      applyLilConfig({ outline: o }, matName);
+      return this.getLilOutline(matName);
+      if (!lilCfg.outline) lilCfg.outline = {};
+      const ALLOW = [
+        "enable",
+        "color",
+        "tex",
+        "width",
+        "widthMask",
+        "fixWidth",
+        "vertexR2Width",
+        "zBias",
+        "cull",
+        "litEnable",
+        "litColor",
+        "litScale",
+        "litOffset",
+        "skipPattern",
+        "fixWidthMode",
+        "litApplyTex",
+        "vectorTex",
+        "vectorScale",
+        "vectorUVMode",
+        "litShadowReceive",
+        "litShadowBlur",
+        "shaderColorMult",
+        "litShadowDebug"
+      ];
+      for (const k of Object.keys(o || {})) {
+        if (ALLOW.indexOf(k) < 0) {
+          console.warn("[outline] 未知字段已忽略：" + k);
+          continue;
+        }
+        lilCfg.outline[k] = o[k];
+      }
+      celProgramVersion++;
+      applyLilOutline();
+      return this.getLilOutline();
+    },
+    /** 当前 lilToon 配置的深拷贝（界面用它同步控件） */
+    getLilConfig(matName) {
+      const src = matName ? lilCfgFor({ name: matName }) : lilCfg;
+      return JSON.parse(JSON.stringify(src));
+    },
+    /** 按材质覆盖表（原始 ✗ 未合并）。含自动按材质名去重后的名字列表 ✓ */
+    getLilCfgByMaterial() {
+      return JSON.parse(JSON.stringify(lilCfgByMaterial));
+    },
+    /** 直接替换整张按材质覆盖表（导入配置用）*/
+    setLilCfgByMaterial(obj) {
+      lilCfgByMaterial = obj && typeof obj === "object" ? JSON.parse(JSON.stringify(obj)) : {};
+      lilMaterialVersion++;
+      celProgramVersion++;
+      applyLilOutline();
+    },
+    /** 清掉某个材质的覆盖（回到全局）*/
+    clearLilMaterialOverride(matName) {
+      if (lilCfgByMaterial[matName]) {
+        delete lilCfgByMaterial[matName];
+        lilMaterialVersion++;
+        celProgramVersion++;
+        applyLilOutline();
+      }
+    },
+    /** 模型里全部材质名（面板材质选择器用 ✗ 按名字排序去重）*/
+    getLilMaterials() {
+      const set = /* @__PURE__ */ new Set();
+      if (modelRoot) modelRoot.traverse((m) => {
+        if (m.isMesh && m.material && m.material.name) set.add(m.material.name);
+      });
+      return [...set].sort();
+    },
+    /**
+     * 改 lilToon 参数（增量合并 ✓ 只给要改的键即可）。
+     * 改完立即重建材质 → 着色器重编译 → 界面/画面同步生效 ✓
+     */
+    setLilConfig(partial, matName) {
+      if (!partial || typeof partial !== "object") return this.getLilConfig();
+      applyLilConfig(partial, matName);
+      if (modelRoot) applyRender(renderMode);
+      return this.getLilConfig();
+    },
+    /**
+     * 导出配置 —— **与出厂默认值做 diff** ✗：等于默认的项不写 ✓，改过的才写 ✓。
+     * 这样导出的就是一份「最小可用」的 model.json ✓ 直接丢回 assets/ 即可复现 ✓
+     *
+     * 这些项永远写出来（不属于 diff ✗ 因为它们是"这份配置指向哪个模型"）：
+     *   model.url / model.mouthAtlas / model.rotation
+     */
+    exportConfig() {
+      const diff = (cur2, def2) => {
+        if (cur2 === null || cur2 === void 0) return cur2 === def2 ? void 0 : cur2;
+        if (typeof cur2 !== "object") return cur2 === def2 ? void 0 : cur2;
+        if (Array.isArray(cur2)) {
+          const same = Array.isArray(def2) && cur2.length === def2.length && cur2.every((v, i) => v === def2[i]);
+          return same ? void 0 : cur2.slice();
+        }
+        const out2 = {};
+        for (const k of Object.keys(cur2)) {
+          const v = diff(cur2[k], def2 ? def2[k] : void 0);
+          if (v !== void 0) out2[k] = v;
+        }
+        return Object.keys(out2).length ? out2 : void 0;
+      };
+      const cur = {
+        render: renderMode,
+        shader: shaderMode,
+        lightingScale: Number(cfg.lightingScale) || 1,
+        outline: { on: !!outlineOn, width: outlineParams.thickness, color: outlineParams.color },
+        shadow: !!cfg.shadows,
+        /**
+         * ★★ lilToon 参数**已拆到独立文件**（`模型名.lilToon.json` ✓）——
+         *   主 JSON 里**只留一个开关**：用没用 lilToon ✓
+         *
+         *   ⚠️ 为什么拆：lilToon 的配置有 **200+ 个键**（含每材质覆盖 ✓）
+         *     混在主 JSON 里 ⇒ 手改主配置时满屏都是它的键 ⇒ 看不懂 ✓
+         *   ⚠️ 为什么留 `use`：不写的话「这个模型要不要找 lilToon 文件」
+         *     就得靠猜 ✗ 显式写出来才符合「不要学习成本」✓
+         */
+        /**
+         * ★★ 修正模型位置（用户问的：「场景的模型位置修正参数为什么没导出」✓）
+         *
+         *   ⚠️ 它属于**模型级的摆放**（不是视图状态 ✓）⇒ 必须跟着主 JSON 走 ✓
+         *     默认 {0,0,0} ⇒ 和 `def` 一样 ⇒ diff 后**不写** ✓
+         *     （自动贴地会把它写成非 0 ✗ 那时才会出现在 JSON 里 ✓）
+         */
+        modelOffset: getModelOffset(),
+        /**
+         * ★ 光照**手动值** —— 只在「预设被手动改过」时才有意义 ✓
+         *   ⚠️ `lighting`（上面那个 ✓）存的是**预设名** ✗ 手动改过会置成 null ✓
+         *     ⇒ 不带上手动值 ⇒ 导出的 JSON 会**丢掉光照调整** ✓
+         */
+        lightState: cfg.lightingPreset ? void 0 : readLightState(),
+        /**
+         * ⚠️⚠️⚠️ **判据必须是 `shaderMode === 'lilToon'`** ——
+         *
+         *   我第一版写的是 `!!shaderActive()` ✗
+         *   而 `shaderActive()` 的定义是（第 5760 行 ✓）：
+         *       return renderMode === 'toon' && shaderMode !== 'none';
+         *   ⇒ 它是「**cel 着色器在生效**」✗ 不是「用了 lilToon」✓
+         *     对默认的 `shaderMode === 'cel'` 也返回 **true** ✓
+         *   ⇒ 用户刷新后明明用的是 Cel 分档 ✗ 导出却说 `lilToon: { use: true }` ✓
+         *     （用户：「我刷新了以后都没选 lilToon 着色器还用的 cel 他都能？」✓）
+         *
+         *   `shaderMode` 的取值：`'none'` / `'cel'` / `'lilToon'` ✓
+         */
+        lilToon: { use: shaderMode === "lilToon" },
+        /**
+         * ⚠️ 这里以前是**手写列表** ✗ 加了 bandRamp / bandSoft 后忘了同步 ⇒ 导出丢字段 ✓
+         *    ⇒ 改成 celSnapshot() ✗ 以后 celCfg 加字段自动带上 ✓
+         *    （同一个坑踩过好几次：applyLilConfig 的组白名单 / lilCfg 的键白名单 ✓）
+         */
+        cel: celSnapshot()
+      };
+      const def = {
+        render: "toon",
+        shader: "cel",
+        lightingScale: 1,
+        outline: { on: true, width: OUTLINE_DEFAULT.thickness, color: OUTLINE_DEFAULT.color },
+        shadow: true,
+        // ⚠️ lilToon 的 diff 基准已移走（它不再属于主 JSON ✓）
+        modelOffset: { x: 0, y: 0, z: 0 },
+        lightState: void 0,
+        // 没有手动光照 ⇒ 不写 ✓
+        cel: CEL_DEFAULTS
+      };
+      const renderer2 = diff(cur, def) || {};
+      renderer2.render = renderMode;
+      renderer2.shader = shaderMode;
+      renderer2.lilToon = { use: shaderMode === "lilToon" };
+      const urlUnchanged = !!(cfg.__urlRaw && cfg.__urlResolved && cfg.modelUrl === cfg.__urlResolved.modelUrl);
+      const model = { url: urlUnchanged && cfg.__urlRaw.modelUrl || cfg.modelUrl || "" };
+      const __atlas = mouthAtlasUrl || cfg.mouthAtlasUrl || null;
+      const atlasUnchanged = !!(cfg.__urlRaw && cfg.__urlResolved && __atlas === cfg.__urlResolved.mouthAtlas);
+      if (atlasUnchanged && cfg.__urlRaw.mouthAtlas) {
+        model.mouthAtlas = cfg.__urlRaw.mouthAtlas;
+      } else if (__atlas && !/^(blob:|data:)/i.test(String(__atlas))) {
+        model.mouthAtlas = __atlas;
+      } else if (__atlas) {
+        console.debug("[export] 嘴部图集是本地选文件产生的一次性 URL ⇒ 不写进配置 ✓：" + String(__atlas).slice(0, 40) + "…");
+      }
+      if (Array.isArray(cfg.modelRotation)) model.rotation = cfg.modelRotation.slice();
+      const out = { model, renderer: renderer2 };
+      if (currentLighting && currentLighting !== "day") out.lighting = currentLighting;
+      const bgCur = { transparent: !!cfg.transparent };
+      if (cfg.background) bgCur.color = cfg.background;
+      if (!(bgCur.transparent === true && bgCur.color === void 0)) out.background = bgCur;
+      if (currentClipName) out.animation = { name: currentClipName };
+      return out;
+    },
+    /**
+     * 截取当前画面为 PNG dataURL（供"保存 PNG"用）。
+     *
+     * ⚠️ 两个必须注意的点：
+     *   ① WebGL 的绘制缓冲在浏览器合成之后就被清空了 ✗
+     *      （本渲染器**没有**开 preserveDrawingBuffer ✗ 开它会明显掉性能 ✓）
+     *      所以必须**立刻重绘一帧** ✗ 并且在**同一个同步任务里**读取 ✓ 中间不能 await ✓
+     *   ② 渲染要跟主循环走同一条路径 —— 描边开启时是 OutlineEffect（两趟 ✗）
+     *      直接调 renderer.render 会**丢掉描边** ✓
+     *   ③ 透明背景下 canvas 本身是透明的 ✗ 合成到当前背景色上更便于前后对比 ✓
+     */
+    screenshot() {
+      const canvas = renderer.domElement;
+      if (outlineActive()) getOutlineEffect().render(scene, camera);
+      else renderer.render(scene, camera);
+      ba3dTimeUniform.value = performance.now() / 1e3;
+      const out = document.createElement("canvas");
+      out.width = canvas.width;
+      out.height = canvas.height;
+      const ctx = out.getContext("2d");
+      if (!bgTransparent) {
+        ctx.fillStyle = "#" + bgColor.getHexString();
+        ctx.fillRect(0, 0, out.width, out.height);
+      }
+      ctx.drawImage(canvas, 0, 0);
+      return out.toDataURL("image/png");
+    },
+    /** 保存 PNG：直接触发下载。返回文件名 */
+    saveScreenshot(name) {
+      const now2 = Date.now();
+      if (this.__lastShotAt && now2 - this.__lastShotAt < 300) return null;
+      this.__lastShotAt = now2;
+      const url = this.screenshot();
+      const a = document.createElement("a");
+      a.href = url;
+      const st = this.getRenderState();
+      const d = /* @__PURE__ */ new Date();
+      const pad = (n) => String(n).padStart(2, "0");
+      a.download = (name || "ba3d-" + st.render + "-" + st.shader + "-" + d.getFullYear() + pad(d.getMonth() + 1) + pad(d.getDate()) + "-" + pad(d.getHours()) + pad(d.getMinutes()) + pad(d.getSeconds())) + ".png";
+      a.click();
+      return a.download;
+    },
+    /** 导出为带缩进的 JSON 字符串（可直接另存为 .json） */
+    exportConfigJSON() {
+      return JSON.stringify(this.exportConfig(), null, 2);
+    },
+    /* ============================================================
+     * ★★ lilToon 的独立配置文件（`模型名.lilToon.json` ✓）
+     *
+     *   ⚠️ 主 JSON 里只有 `lilToon: { use: true }` ✗ 参数全在这里 ✓
+     * ============================================================ */
+    /** lilToon 配置对象（导出用 ✓ 全局 + 每材质覆盖 ✓）*/
+    exportLilConfig() {
+      return {
+        _comment: "lilToon 参数 —— 只有主 JSON 的 renderer.lilToon.use 为 true 时才需要这个文件",
+        version: 1,
+        config: JSON.parse(JSON.stringify(lilCfg)),
+        byMaterial: JSON.parse(JSON.stringify(lilCfgByMaterial))
+      };
+    },
+    exportLilConfigJSON() {
+      return JSON.stringify(this.exportLilConfig(), null, 2);
+    },
+    /**
+     * 套用 lilToon 独立配置（导入用 ✓）
+     * ⚠️ 两个入口分开调：`config` 走 setLilConfig ✗ `byMaterial` 走 setLilCfgByMaterial ✓
+     *   （它们各自会重建材质 / 重编译着色器 ✓）
+     */
+    /**
+     * ★★ **导入 lilToon 预设**（Unity .asset 文本 ✓）
+     *
+     *   ⚠️ 只套用**我们能表达的字段** ✗ 其余忽略 ✓
+     *     返回值里带 skipped（未识别的 lilToon 属性名 ✓）供 UI 提示 ✓
+     *
+     *   ⚠️ 必须走 this.setLilConfig(patch) ——
+     *     它会 applyLilConfig + applyRender ⇒ **触发材质重建 / 着色器重编译** ✓
+     *     只改 lilCfg 数据是**不会生效**的 ✓
+     */
+    importLilPreset(text) {
+      if (typeof text !== "string" || !text.trim()) return { ok: false, reason: "空内容" };
+      let preset;
+      try {
+        preset = parseLilPresetYaml(text);
+      } catch (e) {
+        return { ok: false, reason: "解析失败：" + (e && e.message) };
+      }
+      const n = Object.keys(preset.colors).length + Object.keys(preset.vectors).length + Object.keys(preset.floats).length;
+      if (!n) return { ok: false, reason: "没解析出任何属性（不是 lilToon 预设 / 材质 ？）" };
+      const r = lilPresetToPatch(preset);
+      this.setLilConfig(r.patch);
+      console.debug("[lilToon] 导入预设「" + (preset.name || "?") + "」：源 " + n + " 条 ⇒ 套用 " + r.applied + " 项 · 未识别 " + r.skipped.length + " 个属性名");
+      return { ok: true, name: preset.name, total: n, applied: r.applied, skipped: r.skipped };
+    },
+    /**
+     * ★★ **导出 lilToon 预设**（Unity .asset 文本 ✓）
+     *
+     *   ⚠️ 只写**映射表里有的**字段 ⇒ 产物是「我们实现的那部分」✓
+     *     我们没实现的属性**不会出现** ✗ 拖进 Unity 后那些保持 lilToon 默认 ✓
+     */
+    /**
+     * ⚠️ 现在多一个 `name` 是**必给的** ——
+     *   它会写进 `bases[].name`（Unity 里那个按钮的**文字** ✓）
+     *   空名字 ⇒ Unity 里是**没有文字的按钮** ⇒ 用户会以为没出现 ✓
+     */
+    /**
+     * ★★ **导出 lilToon 预设**（Unity `.asset` 文本 ✓）
+     *
+     * @param {string|object} opt
+     *   · 传字符串 ⇒ 兼容旧调用（当 name 用 ✓）
+     *   · 传对象 ⇒ `{ name, category, shader, preferTwoPass, material }`
+     *       `shader` 可以是名字或 GUID ✗ 传了就是**手动指定**（最高优先 ✓）
+     *       `material` 指定材质（不传 = 全局 ✓）
+     *
+     * ⚠️⚠️ **子着色器是必须给的**（读源码得出 ✓）：
+     *   主着色器 `lilToon`（lts）只有 FORWARD/FORWARD_ADD/SHADOW_CASTER/META
+     *   ⇒ **没有 OUTLINE pass** ⇒ 材质用 lts 时 `_UseOutline=1` 也不渲染 ✓
+     *   ⇒ 而 64 个变体里**只有 1 个可见名** ⇒ 其余只能靠预设绑定 ✓
+     *   ⇒ 所以这里**自动推导 + 写进 `shader:` 字段** ✓
+     */
+    exportLilPreset(opt) {
+      const o = typeof opt === "string" ? { name: opt } : opt || {};
+      const cfg2 = this.getLilConfig(o.material) || {};
+      const p = lilCfgToPreset(cfg2, o.name);
+      p.name = o.name || p.name;
+      if (o.category !== void 0 && o.category !== null) p.category = Number(o.category) || 0;
+      const sh = lilDeriveShader(cfg2, o.shader, !!o.preferTwoPass);
+      if (sh) {
+        p.shader = sh.guid;
+        p.renderingMode = lilRenderModeOfShaderName(sh.name);
+      }
+      console.debug("[lilToon] 导出预设「" + p.name + "」子着色器 = " + (sh ? sh.name + "（" + sh.why + "）" : "不改") + " ✓");
+      return buildLilPresetYaml(p);
+    },
+    /** 当前配置会推导出什么子着色器（UI 显示用 ✓）*/
+    lilShaderInfo(material, manual) {
+      const cfg2 = this.getLilConfig(material) || {};
+      return lilDeriveShader(cfg2, manual) || null;
+    },
+    /** 全部材质（批量导出用 ✓）*/
+    lilExportTargets() {
+      const list = [];
+      try {
+        list.push(...this.getLilMaterials() || []);
+      } catch (e) {
+      }
+      return list;
+    },
+    /**
+     * ★★ **批量导出**：每个材质一个 `.asset`（用户要求 ✓）。
+     * @returns {Array<{ material, filename, text, category, shader, why }>}
+     *
+     * ⚠️ 分类**按材质名猜**（`guessLilCategory` ✓）——
+     *   用户说了：「分类不算特别重点 ✗ 只是方便下拉选 ✓
+     *              Unity 里其实可以任意套 ✓」
+     */
+    exportAllLilPresets(opt) {
+      const o = opt || {};
+      const base = o.baseName || "model";
+      const out = [];
+      for (const mat of this.lilExportTargets()) {
+        const cfg2 = this.getLilConfig(mat) || {};
+        const cat = o.category !== void 0 && o.category !== null ? Number(o.category) : guessLilCategory(mat);
+        const sh = lilDeriveShader(cfg2, o.shader, !!o.preferTwoPass);
+        const p = lilCfgToPreset(cfg2, mat);
+        p.name = mat;
+        p.category = cat;
+        if (sh) {
+          p.shader = sh.guid;
+          p.renderingMode = lilRenderModeOfShaderName(sh.name);
+        }
+        const safe = String(mat).replace(/[\\/:*?"<>|]/g, "_");
+        out.push({
+          material: mat,
+          filename: base + "_" + safe + ".asset",
+          text: buildLilPresetYaml(p),
+          category: cat,
+          shader: sh ? sh.name : null,
+          why: sh ? sh.why : ""
+        });
+      }
+      return out;
+    },
+    /** UI 用：分类表 + 着色器分组表 + 材质表 ✓ */
+    lilExportOptions() {
+      const byMode = {};
+      for (const s of LIL_SHADERS || []) {
+        if (s.lite || s.multi || s.tess) continue;
+        if (/^(Hidden\/ltspass|_lil\/)/.test(s.name)) continue;
+        (byMode[s.renderingMode] = byMode[s.renderingMode] || []).push({ name: s.name, guid: s.guid });
+      }
+      return {
+        categories: LIL_CATEGORIES.slice(),
+        shadersByMode: byMode,
+        materials: this.lilExportTargets()
+      };
+    },
+    /** 当前配置能表达成预设里的多少条（给 UI 提示用 ✓） */
+    lilPresetStats() {
+      const p = lilCfgToPreset(this.getLilConfig() || {}, "x");
+      return { colors: Object.keys(p.colors).length, vectors: Object.keys(p.vectors).length, floats: Object.keys(p.floats).length };
+    },
+    applyLilConfigJSON(o) {
+      if (!o || typeof o !== "object") return false;
+      if (o.config && typeof o.config === "object") this.setLilConfig(o.config);
+      if (o.byMaterial && typeof o.byMaterial === "object") this.setLilCfgByMaterial(o.byMaterial);
+      return true;
+    },
+    /**
+     * ★ 自动探测并载入 lilToon 配置（用户定的规则 ✓）
+     *
+     *   ① 先试 **模型名.lilToon.json**（按 `cfg.modelUrl` 推 ✓）
+     *   ② 找不到再试 **主 JSON 名.lilToon.json**（`opts.mainJsonUrl` ✓）
+     *   ③ 都没有 ⇒ **保持出厂默认** + 控制台 `warn` 一句（用户确认的兜底 ✓）
+     *
+     *   ⚠️ 「模型名」= `./assets/sample.glb` → `sample` ✓
+     *     ⇒ 探测 `./assets/sample.lilToon.json` ✓
+     */
+    async probeLilConfig(mainJsonUrl) {
+      const base = String(cfg.modelUrl || "").replace(/[?#].*$/, "").replace(/\.[^./\\]+$/, "");
+      const cands = [];
+      if (base) cands.push(base + ".lilToon.json");
+      if (mainJsonUrl) {
+        const mj = String(mainJsonUrl).replace(/[?#].*$/, "").replace(/\.json$/i, "");
+        if (mj && mj + ".lilToon.json" !== cands[0]) cands.push(mj + ".lilToon.json");
+      }
+      for (const url of cands) {
+        try {
+          const r = await fetch(url, { cache: "no-cache" });
+          if (!r.ok) continue;
+          const o = await r.json();
+          this.applyLilConfigJSON(o);
+          console.debug("[lilToon] 已载入独立配置：" + url);
+          return { ok: true, url };
+        } catch (e) {
+        }
+      }
+      console.warn("[lilToon] 主配置要求使用 lilToon ✗ 但**未找到配置**" + (cands.length ? "（试过 " + cands.join(" · ") + " ✓）" : "（没有可推导的文件名 ✓）") + " ⇒ 使用**出厂默认** ✓");
+      return { ok: false, tried: cands };
     },
     /**
      * 播放动作（等价于全局 play3dmodelaction）：
@@ -27157,6 +37130,179 @@ function createViewer(container, opts = {}) {
      */
     playAction(actions) {
       return playAction(actions);
+    },
+    /**
+     * 着色器诊断：看当前每个网格用的到底是什么材质、cacheKey 里写的是什么着色器。
+     * 排查「切了着色器但画面没变」时用：控制台跑 viewer.shaderReport()
+     */
+    shaderReport() {
+      const out = {
+        render: renderMode,
+        shader: shaderMode,
+        shaderActive: shaderActive(),
+        celProgramVersion,
+        rendering: {
+          toneMapping: renderer.toneMapping,
+          // 1=Linear 2=Reinhard 3=ACESFilmic 4=Cineon 5=AgX 6=Neutral
+          toneMappingExposure: Number(renderer.toneMappingExposure.toFixed(6)),
+          outputColorSpace: renderer.outputColorSpace,
+          pixelRatio: renderer.getPixelRatio(),
+          shadowMapEnabled: renderer.shadowMap.enabled,
+          shadowMapType: renderer.shadowMap.type
+        },
+        lastLightingCalc: lastLighting,
+        // ★ 最近一次打光计算的实参（排查曝光漂移 ✗）
+        lighting: {
+          preset: currentLighting,
+          lightingScale: Number(cfg.lightingScale) || 1,
+          hemi: Number(hemi.intensity.toFixed(6)),
+          key: Number(keyLight.intensity.toFixed(6)),
+          rim: Number(rimLight.intensity.toFixed(6)),
+          fill: Number(fillLight.intensity.toFixed(6))
+        },
+        outline: { on: outlineOn, thickness: outlineParams.thickness, color: outlineParams.color, alpha: outlineParams.alpha },
+        background: { transparent: bgTransparent, color: bgTransparent ? null : bgColor.getHexString() },
+        materials: []
+      };
+      if (!modelRoot) return out;
+      modelRoot.traverse((o) => {
+        if (!o.isMesh || !o.material) return;
+        const ms = Array.isArray(o.material) ? o.material : [o.material];
+        ms.forEach((m) => {
+          if (!m) return;
+          const ud = m.userData || {};
+          let key = "";
+          try {
+            key = m.customProgramCacheKey ? String(m.customProgramCacheKey()) : "";
+          } catch (e) {
+            key = "ERR:" + e.message;
+          }
+          out.materials.push({
+            mesh: o.name,
+            material: m.name || m.type,
+            type: m.type,
+            是派生材质: !!(ud.__toon || ud.__unlit),
+            记录的着色器: ud.__celShader || "(无)",
+            // ★ 顶点色：lilToon 的遮罩（triMask ✗）用它 ✓
+            //   没有顶点色时遮罩恒为 1 ✗ 效果全区域生效 ✓（BA 那批 GLB 就没有 ✗）
+            有顶点色: !!(o.geometry && o.geometry.attributes && o.geometry.attributes.color),
+            材质开了顶点色: !!m.vertexColors,
+            顶点色均值: (() => {
+              const c = o.geometry && o.geometry.attributes && o.geometry.attributes.color;
+              if (!c) return null;
+              const n = Math.min(c.count, 500);
+              const sum = [0, 0, 0];
+              for (let i = 0; i < n; i++) {
+                sum[0] += c.getX(i);
+                sum[1] += c.getY(i);
+                sum[2] += c.getZ(i);
+              }
+              return sum.map((v) => Number((v / n).toFixed(3)));
+            })(),
+            // ★ 决定性字段：编译时实际注入进 GLSL 的是哪套分档
+            实际编译的分档: ud.__fragKind || "(未编译)",
+            编译时的shaderMode: ud.__fragShaderAtCompile || "(无)",
+            记录的版本: ud.__celVersion,
+            cacheKey: key,
+            hasOBC: !!m.onBeforeCompile
+          });
+        });
+      });
+      return out;
+    },
+    /**
+     * **顶点色预览** —— 把顶点色直接当颜色渲染出来看。
+     *
+     * 原理：换成 MeshBasicMaterial + vertexColors:true + 白色基色 ✗
+     *       输出就是 vColor 本身 ✓（无光照 ✗ 无贴图 ✓）
+     *
+     * 用途：lilToon 的遮罩就是读顶点色的 RGB 三通道 ✗
+     *   R → MatCap 权重 · G → Rim 权重 · B → 自发光权重 ✓
+     *   用这个模式可以直观看清"哪个部位是哪个通道" ✓
+     *
+     *   viewer.showVertexColors(true)   打开预览
+     *   viewer.showVertexColors(false)  还原
+     *
+     * ⚠️ 没有顶点色的模型会整体显示为**纯白** ✓（那说明遮罩恒为 1 ✓ 效果全区域生效 ✓）
+     */
+    showVertexColors(on) {
+      cfg.__vcView = !!on;
+      if (!modelRoot) return cfg.__vcView;
+      if (!on) {
+        applyRender(renderMode);
+        return cfg.__vcView;
+      }
+      modelRoot.traverse((o) => {
+        if (!o.isMesh || !o.material) return;
+        const hasColor = !!(o.geometry && o.geometry.attributes && o.geometry.attributes.color);
+        const mats = Array.isArray(o.material) ? o.material : [o.material];
+        const next = mats.map((m) => {
+          if (!m) return m;
+          if (m.userData && m.userData.__vcView) return m;
+          const t = new MeshBasicMaterial({
+            color: 16777215,
+            map: null,
+            // 不看贴图 ✗ 只看顶点色 ✓
+            vertexColors: true,
+            // ★ 关键：输出 vColor ✓
+            side: m.side,
+            transparent: false,
+            depthWrite: true,
+            toneMapped: false
+            // 直通 ✗ 否则被色调映射改变 ✓
+          });
+          t.name = (m.name || "mat") + "_VCView";
+          t.userData.__vcView = true;
+          t.userData.__src = m.userData && m.userData.__src ? m.userData.__src : m;
+          if (!hasColor) console.warn("[vcView] 该网格没有顶点色属性 ✗ 会显示为纯白：", o.name);
+          return t;
+        });
+        o.material = Array.isArray(o.material) ? next : next[0];
+      });
+      console.debug("[vcView] 顶点色预览已开启（白 = 无顶点色 或 全为 1 ✗）");
+      console.debug("[vcView] R 通道=MatCap 权重 ✗ G 通道=Rim 权重 ✗ B 通道=自发光权重");
+      return cfg.__vcView;
+    },
+    /**
+     * 检查当前模型有没有顶点色 ✗ 并给出统计（比看画面更准 ✓）。
+     *   viewer.vertexColorInfo()
+     */
+    vertexColorInfo() {
+      const out = [];
+      if (!modelRoot) return out;
+      modelRoot.traverse((o) => {
+        if (!o.isMesh || !o.geometry) return;
+        const c = o.geometry.attributes && o.geometry.attributes.color;
+        const m = Array.isArray(o.material) ? o.material[0] : o.material;
+        if (!c) {
+          out.push({ mesh: o.name, 有顶点色: false });
+          return;
+        }
+        const n = c.count;
+        const mn = [9, 9, 9], mx = [-9, -9, -9], sum = [0, 0, 0];
+        for (let i = 0; i < n; i++) {
+          const v = [c.getX(i), c.getY(i), c.getZ(i)];
+          for (let k2 = 0; k2 < 3; k2++) {
+            if (v[k2] < mn[k2]) mn[k2] = v[k2];
+            if (v[k2] > mx[k2]) mx[k2] = v[k2];
+            sum[k2] += v[k2];
+          }
+        }
+        const mean = sum.map((v) => Number((v / n).toFixed(3)));
+        const allWhite = mn.every((v) => v > 0.999);
+        out.push({
+          mesh: o.name,
+          材质: m && m.name,
+          有顶点色: true,
+          顶点数: n,
+          min: mn.map((v) => Number(v.toFixed(3))),
+          max: mx.map((v) => Number(v.toFixed(3))),
+          均值: mean,
+          是否全白: allWhite,
+          遮罩效果: allWhite ? "恒为 1 ✗ 效果全区域生效" : "分区生效 ✓"
+        });
+      });
+      return out;
     },
     /** 当前默认动作名（未指定初始动作时，是从含 idle 的动作里随机选的） */
     getDefaultAction() {
@@ -27208,7 +37354,7 @@ function createViewer(container, opts = {}) {
     },
     /** 描边：getOutline() -> { on, thickness, color, alpha } */
     getOutline() {
-      return Object.assign({ on: outlineOn }, outlineParams);
+      return Object.assign({ on: outlineOn, active: outlineActive(), fbxDisabled: !!cfg.__isFbx }, outlineParams);
     },
     setOutline(on) {
       return setOutline(on);
@@ -27381,7 +37527,13 @@ function autoMount(root = document) {
   const list = [];
   root.querySelectorAll("[data-ba3d]").forEach((el) => {
     if (el.__ba3dViewer) return;
-    const v = createViewer(el, {});
+    const __opts = {};
+    if (!el.hasAttribute("data-ba3d-framing-offset")) {
+      __opts.framingOffsetY = EMBED_FRAMING_OFFSET_Y;
+      __opts.__framingOffsetYForced = EMBED_FRAMING_OFFSET_Y;
+      __opts.__framingOffsetForced = true;
+    }
+    const v = createViewer(el, __opts);
     el.__ba3dViewer = v;
     const p = v.load();
     el.__ba3dLoad = p;

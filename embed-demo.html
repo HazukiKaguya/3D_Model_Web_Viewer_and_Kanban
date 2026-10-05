@@ -132,7 +132,7 @@
 
   <h1>3D 模型网页内嵌看板娘演示</h1>
   <p class="sub">
-    左边那个角色就是内嵌的查看器 —— 浮层本身**平时完全隐形**（鼠标移进它的范围才显出边框和投影），
+    左边那个角色就是内嵌的查看器 —— 浮层本身<b>平时完全隐形</b>（鼠标移进它的范围才显出边框和投影），
     所以看起来就像角色直接站在网页上。<b>按住角色本体拖动可以移动整个面板</b>，
     <b>按住右键拖动可以旋转角色</b>。按住左键时页面会通过 <code>play3dmodelaction</code> 触发
     <code>Formation_Pickup</code>，松开恢复。
@@ -148,6 +148,26 @@
   autoMount();
 &lt;/script&gt;</pre>
 
+  <p>
+    有时候，我们会遇到角色有「倒地 / 死亡」这类向下展开的动画，所以嵌入默认的取景偏移是 <b>42</b>，避免在卡片更矮或者动画幅度更大时，角色部分跑出场景，这时在容器上写 <code>data-ba3d-framing-offset</code> ，数值越大画面越往上，下方留白越多。
+  </p>
+  <pre>&lt;!-- 默认 42（不用写属性） --&gt;
+&lt;div data-ba3d data-ba3d-drag data-ba3d-config="./assets/sample.json"
+     style="width:420px;height:430px"&gt;&lt;/div&gt;
+
+&lt;!-- 想再往上一点：显式写数值（单位是<b>容器的 CSS 像素</b>） --&gt;
+&lt;div data-ba3d data-ba3d-drag data-ba3d-config="./assets/sample.json"
+     data-ba3d-framing-offset="70"
+     style="width:420px;height:430px"&gt;&lt;/div&gt;
+
+&lt;!-- 完全不下移 --&gt;
+&lt;div data-ba3d data-ba3d-drag data-ba3d-config="./assets/sample.json"
+     data-ba3d-framing-offset="0"
+     style="width:420px;height:430px"&gt;&lt;/div&gt;</pre>
+  <p class="sub">
+    ⚠️注意：同一数值在<b>不同高度的容器</b>里效果不同（它按容器高换算成世界单位），所以换尺寸后要重新试一下。
+  </p>
+
   <h2>2. 容器的 data-* 属性</h2>
   <table>
     <tr><th>属性</th><th>说明</th></tr>
@@ -155,7 +175,12 @@
     <tr><td><code>data-ba3d-config</code></td><td>配置 JSON（模型 / 嘴部贴图 / 基准 / 渲染 / 打光 / 背景）</td></tr>
     <tr><td><code>data-ba3d-model</code></td><td>模型文件 URL（<code>.glb</code>）</td></tr>
     <tr><td><code>data-ba3d-mouth</code></td><td>嘴部修复贴图 URL（<code>.png</code>）</td></tr>
-    <tr><td><code>data-ba3d-drag</code></td><td>开启「左键按在模型上拖动整个容器」</td></tr>
+    <tr><td><code>data-ba3d-framing-offset</code></td><td>取景垂直偏移（CSS 像素 · 正值 = 取景下移 ⇒ 内容上移）。嵌入默认 <b>42</b>，主页面是 22。角色有倒地/死亡这类向下展开的动画时调大它，下方留白更多。<br>⚠️ 按容器高换算、换尺寸后要重试。用例见上面第 1 节、比对见 <a href="./embed-test.html">embed-test.html</a>。</td></tr>
+<tr><td><code>data-ba3d-grid</code></td><td>显示地面网格（<b>默认关</b> · 嵌入看板一般不需要）</td></tr>
+<tr><td><code>data-ba3d-axes</code></td><td>显示原点 XYZ 坐标轴（默认关）</td></tr>
+<tr><td><code>data-ba3d-gizmo</code></td><td>显示视角指示器（默认关）</td></tr>
+<tr><td><code>data-ba3d-light-helper</code></td><td>显示主光方向指示（默认关）</td></tr>
+<tr><td><code>data-ba3d-drag</code></td><td>开启「左键按在模型上拖动整个容器」</td></tr>
     <tr><td><code>data-ba3d-auto-rotate</code></td><td><code>true</code> 自动旋转</td></tr>
   </table>
 
@@ -193,10 +218,10 @@
     <tr><td>滚轮</td><td>缩放</td></tr>
   </table>
   <h3>按住才算「按下」：0.2s 阈值</h3>
-  <p>左键在模型上按下后**不会立刻**触发——先进入待定，按住超过 <code>pressHoldMs</code>（默认 <b>200ms</b>）
+  <p>左键在模型上按下后<b>不会立刻</b>触发——先进入待定，按住超过 <code>pressHoldMs</code>（默认 <b>200ms</b>）
      才真正算一次「按下」，这时才会派发 <code>ba3d:press</code> 并开始拖动容器；
      没按够就松手算「点击」，派发 <code>ba3d:click</code>，不触发拖动。</p>
-  <p>这样**点一下想触发动作、结果把面板拖走了**的情况就不会发生了。</p>
+  <p>这样<b>点一下想触发动作、结果把面板拖走了</b>的情况就不会发生了。</p>
   <pre>panel.addEventListener('ba3d:press', (e) =&gt; {
   // e.detail = { button, heldMs, thresholdMs, hit }   按住够久了 → 触发动作
 });
@@ -222,7 +247,7 @@ play3dmodelaction();                       // 不传 → 回到默认动作（�
      所以 <code>'Formation_Pickup'</code> 能匹配到 <code>xxx_Formation_Pickup</code>。</p>
 
   <h3>左下角控件区的动作选单</h3>
-  <p>左下角控件区最上面那行的下拉选单就是纯页面代码：动作列表问一次查看器，**切动作只走全局钩子**，
+  <p>左下角控件区最上面那行的下拉选单就是纯页面代码：动作列表问一次查看器，<b>切动作只走全局钩子</b>，
      完全不碰模型内部：</p>
   <pre>const sel = document.getElementById('animSel');
 let current = null;
@@ -267,7 +292,7 @@ panel.addEventListener('ba3d:pointerup', (e) =&gt; {
 });</pre>
 
   <h2>6. 默认动作</h2>
-  <p>配置里没写 <code>animation.name</code> 时，会**在名字含 <code>idle</code> 的动作里随机**挑一个作为初始动作
+  <p>配置里没写 <code>animation.name</code> 时，会<b>在名字含 <code>idle</code> 的动作里随机</b>挑一个作为初始动作
      （本模型有 <code>Normal_Idle</code> / <code>Cafe_Idle</code> / <code>Formation_Idle</code> 三个）。
      多刷新几次能看到初始动作在变。</p>
 

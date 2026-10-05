@@ -1,0 +1,16 @@
+﻿# Apache：让 .glb 以正确 MIME 返回 + 静态资源长缓存
+AddType model/gltf-binary .glb
+AddType text/javascript .js
+AddType application/json .json
+
+# 配置 json 不缓存：改完上传即生效
+<FilesMatch "\.json$">
+  Header set Cache-Control "no-cache"
+</FilesMatch>
+
+<IfModule mod_expires.c>
+  ExpiresActive On
+  ExpiresByType model/gltf-binary "access plus 1 year"
+  ExpiresByType image/png "access plus 1 year"
+  ExpiresByType text/javascript "access plus 1 year"
+</IfModule>
