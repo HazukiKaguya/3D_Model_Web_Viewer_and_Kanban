@@ -1,4 +1,4 @@
-# 3D 角色模型网页内嵌看板娘 部署说明
+﻿# 3D 角色模型网页内嵌看板娘 部署说明
 
 纯静态站点，**无构建步骤、无 CDN 依赖、无需 Node**，全部使用相对路径（根路径/子路径部署都不用改配置）。
 `dist/` 已预打包好，直接把本目录里的**全部文件按原样上传到网站根目录**（或任意子目录）即可，静态托管即可运行（Nginx / Apache / Netlify / Cloudflare Pages / OSS / COS 都行）。
@@ -19,7 +19,8 @@
 |---|---|
 | `index.html` | 3D 模型查看器（全屏、控制台 UI） |
 | `viewer.js` | 查看器核心（`createViewer` / `autoMount`，ES module，被 index.html 直接引用） |
-| `vendor/three/three.module.js` | three.js r160 本体（importmap 里 `"three"` 指向它） |
+| `vendor/three/three.module.js` | three.js r185.1 本体（importmap 里 `"three"` 指向它） |
+| `vendor/three/three.core.js` | ↑ r185 起拆出的核心，`three.module.js` 用相对 import 引用它，**不能漏** |
 | `vendor/three/controls/OrbitControls.js` | 相机交互（旋转 / 缩放） |
 | `vendor/three/loaders/GLTFLoader.js` | 模型加载（`.glb` / `.gltf`）|
 | `vendor/three/loaders/FBXLoader.js` | 模型加载（`.fbx`）|
@@ -74,7 +75,7 @@
 
   ### 现在一共 **38 个文件（10.50 MB）**、（`kanban-demo.html` 已删、功能被 `embed-demo.html` 完全覆盖）
 
-      必需  index.html · viewer.js · vendor/three 的 13 个 ·
+      必需  index.html · viewer.js · vendor/three 的 12 个 ·
             assets（sample.glb / 2 个 json / 3 张嘴部贴图）·
             .htaccess / _headers / .nojekyll / nginx-3d-viewer.conf / DEPLOY.md
       可选  dist 两个 · 2 个演示页 · 4 份文档 · _lilpresets.json ·
@@ -102,7 +103,7 @@
 | `README.md` | 项目说明 |
 | `assets/mouth/_cells-preview-*.png` | 嘴部图集 8×8 索引图，挑 `mouthCell` 时照着看用 |
 
-跑主页面真正必需的就是：**`index.html` + `viewer.js` + `vendor/three/` 的 11 个文件 + `assets/` 里的模型与配置**。
+跑主页面真正必需的就是：**`index.html` + `viewer.js` + `vendor/three/` 的 12 个文件 + `assets/` 里的模型与配置**。
 表格里其余几项都是按平台/用途可选的（`.htaccess` / `_headers` / `.nojekyll` / `nginx-3d-viewer.conf` / `DEPLOY.md`）。
 
 ## 三、部署到子目录（例如 nginx 的 `api.sample.site/3d-viewer/`）
@@ -170,6 +171,7 @@ model/gltf-binary  glb;
 ├── nginx-3d-viewer.conf← nginx 用
 ├── vendor/three/…      ← 必须和 index.html 同级（importmap 指向 ./vendor/three/）
 │   ├── three.module.js
+│   ├── three.core.js
 │   ├── controls/OrbitControls.js
 │   ├── loaders/GLTFLoader.js
 │   ├── environments/RoomEnvironment.js

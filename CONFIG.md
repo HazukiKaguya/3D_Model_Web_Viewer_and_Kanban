@@ -2201,7 +2201,7 @@ lil_pass_forward_normal.hlsl:352 / 360 / 411 / 445 / 450 / 457 / 472 / 478：
 、<common> 注入：花括号不配平、末尾深度 1
 、<common> 注入：函数嵌套定义 ba3dBlend3(深度 1)、GLSL 不允许
 、描边：ba3dToneCorrection：HLSL 写法 frac(
-      exit 1 ✓
+      exit 1
 
 ---
 
@@ -2365,7 +2365,7 @@ lilToon 的 `Reader` 其实是「避开」、`Reader(Invert)` 才是「只显示
     node scripts/check-panel.mjs            # 检查 index.html
     node scripts/check-panel.mjs <文件>     # 检查指定文件（负例测试用）
 
-**⇒ 双向验证过**、正例 exit 0 ✗ 五个负例全部精准报错、exit 1 ✓
+**⇒ 双向验证过**、正例 exit 0 、五个负例全部精准报错、exit 1
 
 ### panel 侧的坑（第三批补充）
 

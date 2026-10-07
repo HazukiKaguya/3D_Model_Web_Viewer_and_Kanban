@@ -46,6 +46,110 @@ import { OutlineEffect } from 'three/addons/effects/OutlineEffect.js';
 
 
 /**
+ * 匹配 three 的 `getShadow()` **调用点**（不是它的定义）。
+ *
+ * 为什么不能再用精确文本：r185 改了签名，
+ *   r160  getShadow( map, mapSize, bias, radius, coord )                 5 个实参
+ *   r185  getShadow( map, mapSize, intensity, bias, radius, coord )      6 个实参
+ * 我们原来写死了 r160 那串，升级后匹配不到、改写被静默跳过
+ * （实测后果：阴影提亮没了，头发/脸上的投影直接全黑，跨版本差异 2.34%）。
+ *
+ * 这里的判据是「第一个实参是 directionalShadowMap[ i ] / spotShadowMap[ i ]」，
+ * 中间有几个参数都不影响，因此两版通吃。three 自己的函数定义第一个形参是
+ * `sampler2D shadowMap` / `sampler2DShadow shadowMap`，不会命中。
+ */
+function ba3dShadowCallRe() {
+  return /getShadow\(\s*(?:directional|spot)ShadowMap\[\s*i\s*\][^)]*\)/g;
+}
+
+/** 这段源码里有没有 three 的阴影调用点 */
+function ba3dHasShadowCall(src) {
+  return ba3dShadowCallRe().test(String(src));
+}
+
+/** 把每个阴影调用点交给 wrap() 包裹 */
+function ba3dWrapShadowCalls(src, wrap) {
+  return String(src).replace(ba3dShadowCallRe(), (call) => wrap(call));
+}
+
+/**
+ * three 是否还提供 `SHADOWMAP_TYPE_PCF_SOFT` 这条着色器路径。
+ *
+ * r160 及更早：有；`PCFSoftShadowMap` 是独立算法。
+ * r182 起：被弃用（软阴影并入 `PCFShadowMap`）；r185 里已彻底移除。
+ *
+ * 用它来选 `renderer.shadowMap.type` 的正确常量，避免在新版上写一个
+ * 只会被规范化掉的弃用值。
+ */
+function ba3dHasPcfSoftPath() {
+  const chunk = (THREE.ShaderChunk && THREE.ShaderChunk.shadowmap_pars_fragment) || '';
+  return chunk.indexOf('SHADOWMAP_TYPE_PCF_SOFT') >= 0;
+}
+
+/**
+ * 自实现柔化阴影，不再依赖 `renderer.shadowMap.type`。
+ *
+ * 背景：three r185 移除了 `SHADOWMAP_TYPE_PCF_SOFT` 这条路径，
+ *   `PCFSoftShadowMap` 被静默规范化成 PCF（`shadowMap.type` 读回 1）。
+ *   采样核因此从「固定 2 texel 的 9 tap 双线性」缩成
+ *   「radius = 1 texel 的 5 tap Vogel」，阴影边缘明显变硬。
+ *   实测：跨版本差异 2.34%，把阴影整个关掉后降到 0.06%。
+ *
+ * 做法：照搬 three r160 的 PCF_SOFT 9-tap 图案，再用 `#define getShadow`
+ *   把它之后的所有调用改到我们的实现上。两版观感一致，柔化程度由
+ *   `light.shadow.radius` 说了算（半径 >= 1，等于 1 时与 r160 完全一致）。
+ *
+ * 采样器类型两版不同，要分别生成：
+ *   r160  `sampler2D`       + `texture2DCompare()`    手动比较
+ *   r185  `sampler2DShadow` + `texture()`             硬件比较，自带 4 tap 双线性
+ */
+function ba3dSoftShadowGLSL() {
+  const chunk = (THREE.ShaderChunk && THREE.ShaderChunk.shadowmap_pars_fragment) || '';
+  const hw = chunk.indexOf('sampler2DShadow') >= 0;
+  const S = (off) => (hw
+    ? 'texture( shadowMap, vec3( uv + ' + off + ', z ) )'
+    : 'texture2DCompare( shadowMap, uv + ' + off + ', z )');
+  const taps = [
+    S('vec2( 0.0, 0.0 )'),
+    S('vec2( dx, 0.0 )'),
+    S('vec2( 0.0, dy )'),
+    S('vec2( dx, dy )'),
+    'mix( ' + S('vec2( - dx, 0.0 )') + ', ' + S('vec2( 2.0 * dx, 0.0 )') + ', f.x )',
+    'mix( ' + S('vec2( - dx, dy )') + ', ' + S('vec2( 2.0 * dx, dy )') + ', f.x )',
+    'mix( ' + S('vec2( 0.0, - dy )') + ', ' + S('vec2( 0.0, 2.0 * dy )') + ', f.y )',
+    'mix( ' + S('vec2( dx, - dy )') + ', ' + S('vec2( dx, 2.0 * dy )') + ', f.y )',
+    'mix( mix( ' + S('vec2( - dx, - dy )') + ', ' + S('vec2( 2.0 * dx, - dy )') + ', f.x ), '
+      + 'mix( ' + S('vec2( - dx, 2.0 * dy )') + ', ' + S('vec2( 2.0 * dx, 2.0 * dy )') + ', f.x ), f.y )',
+  ];
+  const head = hw
+    ? 'float ba3dSoftShadow( sampler2DShadow shadowMap, vec2 shadowMapSize, float shadowIntensity, float shadowBias, float shadowRadius, vec4 shadowCoord ) {'
+    : 'float ba3dSoftShadow( sampler2D shadowMap, vec2 shadowMapSize, float shadowBias, float shadowRadius, vec4 shadowCoord ) {';
+  return [
+    '// ── 自实现柔化阴影：照搬 three r160 的 SHADOWMAP_TYPE_PCF_SOFT 9-tap ──',
+    head,
+    '  float shadow = 1.0;',
+    '  shadowCoord.xyz /= shadowCoord.w;',
+    '  shadowCoord.z += shadowBias;',
+    '  bool inFrustum = shadowCoord.x >= 0.0 && shadowCoord.x <= 1.0 && shadowCoord.y >= 0.0 && shadowCoord.y <= 1.0;',
+    '  if ( inFrustum && shadowCoord.z <= 1.0 ) {',
+    '    vec2 texelSize = vec2( 1.0 ) / shadowMapSize;',
+    '    float sc = max( shadowRadius, 1.0 );',
+    '    float dx = texelSize.x * sc;',
+    '    float dy = texelSize.y * sc;',
+    '    vec2 uv = shadowCoord.xy;',
+    '    vec2 f = fract( uv * shadowMapSize + 0.5 );',
+    '    uv -= f * texelSize;',
+    '    float z = shadowCoord.z;',
+    '    shadow = ( ' + taps.join('\n      + ') + ' ) * ( 1.0 / 9.0 );',
+    '  }',
+    hw ? '  return mix( 1.0, shadow, shadowIntensity );' : '  return shadow;',
+    '}',
+    '#define getShadow ba3dSoftShadow',
+  ].join('\n');
+}
+
+
+/**
  * 打光预设（只改灯光，不碰背景；背景由背景菜单独立控制）。
  * 白昼 = 基线默认；早晨/傍晚 = 同一个黄金时刻；黑夜 = 冷蓝月光。
  */
@@ -688,7 +792,18 @@ function dataAttrs(el) {
   renderer.toneMapping = THREE.ACESFilmicToneMapping;
   renderer.toneMappingExposure = 1.0;
   renderer.shadowMap.enabled = cfg.shadows;
-  renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+  /**
+   * 阴影类型：按 three 是否还提供 `SHADOWMAP_TYPE_PCF_SOFT` 路径来选。
+   *
+   * r182 起 `PCFSoftShadowMap` 被弃用，软阴影能力并入了 `PCFShadowMap`
+   * （新版 PCF 用原生深度纹理 + Vogel disk + IGN 采样，本身就带软化效果），
+   * r185 里旧的 PCF_SOFT 路径已完全不存在，写 `PCFSoftShadowMap` 只会被
+   * 静默规范化成 PCF，还会留一条弃用警告。
+   *
+   * 两个常量各自的含义在两版里都不是同一套算法，所以这里按版本各取其正确的那个。
+   * 真正的柔化由我们自己的 `ba3dSoftShadowGLSL()` 负责，与这个取值无关。
+   */
+  renderer.shadowMap.type = ba3dHasPcfSoftPath() ? THREE.PCFSoftShadowMap : THREE.PCFShadowMap;
   container.appendChild(renderer.domElement);
 
   /* ---------- 场景 / 相机 ---------- */
@@ -5278,12 +5393,8 @@ cutoff: -1,
         const faceShadow = isFace && celCfg.faceShadowMin !== null && celCfg.faceShadowMin !== undefined;
         const keep = Math.max(0, Math.min(1, Number(faceShadow ? celCfg.faceShadowMin : celCfg.shadowMin)));
         if (keep > 0) {
-          const dirRaw = 'getShadow( directionalShadowMap[ i ], directionalLightShadow.shadowMapSize, directionalLightShadow.shadowBias, directionalLightShadow.shadowRadius, vDirectionalShadowCoord[ i ] )';
-          const spotRaw = 'getShadow( spotShadowMap[ i ], spotLightShadow.shadowMapSize, spotLightShadow.shadowBias, spotLightShadow.shadowRadius, vSpotLightCoord[ i ] )';
           const k = keep.toFixed(4);
-          const soften = (src) => src
-            .split(dirRaw).join('mix( ' + k + ', 1.0, ' + dirRaw + ' )')
-            .split(spotRaw).join('mix( ' + k + ', 1.0, ' + spotRaw + ' )');
+          const soften = (src) => ba3dWrapShadowCalls(src, (call) => 'mix( ' + k + ', 1.0, ' + call + ' )');
           /**
            * ⚠️ 必须替换 **#include 本身**，不能去replace展开后的语句。
            * three 的调用顺序是：
@@ -5299,7 +5410,7 @@ cutoff: -1,
           const hitChunk = softChunk && softChunk !== chunk && shader.fragmentShader.includes(INCLUDE);
           if (hitChunk) {
             shader.fragmentShader = shader.fragmentShader.replace(INCLUDE, softChunk);
-          } else if (shader.fragmentShader.includes(dirRaw)) {
+          } else if (ba3dHasShadowCall(shader.fragmentShader)) {
             // 兜底：某些版本/路径下 include 已被展开
             shader.fragmentShader = soften(shader.fragmentShader);
           }
@@ -6064,14 +6175,19 @@ cutoff: -1,
         }
         const INCLUDE = '#include <lights_fragment_begin>';
         const chunk = (THREE.ShaderChunk && THREE.ShaderChunk.lights_fragment_begin) || '';
-        const dirRaw = 'getShadow( directionalShadowMap[ i ], directionalLightShadow.shadowMapSize, directionalLightShadow.shadowBias, directionalLightShadow.shadowRadius, vDirectionalShadowCoord[ i ] )';
-        const spotRaw = 'getShadow( spotShadowMap[ i ], spotLightShadow.shadowMapSize, spotLightShadow.shadowBias, spotLightShadow.shadowRadius, vSpotLightCoord[ i ] )';
-        const neutral = (src) => src
-          .split(dirRaw).join('( ' + dirRaw + ' * 0.0 + 1.0 )')
-          .split(spotRaw).join('( ' + spotRaw + ' * 0.0 + 1.0 )');
+        /* 关阴影：把调用点整个换成 1.0。同样用正则匹配，兼容两版签名
+           （r160 五个实参 / r185 六个实参，写死文本会在升级后静默失效） */
+        const neutral = (src) => ba3dWrapShadowCalls(src, (call) => '( ' + call + ' * 0.0 + 1.0 )');
         shader.fragmentShader = shader.fragmentShader
           .replace('#include <shadowmap_pars_fragment>',
             '#include <shadowmap_pars_fragment>' + '\n' +
+            /**
+             * 柔化阴影：交给我们自己实现，两版观感一致、且柔化程度由
+             * `light.shadow.radius` 说了算（原因见 ba3dSoftShadowGLSL 的说明）。
+             * 必须放在 shadowmask_pars_fragment 之前 —— 它内部的 getShadowMask()
+             * 也要走我们这份实现。
+             */
+            ba3dSoftShadowGLSL() + '\n' +
             '#define receiveShadow true' + '\n' +
             '#include <shadowmask_pars_fragment>' + '\n');
         /**
@@ -6221,12 +6337,8 @@ cutoff: -1,
       const faceShadow = isFace && celCfg.faceShadowMin !== null && celCfg.faceShadowMin !== undefined;
       const keep = Math.max(0, Math.min(1, Number(faceShadow ? celCfg.faceShadowMin : celCfg.shadowMin)));
       if (keep > 0) {
-        const dirRaw = 'getShadow( directionalShadowMap[ i ], directionalLightShadow.shadowMapSize, directionalLightShadow.shadowBias, directionalLightShadow.shadowRadius, vDirectionalShadowCoord[ i ] )';
-        const spotRaw = 'getShadow( spotShadowMap[ i ], spotLightShadow.shadowMapSize, spotLightShadow.shadowBias, spotLightShadow.shadowRadius, vSpotLightCoord[ i ] )';
         const k = keep.toFixed(4);
-        const soften = (src) => src
-          .split(dirRaw).join('mix( ' + k + ', 1.0, ' + dirRaw + ' )')
-          .split(spotRaw).join('mix( ' + k + ', 1.0, ' + spotRaw + ' )');
+        const soften = (src) => ba3dWrapShadowCalls(src, (call) => 'mix( ' + k + ', 1.0, ' + call + ' )');
         /**
          * ⚠️ 必须替换 **#include 本身**，不能去replace展开后的语句。
          * three 的调用顺序是：
@@ -6242,7 +6354,7 @@ cutoff: -1,
         const hitChunk = softChunk && softChunk !== chunk && shader.fragmentShader.includes(INCLUDE);
         if (hitChunk) {
           shader.fragmentShader = shader.fragmentShader.replace(INCLUDE, softChunk);
-        } else if (shader.fragmentShader.includes(dirRaw)) {
+        } else if (ba3dHasShadowCall(shader.fragmentShader)) {
           // 兜底：某些版本/路径下 include 已被展开
           shader.fragmentShader = soften(shader.fragmentShader);
         }

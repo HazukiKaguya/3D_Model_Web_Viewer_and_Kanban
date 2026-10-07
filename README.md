@@ -1,6 +1,6 @@
 # 3D 角色模型查看器（3D 模型网页内嵌看板娘）
 
-Three.js 角色查看器：**可配置**（模型 / 嘴部贴图 / 基准 JSON）、**可嵌入**（自包含单文件版）、**可部署**（纯静态）。
+Three.js 角色查看器：**可配置**（模型 / 嘴部贴图 / 基准 JSON）、**可嵌入**（自包含单文件版）、**可部署**（纯静态）、**lilToon风格着色器**（通过源码移植效果）。
 
 【[部署本工具](DEPLOY.md)】  【[模型JSON配置](CONFIG.md)】  【[第三方库许可证声明](THIRD-PARTY-NOTICES.md)】
 
@@ -29,7 +29,7 @@ node scripts/serve.mjs 5199
 | [assets/sample.glb](assets/sample.glb) | 模型（= `sample.glb`，24 段动画） |
 | [assets/sample.json](assets/sample.json) | **sample模型的配置**（模型 + 嘴部贴图 + 基准 + 渲染/打光/背景） |
 | [assets/mouth/](assets/mouth/) | 嘴部修复图集（`Character_Mouth_2` / `_Black` / `_High`） |
-| [vendor/three/](vendor/three/) | 本地 three.js r160 + addons（含 `effects/OutlineEffect.js`） |
+| [vendor/three/](vendor/three/) | 本地 three.js r185 + addons |
 
 ## 配置（JSON）
 
