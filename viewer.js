@@ -1542,7 +1542,7 @@ function dataAttrs(el) {
      *
      *   ⇒ 加上**真的变了**才置位 ✓（1e-6 容差避开浮点噪声 ✓）
      */
-    let touchedKey = false, touchedHemi = false;
+    let touchedKey = false, touchedHemi = false, touchedOther = false;
     const EPS = 1e-6;
     const changed = (a, b) => Math.abs(Number(a) - Number(b)) > EPS;
     if (o.azimuth !== undefined || o.elevation !== undefined) {
@@ -1573,10 +1573,45 @@ function dataAttrs(el) {
     if (o.hemiGround !== undefined) {
       try { const w = new THREE.Color(String(o.hemiGround)); if (w.getHex() !== hemi.groundColor.getHex()) touchedHemi = true; hemi.groundColor.copy(w); } catch (e) {}
     }
-    if (o.rimIntensity !== undefined) rimLight.intensity = Math.max(0, Number(o.rimIntensity) || 0);
-    if (o.fillIntensity !== undefined) fillLight.intensity = Math.max(0, Number(o.fillIntensity) || 0);
-    if (o.exposure !== undefined) renderer.toneMappingExposure = Number(o.exposure) || 1;
-    if (touchedKey || touchedHemi) cfg.lightingPreset = null;   // ⇒ 不再被预设覆盖 ✓
+    /* 边缘补光 / 正面补光 / 曝光：同样按「值真的变了」判定，理由同上 */
+    if (o.rimIntensity !== undefined) {
+      const w = Math.max(0, Number(o.rimIntensity) || 0);
+      if (changed(w, rimLight.intensity)) touchedOther = true;
+      rimLight.intensity = w;
+    }
+    if (o.fillIntensity !== undefined) {
+      const w = Math.max(0, Number(o.fillIntensity) || 0);
+      if (changed(w, fillLight.intensity)) touchedOther = true;
+      fillLight.intensity = w;
+    }
+    if (o.exposure !== undefined) {
+      const w = Number(o.exposure) || 1;
+      if (changed(w, renderer.toneMappingExposure)) touchedOther = true;
+      renderer.toneMappingExposure = w;
+    }
+    /**
+     * ⚠️⚠️⚠️ **手动改过光照 ⇒ 两个地方都要清** ——
+     *
+     *   原来只清了 `cfg.lightingPreset`，漏了模块变量 `currentLighting` ✓
+     *   ⇒ 而 `applyRender()` 末尾会 `applyLightingPreset(currentLighting)` ✓
+     *     （见本文件里「卡通模式下光照重新补偿」那处 ✓）
+     *   ⇒ `setLilConfig()` = `applyLilConfig()` + `applyRender()` ✓
+     *     ⇒ **调任何一个 lilToon 参数都会把光照按预设原值重算一遍** ✓
+     *     ⇒ 用户报的：「调整大多数参数时，自己调整的光照都会回到当前所选
+     *        光照预设的初始状态」✓✓✓
+     *
+     *   而且 `currentLighting` 的初值是 `'day'`（第 1011 行 ✓），
+     *   **永远不为 null** ⇒ 上面那条重套**必然发生** ✓
+     *
+     *   ⚠️ 这正是本文件里已经记过的同一个病（见 applyLightingPreset 的注释 ✓）：
+     *     「凡是『模块变量 + cfg 字段』双份的，写入时必须两边一起写」
+     *     前面三次是 mouthAtlasUrl / groundOffsetY / currentLighting ↔ cfg，
+     *     这次是**同一个 currentLighting 的反方向**（读的时候忘了它 ✓）
+     */
+    if (touchedKey || touchedHemi || touchedOther) {
+      cfg.lightingPreset = null;   // 导出时按「手动值」写 lightState
+      currentLighting = null;      // 运行时不再按预设重套（applyRender 会跳过）
+    }
     updateLightHelper();
     return readLightState();
   }
@@ -7634,7 +7669,22 @@ const SHADOW_UNIFORM_KEYS = [
         mats.forEach((m) => { m.wireframe = true; });
       });
     }
-    applyLightingPreset(currentLighting); // 卡通模式下光照重新补偿
+    /**
+     * ⚠️ **只有还在用预设时才重套** ——
+     *
+     *   这里原本是无条件 `applyLightingPreset(currentLighting)` ✓
+     *   而 `setLilConfig()` → `applyRender()` ⇒ 改任何 lilToon 参数都会走到这里 ✓
+     *   ⇒ 手动调过的光照被预设原值覆盖 ✓（用户报的那个 bug ✓）
+     *
+     *   `currentLighting` 为 null 表示**光照已是手动值** ✓
+     *     那些值是 `writeLightState()` 直接写进去的**最终值**
+     *     （见该函数注释：不走卡通补偿那条路 ✓）
+     *   ⇒ 手动时跳过重套是正确语义：**手动的值优先，不被预设盖掉** ✓
+     *
+     *   ⚠️ 代价：手动光照下切换渲染模式（PBR ↔ 卡通）不会再自动重算补偿 ✓
+     *     这是有意的 —— 手动值本身就是最终值，重算反而会把它改掉 ✓
+     */
+    if (currentLighting) applyLightingPreset(currentLighting); // 卡通模式下光照重新补偿
     applyOutlineParams();                // 新材质补上描边参数
     return renderMode;
   }
@@ -9529,10 +9579,28 @@ const SHADOW_UNIFORM_KEYS = [
       if (modelRoot) applyRender(renderMode);
       return this.getLightClamp();
     },
+    /**
+     * 整体亮度倍率。
+     *
+     * ⚠️ 预设模式下：`applyLightingPreset` 会从预设**原值**重算并乘上倍率
+     *    （不会叠乘 ✓ 见该函数注释 ✓）
+     * ⚠️ 手动光照模式下：没有预设可依据 ⇒ 按**新旧倍率之比**缩放当前强度 ✓
+     *    否则这里会把手动值重套成预设值 ✓（和上面那个 bug 同源 ✓）
+     */
     setLightingScale(v) {
       const n = Number(v);
+      const prev = Number(cfg.lightingScale) > 0 ? Number(cfg.lightingScale) : 1;
       cfg.lightingScale = n > 0 ? n : 1;
-      applyLightingPreset(currentLighting);
+      if (currentLighting) {
+        applyLightingPreset(currentLighting);
+      } else {
+        const k = cfg.lightingScale / prev;
+        hemi.intensity *= k;
+        keyLight.intensity *= k;
+        rimLight.intensity *= k;
+        fillLight.intensity *= k;
+        if (typeof updateLightHelper === 'function') updateLightHelper();
+      }
       return cfg.lightingScale;
     },
 

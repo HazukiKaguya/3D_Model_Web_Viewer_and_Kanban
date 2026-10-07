@@ -125,6 +125,8 @@
     border-bottom: 1px solid rgba(255,255,255,.09);
     font-weight: 600; font-size: 12.5px; color: #c3ccdd;
     cursor: move; user-select: none;
+    /* 触屏：告诉浏览器这一块自己处理手势，别当成滚动，否则拖动会被 pointercancel 打断 */
+    touch-action: none;
     position: sticky; top: -14px; z-index: 2;
     display: flex; align-items: center; gap: 6px;
   }
@@ -158,6 +160,7 @@
     margin-bottom: 10px; padding-bottom: 9px;
     border-bottom: 1px solid rgba(255,255,255,.09);
     cursor: move; user-select: none;
+    touch-action: none;   /* 触屏：同上，交给我们自己处理拖动 */
     display: flex; align-items: center; gap: 6px;
   }
   #upload .u-title:active { cursor: grabbing; }
@@ -236,7 +239,22 @@
   }
   .fw-title .fw-btn:hover { background: #313847; color: #d6e2f5; }
   .fw-body { flex: 1 1 auto; position: relative; min-height: 0; overflow: hidden; }
-  #sceneWin { left: 16px; top: 16px; width: 960px; height: 700px; z-index: 8; }
+  /**
+   * ⚠️⚠️ **场景窗口永远在最底层**（用户要求）——
+   *
+   *   原来它是 z-index 8，看着是低的 ✓ 但 `fwRaise()` 会给被点到的窗口加 `.raised`
+   *   （`.fw.raised { z-index: 30 }`）**场景也算** ⇒
+   *   一旦点过场景（或拖动过它。）它就升到 30，
+   *   而参数面板 `.lp` 只有 15、`#scenePanel` 只有 16 ⇒
+   *   **面板被画在画布底下，用户「点了场景按钮却看不到面板」** ✓
+   *
+   *   ⇒ 场景降到 1（所有浮窗 / 面板都在 10 以上 ✓）
+   *     并加一条 `.raised` 的兜底：即使类被加上去也不改变层级 ✓
+   *     （`fwRaise()` 里也做了跳过。）
+   */
+  /* ⚠️ `!important` 是**必须的**：提升机制写的是内联 z-index，样式表不加 !important 压不住 */
+  #sceneWin { left: 16px; top: 16px; width: 960px; height: 700px; z-index: 1 !important; }
+  #sceneWin.raised { z-index: 1 !important; }   /* 兜底：场景不接受「提到最前」 */
   #sceneWin .fw-body { background: #0d0f13; }
   .fw-grip {
     position: absolute; right: 0; bottom: 0; width: 16px; height: 16px;
@@ -310,17 +328,39 @@
       z-index: 40 !important;
     }
     /* 工具栏 / 状态：底部两条（场景被盖一部分、但至少能用。） */
+    /**
+     * ⚠️⚠️ **工具栏与状态栏必须上下堆叠，不能都贴底重叠** ——
+     *
+     *   原来两个都 `bottom: 0` 且状态栏 z-index 更高（36 > 35），
+     *   而工具栏内容比它 34vh 的框还高（实测 313px > 287px），
+     *   于是工具栏最下面两行**落进状态栏的覆盖区** ⇒
+     *   `elementFromPoint` 拿到的是状态栏的 body ⇒
+     *   手机上有 5 个按钮**完全点不到**：
+     *       通用着色器 · lilToon · 自动旋转 · 重置视角 · 播放动画
+     *   （实测 390×844：12 个可见按钮里 5 个被盖）
+     *
+     *   ⇒ 状态栏贴底（20vh），工具栏叠在它**上面**（bottom: 20vh），
+     *     高度改成自适应、最多 46vh，超了内部滚动 ⇒ 两者永不重叠。
+     *   ⇒ 顺带把工具栏的 z-index 提到状态栏之上：万一将来又重叠，
+     *     让**可交互**的那条赢过只读的状态条。
+     */
+    /**
+     * ⚠️⚠️ **手机上直接不要状态栏**（用户要求）——
+     *
+     *   上一版是「状态栏贴底 + 工具栏叠在它上面」，虽然不再互相遮挡，
+     *   但两条加起来最多占掉 66vh，手机上场景只剩一条缝 ✓
+     *   而且状态栏（网格数 / 三角面 / 动作数）在手机上本来也没什么用 ✓
+     *
+     *   ⇒ 窄屏下 `#infoWin` 直接不显示，工具栏贴底、最多 56vh ✓
+     *     （宽屏仍然是右下角那个状态浮窗，不受影响 ✓）
+     */
+    #infoWin { display: none !important; }
     #hudWin {
       left: 0 !important; right: 0 !important; top: auto !important; bottom: 0 !important;
-      width: 100vw !important; height: 34vh !important;
+      width: 100vw !important; height: auto !important; max-height: 56vh !important;
+      overflow-y: auto !important;
       border-radius: 10px 10px 0 0 !important;
-      z-index: 35 !important;
-    }
-    #infoWin {
-      left: 0 !important; right: 0 !important; top: auto !important; bottom: 0 !important;
-      width: 100vw !important; height: 20vh !important;
-      border-radius: 0 !important;
-      z-index: 36 !important;
+      z-index: 37 !important;
     }
     /* 上传面板（自定义模型。）：全宽 */
     #upload {
@@ -444,7 +484,19 @@
  *   · 再点 ⇒ 放回原来的位置和大小。
  * ============================================================ */
 #dock {
-  position: fixed; left: 10px; bottom: 10px; z-index: 45;
+  /**
+   * ⚠️⚠️ **停靠区必须永远在最上层** ——
+   *
+   *   它是「最小化窗口」的**唯一找回入口** ✓
+   *   而 `raiseFloatWin()` 会把被点过的窗口写成内联 z-index（从 100 递增）✓
+   *   ⇒ 停靠区原来 z-index 45 ⇒ 一旦点过任何面板（100+），
+   *     **最小化的窗口就被盖住、点不回去了** ✓
+   *
+   *   ⚠️ 和「场景被抬到最上层盖住面板」是**同一个根因**：
+   *     递增计数器不认「哪些元素不该参与提升」✓
+   *     所以停靠区也加 `!important` 锁在高位（它很小、只占左下角 ✓）
+   */
+  position: fixed; left: 10px; bottom: 10px; z-index: 999 !important;
   display: flex; flex-direction: column-reverse; gap: 4px;   /* 从下往上叠。 */
   align-items: flex-start; pointer-events: none;
 }
@@ -779,9 +831,26 @@ function toggleMin(el) {
  *   ⚠️ 停靠区里的不抬（它自己就是 flex 顺序。）
  */
 let __zTop = 100;
+/**
+ * ⚠️⚠️⚠️ **场景窗口必须排除在外** ——
+ *
+ *   这套机制给被点到的窗口写**内联** `z-index`（`++__zTop`，从 100 起）✓
+ *   内联样式**压过**样式表里没写 `!important` 的规则 ✓
+ *   ⇒ 点一下场景（比如想转模型）它就变成 101、102……
+ *     ⇒ **盖住所有面板与工具栏** ⇒ 用户报的「所有菜单都看不见了」✓
+ *
+ *   ⚠️ 我上一轮只改了 `fwRaise()`（那套是加类名 `.raised`）、
+ *     漏了这一套 —— 两套提升机制并存，只堵一个没用 ✓
+ *     而且我的测试只发了 `pointerdown`，这套监听的是 `mousedown` ✓
+ *     真实点击两者都会发 ⇒ **测不出来** ✓（教训：模拟点击要发全套事件）
+ *
+ *   ⇒ 场景直接跳过；并把可能已经写上去的内联值清掉 ✓
+ *     （CSS 里也加了 `!important` 兜底，见 #sceneWin 那条 ✓）
+ */
 function raiseFloatWin(el) {
   if (!el) return;
   if (el.closest && el.closest('#dock')) return;
+  if (el.id === 'sceneWin') { try { el.style.zIndex = ''; } catch (e) {} return; }
   try { el.style.zIndex = String(++__zTop); } catch (e) {}
 }
 document.addEventListener('mousedown', (ev) => {
@@ -2624,7 +2693,22 @@ function makePanelDraggable(el, handleSel) {
   if (!el || el.__dragBound) return;
   el.__dragBound = true;
   let sx = 0, sy = 0, ox = 0, oy = 0, dragging = false;
-  el.addEventListener('mousedown', (e) => {
+  /**
+   * ⚠️⚠️ **必须用指针事件，不能用 mousedown** ——
+   *
+   *   触屏上手指按住拖动时，浏览器**不会**持续产生 `mousemove`：
+   *   它要先判断这是滚动还是拖动，只在「轻点」时才补一个鼠标事件。
+   *   ⇒ 原来这套 `mousedown` + `mousemove` 在手机上/平板上**完全拖不动** ✓
+   *     （实测：平板 1024×768 走桌面布局时，触摸拖动位移 0，鼠标拖动正常 ✓）
+   *
+   *   指针事件把鼠标 / 触摸 / 触控笔统一成一套；配合：
+   *     · CSS `touch-action: none`（见 .fw-title / .lp-title / .u-title）
+   *     · `setPointerCapture` 抓住指针 ⇒ 浏览器不会把它当滚动而 pointercancel
+   *     · 同时监听 `pointercancel`（触屏上系统随时可能取消 ✓）
+   */
+  el.addEventListener('pointerdown', (e) => {
+    if (e.pointerType === 'mouse' && e.button !== 0) return;   // 只认鼠标主键
+    if (e.isPrimary === false) return;                          // 多指时只认第一根手指
     // 把手：指定选择器 > .lp-title > h4
     const t = e.target;
     if (!t || !t.closest) return;
@@ -2645,6 +2729,7 @@ function makePanelDraggable(el, handleSel) {
     dragging = true;
     el.classList.add('dragging');
     document.body.style.userSelect = 'none';
+    try { el.setPointerCapture(e.pointerId); } catch (err) {}   // 触屏关键
     e.preventDefault();
   });
   const onMove = (e) => {
@@ -2663,8 +2748,9 @@ function makePanelDraggable(el, handleSel) {
     el.classList.remove('dragging');
     document.body.style.userSelect = '';
   };
-  window.addEventListener('mousemove', onMove);
-  window.addEventListener('mouseup', onUp);
+  window.addEventListener('pointermove', onMove);
+  window.addEventListener('pointerup', onUp);
+  window.addEventListener('pointercancel', onUp);   // 触屏上系统会取消，按松手处理
 }
 
 /**
@@ -2752,9 +2838,16 @@ function fwApplyCollapsed(el) {
   if (on) { el.__fwH = el.getBoundingClientRect().height; el.style.height = '26px'; }
   else if (el.__fwH) { el.style.height = el.__fwH + 'px'; el.__fwH = 0; }
 }
-/** 层级提升：点哪个窗口哪个到最前。 */
+/**
+ * 层级提升：点哪个窗口哪个到最前。
+ *
+ * ⚠️ **场景窗口例外** —— 它是画布，必须永远在最底层 ✓
+ *   否则点一下场景就把参数面板盖住了（用户报的：「点场景按钮呼出场景 panel 看不到」✓）
+ *   ⇒ 场景不参与提升，而且顺手把别人身上的 `raised` 清掉时也会清到它 ✓
+ */
 function fwRaise(el) {
   document.querySelectorAll('.fw, .lp, #upload').forEach((o) => o.classList.remove('raised'));
+  if (!el || el.id === 'sceneWin') return;   // 画布不参与层级提升
   el.classList.add('raised');
 }
 /** 右下角缩放手柄（幂等。）*/
@@ -2780,7 +2873,10 @@ function makePanelResizable(el) {
   if (grip.__resizeBound) return;      // ★ 这个手柄已经绑过了。
   grip.__resizeBound = true;
   let sx = 0, sy = 0, ow = 0, oh = 0, ox = 0, oy = 0, on = false;
-  grip.addEventListener('mousedown', (e) => {
+  /* 同 makePanelDraggable：缩放也要走指针事件，否则触屏上拉不动边框 */
+  grip.addEventListener('pointerdown', (e) => {
+    if (e.pointerType === 'mouse' && e.button !== 0) return;
+    if (e.isPrimary === false) return;
     const r = el.getBoundingClientRect();
     // 先固化到 left/top（有的面板原来是 right/top 定位。）
     el.style.left = r.left + 'px';
@@ -2793,22 +2889,26 @@ function makePanelResizable(el) {
     ow = r.width; oh = r.height; ox = r.left; oy = r.top;
     on = true;
     el.classList.add('resizing');
+    try { grip.setPointerCapture(e.pointerId); } catch (err) {}   // 触屏关键
     e.preventDefault(); e.stopPropagation();
   });
-  window.addEventListener('mousemove', (e) => {
+  const onGripMove = (e) => {
     if (!on) return;
     const c = fwClampBox(ox, oy, ow + (e.clientX - sx), oh + (e.clientY - sy));
     el.style.width = c.width + 'px';
     el.style.height = c.height + 'px';
-  });
-  window.addEventListener('mouseup', () => {
+  };
+  const onGripUp = () => {
     if (!on) return;
     on = false;
     el.classList.remove('resizing');
     fwSave(el);
-  });
-  // 拖动结束也存一次（拖动由 makePanelDraggable 做。 这里只挂个 mouseup。）
-  el.addEventListener('mouseup', () => { setTimeout(() => fwSave(el), 0); });
+  };
+  window.addEventListener('pointermove', onGripMove);
+  window.addEventListener('pointerup', onGripUp);
+  window.addEventListener('pointercancel', onGripUp);
+  // 拖动结束也存一次（拖动由 makePanelDraggable 做，这里只挂个 pointerup）
+  el.addEventListener('pointerup', () => { setTimeout(() => fwSave(el), 0); });
 }
 /** 给一个窗口补齐：拖动 + 缩放 + 恢复 + 层级。 */
 function initFloatWin(el) {
@@ -2817,7 +2917,7 @@ function initFloatWin(el) {
   makePanelDraggable(el);
   makePanelResizable(el);
   fwRestore(el);
-  el.addEventListener('mousedown', () => fwRaise(el), true);
+  el.addEventListener('pointerdown', () => fwRaise(el), true);   // 触屏轻点也能提到最前
 }
 /** 给页面上所有 .lp 面板挂上拖拽（幂等、可重复调用）*/
 function enableAllPanelDrag() {

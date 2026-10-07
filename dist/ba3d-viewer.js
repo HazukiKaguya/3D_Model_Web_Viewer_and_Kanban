@@ -30753,7 +30753,7 @@ function createViewer(container, opts = {}) {
   }
   function writeLightState(o) {
     if (!o) return readLightState();
-    let touchedKey = false, touchedHemi = false;
+    let touchedKey = false, touchedHemi = false, touchedOther = false;
     const EPS = 1e-6;
     const changed = (a, b) => Math.abs(Number(a) - Number(b)) > EPS;
     if (o.azimuth !== void 0 || o.elevation !== void 0) {
@@ -30795,10 +30795,25 @@ function createViewer(container, opts = {}) {
       } catch (e) {
       }
     }
-    if (o.rimIntensity !== void 0) rimLight.intensity = Math.max(0, Number(o.rimIntensity) || 0);
-    if (o.fillIntensity !== void 0) fillLight.intensity = Math.max(0, Number(o.fillIntensity) || 0);
-    if (o.exposure !== void 0) renderer.toneMappingExposure = Number(o.exposure) || 1;
-    if (touchedKey || touchedHemi) cfg.lightingPreset = null;
+    if (o.rimIntensity !== void 0) {
+      const w = Math.max(0, Number(o.rimIntensity) || 0);
+      if (changed(w, rimLight.intensity)) touchedOther = true;
+      rimLight.intensity = w;
+    }
+    if (o.fillIntensity !== void 0) {
+      const w = Math.max(0, Number(o.fillIntensity) || 0);
+      if (changed(w, fillLight.intensity)) touchedOther = true;
+      fillLight.intensity = w;
+    }
+    if (o.exposure !== void 0) {
+      const w = Number(o.exposure) || 1;
+      if (changed(w, renderer.toneMappingExposure)) touchedOther = true;
+      renderer.toneMappingExposure = w;
+    }
+    if (touchedKey || touchedHemi || touchedOther) {
+      cfg.lightingPreset = null;
+      currentLighting = null;
+    }
     updateLightHelper();
     return readLightState();
   }
@@ -34804,7 +34819,7 @@ function createViewer(container, opts = {}) {
         });
       });
     }
-    applyLightingPreset(currentLighting);
+    if (currentLighting) applyLightingPreset(currentLighting);
     applyOutlineParams();
     return renderMode;
   }
@@ -36163,10 +36178,28 @@ function createViewer(container, opts = {}) {
       if (modelRoot) applyRender(renderMode);
       return this.getLightClamp();
     },
+    /**
+     * 整体亮度倍率。
+     *
+     * ⚠️ 预设模式下：`applyLightingPreset` 会从预设**原值**重算并乘上倍率
+     *    （不会叠乘 ✓ 见该函数注释 ✓）
+     * ⚠️ 手动光照模式下：没有预设可依据 ⇒ 按**新旧倍率之比**缩放当前强度 ✓
+     *    否则这里会把手动值重套成预设值 ✓（和上面那个 bug 同源 ✓）
+     */
     setLightingScale(v) {
       const n = Number(v);
+      const prev = Number(cfg.lightingScale) > 0 ? Number(cfg.lightingScale) : 1;
       cfg.lightingScale = n > 0 ? n : 1;
-      applyLightingPreset(currentLighting);
+      if (currentLighting) {
+        applyLightingPreset(currentLighting);
+      } else {
+        const k = cfg.lightingScale / prev;
+        hemi.intensity *= k;
+        keyLight.intensity *= k;
+        rimLight.intensity *= k;
+        fillLight.intensity *= k;
+        if (typeof updateLightHelper === "function") updateLightHelper();
+      }
       return cfg.lightingScale;
     },
     /** 当前模型识别出的「可选部件」（GLB extras.optional）及其使用情况 */
