@@ -74,6 +74,21 @@
     box-shadow: 0 12px 40px rgba(0,0,0,.4);
   }
   #upload.hidden { display: none; }
+/* 换装按钮组 */
+.parts-row { display: flex; align-items: center; gap: 4px; flex-wrap: wrap; }
+.parts-row .parts-label { color: #6b7385; font-size: 11px; margin-right: 2px; }
+.parts-row .parts-btn {
+  font: 11px/1 system-ui, sans-serif; padding: 4px 7px; border-radius: 6px; cursor: pointer;
+  background: rgba(50,58,74,.9); color: #cfd3dc; border: 1px solid rgba(255,255,255,.18);
+}
+.parts-row .parts-btn:hover { border-color: rgba(91,140,245,.7); }
+.parts-row .parts-btn.on { background: #3d6fe0; border-color: #5b8cf5; color: #fff; }
+body.light .parts-row .parts-btn { background: #e6ebf4; color: #2b3340; border-color: rgba(0,0,0,.16); }
+body.light .parts-row .parts-btn.on { background: #3d6fe0; color: #fff; }
+/* 拖入时的视觉反馈 + 工程文件夹那一行与上面分开 */
+#upload.dragging { border-color: rgba(91,140,245,.85); box-shadow: inset 0 0 0 2px rgba(91,140,245,.35); }
+#upload .u-project { margin-top: 5px; padding-top: 9px; border-top: 1px dashed rgba(255,255,255,.13); }
+body.light #upload .u-project { border-top-color: rgba(0,0,0,.12); }
 
   /* 右侧浮层面板（lilToon 参数 / 导出配置共用）*/
   .lp {
@@ -582,6 +597,8 @@
   <label>动作
     <select id="animMenu" disabled><option>载入中…</option></select>
   </label>
+  <!-- ★ 换装片段按钮组：点一下换上、再点一下脱掉（原生 select 重复选同一项不触发 change ✗） -->
+  <span id="partsRow" class="parts-row" style="display:none"></span>
   <span class="sep"></span>
   <label>打光
     <select id="lightMenu"></select>
@@ -645,8 +662,8 @@
 </label>
   <button id="btnOutline" class="on">描边</button>
   <label>粗细
-    <input id="outlineWidth" type="range" min="0" max="0.02" step="0.0005" value="0.004" title="描边粗细">
-    <input id="outlineWidthNum" type="number" min="0" max="0.02" step="0.0005" value="0.004" title="精确输入描边粗细">
+    <input id="outlineWidth" type="range" min="0" max="0.02" step="0.0005" value="0.002" title="描边粗细">
+    <input id="outlineWidthNum" type="number" min="0" max="0.02" step="0.0005" value="0.002" title="精确输入描边粗细">
   </label>
   </div><!-- /#hud -->
   <div class="fw-grip" data-fw-grip="hudWin"></div>
@@ -698,13 +715,40 @@
     <div class="u-name" id="nameConfig">未选择（用默认设置）</div>
   </div>
 
-  <!-- ★ lilToon 参数**和主配置分开选**（用户的需求。） -->
+  <!-- ★ lilToon 参数**和主配置分开选**、**可多选**（同一模型的不同材质用不同配置 ✓） -->
   <div class="u-row">
     <label class="u-pick">
-      <input type="file" id="fileLilConfig" accept=".json,.asset,.mat,application/json,text/plain" />
-      选择 lilToon 参数 <em>.lilToon.json（可选）</em>
+      <input type="file" id="fileLilConfig" multiple accept=".json,.asset,.mat,application/json,text/plain" />
+      选择 lilToon 材质配置 <em>.mat / .asset / .json（可多选）</em>
     </label>
     <div class="u-name" id="nameLilConfig">未选择（按主配置自动探测 / 用出厂默认）</div>
+  </div>
+
+  <!-- ★ 外部 Unity 动画（FBX 通常不自带动画）——可多选 -->
+  <div class="u-row">
+    <label class="u-pick">
+      <input type="file" id="fileAnims" multiple accept=".anim,text/plain" />
+      选择动画文件 <em>.anim（可多选）</em>
+    </label>
+    <div class="u-name" id="nameAnims">未选择</div>
+  </div>
+
+  <!-- ★ Unity 预制体：**默认隐藏部件**只存在这里（FBX 里没有）——可多选 -->
+  <div class="u-row">
+    <label class="u-pick">
+      <input type="file" id="filePrefabs" multiple accept=".prefab,text/plain" />
+      选择 Unity 预制体 <em>.prefab（可多选 · 决定哪些部件默认隐藏）</em>
+    </label>
+    <div class="u-name" id="namePrefabs">未选择（Unity 里默认隐藏的部件就发现不了）</div>
+  </div>
+
+  <!-- ★★ 整个 Unity 工程：自动认出模型 / prefab / .anim / .mat / 贴图（也可以直接把文件夹拖进来） -->
+  <div class="u-row u-project">
+    <label class="u-pick">
+      <input type="file" id="fileProjectDir" webkitdirectory directory multiple />
+      选择整个 Unity 工程文件夹 <em>自动认出模型 · .prefab · .anim · .mat · 贴图</em>
+    </label>
+    <div class="u-name" id="nameProject">未选择（也可以把文件夹直接拖到这个面板里）</div>
   </div>
 
   <div class="u-row">
@@ -1532,6 +1576,14 @@ async function mount(opts) {
  *     在这里再打开会和 view 预设冲突（实测初始状态视角器是 true。）
  */
 const __sceneViewOpts = { showGrid: true };
+/**
+ * ★★ 订阅查看器的片段事件：
+ *   ⚠️ 片段（尤其配置里的 `animation.clips`）是**异步**载入的 ——
+ *      载入完成时「模型已就绪」那段代码早就跑过了
+ *      ⇒ 不高亮 / 不刷新的话，换装按钮组会一直是空的（实测踩过 ✗）
+ *   查看器用 CustomEvent 广播（见 viewer.js 的 emit），容器就是 #app ✓
+ */
+container.addEventListener('ba3d:animations', () => { try { refreshAnimMenu(); } catch (e) {} });
 viewer = createViewer(container, Object.assign({ autoRotate: false, onProgress: progressHandler }, __sceneViewOpts, opts));
 
   // —— 全局可调用（任意脚本 / 控制台都能用。）——
@@ -1601,6 +1653,13 @@ function fillMenu(el, modes) {
 fillMenu(renderMenu, viewer.getRenderModes());
 fillMenu(shaderMenu, viewer.getShaderModes());
 
+/**
+ * 第 4 后端（lilToon 源码）加载失败时会**自动退回** lilToon 风格模式。
+ * 这里把同步函数挂到全局，让下拉框能跟着回退（否则界面显示的与实际跑的不一致）。
+ * 沿用本文件既有的钩子写法（见 __ba3dSyncLightClamp）。
+ */
+window.__ba3dSyncShaderUI = function () { try { syncRenderUI(); } catch (e) {} };
+
 /** 把界面同步到当前状态；着色器下拉在非 toon 材质时禁用 */
 function syncRenderUI() {
   const st = viewer.getRenderState();
@@ -1611,7 +1670,13 @@ function syncRenderUI() {
       ' lilOn =', st.render === 'toon' && st.shader === 'lilToon');
   }
   renderMenu.value = st.render;
-  shaderMenu.value = st.shader;
+  /**
+   * ⚠️ 下拉框用 `shaderKey`（界面层），不是 `shader`（底层模式）——
+   *   第 4 后端（lilToon 源码）的底层模式仍是 'lilToon'，
+   *   用它去填下拉框会立刻把选择同步回「lilToon 风格」。
+   *   而下面的 lilOn 判定**必须继续用 st.shader** —— 那个面板在第 4 后端下要保持可用。
+   */
+  shaderMenu.value = st.shaderKey || st.shader;
   shaderMenu.disabled = st.render !== 'toon';
   shaderMenu.title = st.render === 'toon'
     ? '往 toon 材质里注入什么着色器'
@@ -1711,7 +1776,14 @@ bgColor.addEventListener('input', () => {
 });
 
 animMenu.addEventListener('change', () => {
-  viewer.setAnimation(Number(animMenu.value));
+  const idx = Number(animMenu.value);
+  const a = (viewer.getAnimations ? viewer.getAnimations() : [])[idx];
+  /**
+   * ★ 换装片段走**切换**语义：选到它就是"换上/脱掉"（点两次同一项时下拉不会触发 change，
+   *   所以真正的反复操作请用旁边的换装按钮组 ✓）
+   */
+  if (a && a.kind === 'parts') { viewer.toggleAnimation(a.name); refreshAnimMenu(); return; }
+  viewer.setAnimation(idx);
 });
 
 btnAuto.addEventListener('click', () => {
@@ -2712,6 +2784,17 @@ function makePanelDraggable(el, handleSel) {
     // 把手：指定选择器 > .lp-title > h4
     const t = e.target;
     if (!t || !t.closest) return;
+    /**
+     * ⚠️⚠️ **分组标题（`.lpgroup-head`）不能当拖动把手** —— 它本身就是 `<h4>`，
+     *    会被下面的 `t.closest('h4')` 命中，然后在末尾 `setPointerCapture` 把指针抓走
+     *    ⇒ 真正的 `click` 事件到不了标题 ⇒ **点分组标题展不开** ✓
+     *
+     *    实测（真鼠标点击 18 个分组标题）：**18/18 全部展不开**；
+     *    而合成 `element.click()`（绕过 pointer 事件）**全部正常** ——
+     *    说明点击处理器是好的、就是被拖动逻辑吃掉了。
+     *    面板顶部本来就有 `.lp-title` 标题栏能拖 ⇒ 这里直接放行分组标题。
+     */
+    if (t.closest('.lpgroup-head')) return;
     const hit = (handleSel && t.closest(handleSel))
       || t.closest('.fw-title')
       || t.closest('.lp-title')
@@ -4620,20 +4703,82 @@ mkNrmRow('bump', 'tex', '1st 法线贴图', '_BumpMap：切线空间法线、走
   bgMenu.value = viewer.getBackground().transparent ? '0' : bgMenu.value;
 
   // 填充动作菜单
+  refreshAnimMenu();
+
+  hideLoading();
+}
+
+/**
+ * 填「动作」下拉（**可重复调用** —— 上传 `.anim` 之后要再刷一次 ✓）。
+ *
+ * ⚠️ 以前这段是内联在「模型载入完成」里的 ⇒ 上传动画后菜单不会更新
+ *    （用户会以为动画没加载上）。抽成函数后两处都用它 ✓
+ *
+ * `kind` 只对**外部 Unity 动画**有值（body / face / parts）：
+ *   在菜单里标出来，用户才分得清「表情」「换装」与身体动作 ——
+ *   前两者是叠加层，不会打断正在播的身体动作 ✓
+ */
+function refreshAnimMenu() {
+  if (!animMenu || typeof viewer === 'undefined' || !viewer.getAnimations) return 0;
   const anims = viewer.getAnimations();
   animMenu.innerHTML = '';
-  anims.forEach((a) => {
+  for (const a of anims) {
     const opt = document.createElement('option');
     opt.value = String(a.index);
-    opt.textContent = `${a.name}（${a.duration.toFixed(1)}s）`;
+    const tag = a.source === 'unity-anim'
+      ? (a.kind === 'face' ? '【表情】' : (a.kind === 'parts' ? '【换装】' : '【动作】'))
+      : '';
+    opt.textContent = tag + a.name + '（' + a.duration.toFixed(1) + 's）';
     animMenu.appendChild(opt);
-  });
-  animMenu.disabled = false;
-  // 选中当前（默认 idle）项
+  }
+  animMenu.disabled = anims.length === 0;
   const cur = anims.findIndex((a) => a.name === viewer.state.currentAnimation);
   if (cur >= 0) animMenu.value = String(cur);
 
-  hideLoading();
+  /**
+   * ★★ **换装片段 → 按钮组**（用户要的：点一下换上、再点一下脱掉）
+   *   ⚠️ 不能用下拉：原生 <select> 重复选同一项**不触发 change** ⇒ 第二次点没法做 ✗
+   */
+  const row = document.getElementById('partsRow');
+  if (row) {
+    const parts = anims.filter((a) => a.kind === 'parts');
+    row.innerHTML = '';
+    row.style.display = parts.length ? '' : 'none';
+    if (parts.length) {
+      const lbl = document.createElement('span');
+      lbl.className = 'parts-label';
+      lbl.textContent = '换装';
+      row.appendChild(lbl);
+      const active = viewer.getPartsOverlay ? viewer.getPartsOverlay() : null;
+      /**
+       * 标签：去掉 _ON 后缀（短一点好点）——
+       *   ⚠️ 但若一个模型同时有 `xxx_ON` 与 `xxx_OFF`，两个按钮会同名 ⇒ 撞车 ✗
+       *   ⇒ 撞车时**保留原后缀**区分（ON / OFF 各自成键，语义也清楚 ✓）
+       */
+      const shortOf = (n) => String(n).replace(/_ON$/i, '');
+      const shorts = parts.map((x) => shortOf(x.name));
+      const labelOf = (n) => {
+        const s = shortOf(n);
+        return shorts.filter((x) => x === s).length > 1 ? String(n).replace(/^.*?_/, '') : s;
+      };
+      for (const a of parts) {
+        const b = document.createElement('button');
+        b.type = 'button';
+        b.className = 'parts-btn' + (a.name === active ? ' on' : '');
+        b.dataset.clip = a.name;
+        b.textContent = labelOf(a.name);
+        b.title = a.name + '：点一下换上 / 再点一下脱掉';
+        b.onclick = () => {
+          const r = viewer.toggleAnimation(a.name);
+          const on = !!(r && r.on);
+          if (on) row.querySelectorAll('.parts-btn').forEach((x) => { if (x !== b) x.classList.remove('on'); });
+          b.classList.toggle('on', on);
+        };
+        row.appendChild(b);
+      }
+    }
+  }
+  return anims.length;
 }
 
 function showLoading(text) {
@@ -4675,6 +4820,41 @@ const texDirInput = document.getElementById('fileTexDir');
 if (texInput) texInput.addEventListener('change', () => addTextureFiles(texInput.files));
 if (texDirInput) texDirInput.addEventListener('change', () => addTextureFiles(texDirInput.files));
 
+/**
+ * ★★ **整个 Unity 工程**：选文件夹 or 直接把文件夹拖进来 —— 两条路都走同一套分类 ✓
+ *   拖入后**直接加载**（用户的动作本身就是「我要用它」）✓
+ */
+const projInput = document.getElementById('fileProjectDir');
+if (projInput) {
+  projInput.addEventListener('change', async () => {
+    setMsg('正在读取文件夹…');
+    await applyProjectFiles([...projInput.files]);
+    if (picked.model) await doLoadPicked();
+  });
+}
+const uploadPanel = document.getElementById('upload');
+if (uploadPanel) {
+  ['dragenter', 'dragover'].forEach((ev) => uploadPanel.addEventListener(ev, (e) => {
+    e.preventDefault(); e.stopPropagation();
+    if (e.dataTransfer) e.dataTransfer.dropEffect = 'copy';
+    uploadPanel.classList.add('dragging');
+  }));
+  uploadPanel.addEventListener('dragleave', (e) => { e.preventDefault(); uploadPanel.classList.remove('dragging'); });
+  uploadPanel.addEventListener('drop', async (e) => {
+    e.preventDefault(); e.stopPropagation();
+    uploadPanel.classList.remove('dragging');
+    setMsg('正在读取拖入的文件…');
+    try {
+      const files = await filesFromDataTransfer(e.dataTransfer);
+      await applyProjectFiles(files);
+      if (picked.model) await doLoadPicked();
+    } catch (err) {
+      console.error('[project] 拖入处理失败：', err);
+      setMsg('拖入失败：' + (err && err.message ? err.message : err), true);
+    }
+  });
+}
+
 const FILE_UI = {
   model:  { input: 'fileModel',  name: 'nameModel',  empty: '未选择' },
   mouth:  { input: 'fileMouth',  name: 'nameMouth',  empty: '未选择（用默认图集）' },
@@ -4682,32 +4862,226 @@ const FILE_UI = {
   /**
    * ★ lilToon 参数**单独选**（用户的需求：手动导入分开选择。）
    *   ⚠️ 不选也行 —— 走「自动探测」那条路（见 afterLoad。）
+   *   ★ `multi: true` ⇒ **可一次选多个**（不同材质用不同配置 ✓）
    */
-  lilConfig: { input: 'fileLilConfig', name: 'nameLilConfig', empty: '未选择（按主配置自动探测 / 用出厂默认）' },
+  lilConfig: { input: 'fileLilConfig', name: 'nameLilConfig', multi: true, empty: '未选择（按主配置自动探测 / 用出厂默认）' },
+  /** ★ 外部 Unity 动画（`.anim`）——FBX 通常不自带动画，可一次多选 ✓ */
+  anims: { input: 'fileAnims', name: 'nameAnims', multi: true, empty: '未选择' },
+  /**
+   * ★ Unity 预制体（`.prefab`）——**「哪些部件默认隐藏」只存在这里**：
+   *   FBX 不存逐节点可见性、`.anim` 也不存默认值（实测确认）⇒ 不给 prefab 就只能全显示 ✓
+   */
+  prefabs: { input: 'filePrefabs', name: 'namePrefabs', multi: true, empty: '未选择（Unity 里默认隐藏的部件就发现不了）' },
 };
 /**
  * ⚠️ 统一在这里绑 change（而不是散在各处。）——
- *   新加一个文件输入只要往 FILE_UI 里加一行 + 加个 <input> 就行。
+ *   新加一个文件输入只要往 FILE_UI 里加一行 + 加个 `<input>` 就行。
+ *
+ *   多选项（`multi`）存**数组**，单选项存**单个 File** ——
+ *   下游 `doLoadPicked` 用 `asFiles()` 统一成数组来遍历 ✓
  */
 for (const [key, ui] of Object.entries(FILE_UI)) {
   const inp = document.getElementById(ui.input);
   if (!inp) { console.warn('[upload] 找不到输入框 ' + ui.input + '（key=' + key + '。）'); continue; }
-  inp.addEventListener('change', () => setPicked(key, inp.files && inp.files[0]));
+  inp.addEventListener('change', () => {
+    const list = Array.from(inp.files || []);
+    setPicked(key, ui.multi ? list : (list[0] || null));
+    setMsg('');
+  });
 }
+
+/** 把 picked[key] 统一取成数组（单选 → 长度 0/1 的数组 ✓）*/
+function asFiles(v) {
+  if (!v) return [];
+  return Array.isArray(v) ? v.filter(Boolean) : [v];
+}
+
+/* ══════════════════════════════════════════════════════════════════════
+ * ★★ **整个 Unity 工程文件夹**：按扩展名自动分类，再填进上面这些选择框
+ *
+ *   用户的意图是「把工程拖进来就能用」，所以这里不做任何提问：
+ *     .fbx/.glb/.gltf → 模型（没选模型时自动选；多个取最大的那个）
+ *     .prefab         → 默认隐藏部件（唯一来源 ✓）
+ *     .anim           → 外部动画（可叠加到身体动作上）
+ *     .mat            → lilToon 材质配置（按材质名各自对应）
+ *     .asset          → **只把内容像 lilToon 的当配置**（BlendTree / VRC 菜单不算 ✓）
+ *     图片            → 贴图（喂给既有的 textureFiles 映射）
+ *     .unity          → Unity 场景（取里面相机 + 打光 ✓）
+     其余（.meta/.controller/...）忽略
+ * ══════════════════════════════════════════════════════════════════════ */
+const PROJECT_MAX_FILES = 6000;   // 防呆：整个磁盘拖进来时不至于卡死
+function classifyProjectFiles(files) {
+  const out = { model: [], prefabs: [], anims: [], mats: [], assets: [], humanoid: [], scenes: [], sceneViews: [], textures: [], ignored: [], overflow: 0 };
+  const list = [...(files || [])];
+  if (list.length > PROJECT_MAX_FILES) { out.overflow = list.length - PROJECT_MAX_FILES; list.length = PROJECT_MAX_FILES; }
+  for (const f of list) {
+    const n = f.name || '';
+    const ext = (n.match(/\.([^.]+)$/) || [, ''])[1].toLowerCase();
+    if (ext === 'glb' || ext === 'gltf' || ext === 'fbx') out.model.push(f);
+    else if (ext === 'prefab') out.prefabs.push(f);
+    else if (ext === 'anim') out.anims.push(f);
+    else if (ext === 'mat') out.mats.push(f);
+    else if (ext === 'asset') out.assets.push(f);
+    /**
+     * ★ **Humanoid 肌肉换算表**：Unity 侧脚本导出的 JSON
+     *   （名字形如 `humanoid-muscles.json`；内容里有 muscles 数组 ⇒ 靠内容判更稳，见下）
+     */
+    else if (ext === 'json' && /humanoid|muscles?/i.test(n)) out.humanoid.push(f);
+    // Unity 场景：读它的相机 + 打光 ✓（以前归到 ignored ✗）
+    else if (ext === 'unity') out.scenes.push(f);
+    // Unity Scene 视图相机（编辑器状态 ✓ 名字固定 ✓）
+    else if (/LastSceneManagerSetup/i.test(n)) out.sceneViews.push(f);
+    else if (/^(png|jpg|jpeg|tga|psd|bmp|webp|gif)$/.test(ext)) out.textures.push(f);
+    else out.ignored.push(f);
+  }
+  return out;
+}
+
+/** 按名字去重后合并（多次拖入同一批文件不会重复）*/
+function mergeByName(prev, add) {
+  const seen = new Set(asFiles(prev).map((f) => f.name));
+  return asFiles(prev).concat(add.filter((f) => !seen.has(f.name)));
+}
+
+/**
+ * 把「一批工程文件」填进面板的选择框 + 贴图表。
+ * ⚠️ 真正的加载/套用仍走既有流程（doLoadPicked 里那几段），这里只负责**填** ✓
+ */
+async function applyProjectFiles(fileList) {
+  const c = classifyProjectFiles(fileList);
+  const bits = [];
+
+  if (!picked.model && c.model.length) {
+    /* 多个模型 ⇒ 取最大的（通常是主角模型；小 fbx 多是配件）*/
+    const big = c.model.slice().sort((a, b) => (b.size || 0) - (a.size || 0))[0];
+    setPicked('model', big);
+    bits.push('模型 ' + big.name + (c.model.length > 1 ? '（' + c.model.length + ' 个里取最大的）' : ''));
+  } else if (picked.model && c.model.length) {
+    bits.push('模型保持已选（' + picked.model.name + '；工程里有 ' + c.model.length + ' 个）');
+  }
+  /**
+   * ★ Humanoid 换算表：此刻 viewer 可能还没建（拖入 → 先分类、后加载）
+   *   ⇒ 只**读出来暂存**，等 mount 之后再注入（且必须在追加动画之前 ✓）
+   */
+  if (c.humanoid.length) {
+    for (const f of c.humanoid) {
+      try {
+        const j = JSON.parse(await f.text());
+        if (j && Array.isArray(j.muscles) && j.muscles.length) {
+          picked.humanoidProfile = j;
+          bits.push('Humanoid 换算表（肌肉 ' + j.muscles.length + ' 条' + (j.zeroQuat ? ' · 含零姿势' : '') + '）');
+        } else skippedAssets++;   // 形状不对的 json 不算表
+      } catch (e) { console.warn('[humanoid] ' + f.name + ' 解析失败：', e); }
+    }
+  }
+  /**
+   * ★ Unity 场景（可选）：只暂存文本 ✓ 等模型加载后再套（相机要等模型建好才有意义 ✓）
+   *   多个场景取最大的（通常就是主场景 ✓）
+   */
+  /** ★ Unity 的 Scene 视图相机（可选 ✓ 常常就是"用户看着对"的那台 ✓）*/
+  if (c.sceneViews && c.sceneViews.length) {
+    try {
+      picked.sceneViewSetup = await c.sceneViews[0].text();
+      bits.push('Scene 视图相机（来自 ' + c.sceneViews[0].name + '）');
+    } catch (e) { console.warn('[unity-sceneview] 读取失败：', e); }
+  }
+  if (c.scenes && c.scenes.length) {
+    const bigScene = c.scenes.slice().sort((x, y) => (y.size || 0) - (x.size || 0))[0];
+    try {
+      picked.unityScene = await bigScene.text();
+      bits.push('Unity 场景（相机+打光：' + bigScene.name + '）');
+    } catch (e) { console.warn('[unity-scene] 读取失败：', e); }
+  }
+  if (c.textures.length) { addTextureFiles(c.textures); bits.push('贴图 ' + textureFiles.size + ' 张'); }
+  if (c.prefabs.length) { setPicked('prefabs', mergeByName(picked.prefabs, c.prefabs)); bits.push('prefab ' + c.prefabs.length + ' 个'); }
+  if (c.anims.length) { setPicked('anims', mergeByName(picked.anims, c.anims)); bits.push('动画 ' + c.anims.length + ' 段'); }
+
+  /* `.asset` 要读内容才敢当配置（BlendTree / VRC 菜单不是 lilToon 配置 ✗）*/
+  const mats = c.mats.slice();
+  let skippedAssets = 0;
+  for (const f of c.assets) {
+    try {
+      const t = await f.text();
+      if (/lilToonPreset|lilToon/i.test(t)) mats.push(f); else skippedAssets++;
+    } catch (e) { skippedAssets++; }
+  }
+  if (mats.length) { setPicked('lilConfig', mergeByName(picked.lilConfig, mats)); bits.push('材质配置 ' + mats.length + ' 个'); }
+  if (skippedAssets) bits.push('忽略 ' + skippedAssets + ' 个非 lilToon 的 .asset');
+
+  const el = document.getElementById('nameProject');
+  if (el) {
+    el.textContent = bits.length ? ('已识别：' + bits.join(' · ')) : ('没认出可用文件（' + c.ignored.length + ' 个已忽略）');
+    el.classList.toggle('has', bits.length > 0);
+  }
+  if (c.overflow) console.warn('[project] 文件太多，只处理前 ' + PROJECT_MAX_FILES + ' 个（忽略 ' + c.overflow + ' 个）');
+  console.info('[project] 分类结果：', {
+    model: c.model.map((f) => f.name), prefabs: c.prefabs.map((f) => f.name),
+    anims: c.anims.length, mats: mats.map((f) => f.name), textures: c.textures.length,
+    ignored: c.ignored.length, overflow: c.overflow,
+  });
+  setMsg(bits.length ? ('工程已识别：' + bits.join('；')) : '这个文件夹里没认出可用的 Unity 文件', bits.length === 0);
+  return { ...c, mats };
+}
+
+/** 从 drag 事件里取出文件（**支持文件夹**：走 webkitGetAsEntry 递归）*/
+async function filesFromDataTransfer(dt) {
+  const out = [];
+  const entries = [];
+  if (dt && dt.items) {
+    for (const it of dt.items) {
+      if (it.kind !== 'file') continue;
+      const en = it.webkitGetAsEntry ? it.webkitGetAsEntry() : null;
+      if (en) entries.push(en); else if (it.getAsFile) { const f = it.getAsFile(); if (f) out.push(f); }
+    }
+  }
+  if (!entries.length) return [...(dt && dt.files ? dt.files : [])];
+  const walk = async (entry) => {
+    if (out.length >= PROJECT_MAX_FILES) return;
+    if (entry.isFile) {
+      const f = await new Promise((res) => entry.file(res, () => res(null)));
+      if (f) out.push(f);
+      return;
+    }
+    if (entry.isDirectory) {
+      const reader = entry.createReader();
+      for (;;) {
+        const batch = await new Promise((res) => reader.readEntries(res, () => res([])));
+        if (!batch || !batch.length) break;
+        for (const en of batch) await walk(en);
+        if (out.length >= PROJECT_MAX_FILES) break;
+      }
+    }
+  };
+  for (const en of entries) await walk(en);
+  return out;
+}
+
+/* 调试钩子（控制台 / 测试用）——和 ba3dExportConfig 那些一个风格 ✓ */
+window.__ba3dClassifyProjectFiles = classifyProjectFiles;
+window.__ba3dApplyProjectFiles = applyProjectFiles;
 
 function setMsg(text, isErr) {
   uploadMsgEl.textContent = text || '';
   uploadMsgEl.style.color = isErr ? '#e06c6c' : '#7de0a8';
 }
 
-function setPicked(key, file) {
-  picked[key] = file || null;
+function setPicked(key, fileOrList) {
   const ui = FILE_UI[key];
+  const list = asFiles(fileOrList);
+  picked[key] = ui.multi ? list : (list[0] || null);
   const nameEl = document.getElementById(ui.name);
-  if (file) {
-    nameEl.textContent = file.name + ' · ' + (file.size >= 1048576
-      ? (file.size / 1048576).toFixed(1) + ' MB'
-      : Math.max(1, Math.round(file.size / 1024)) + ' KB');
+  const show = ui.multi ? list : list.slice(0, 1);
+  if (show.length) {
+    const bytes = show.reduce((n, f) => n + (f.size || 0), 0);
+    const size = bytes >= 1048576 ? (bytes / 1048576).toFixed(1) + ' MB' : Math.max(1, Math.round(bytes / 1024)) + ' KB';
+    /**
+     * 多选时列出文件名（最多 3 个 + 「等 N 个」）——
+     * 用户要能一眼确认「哪几个材质配置都选上了」✓
+     */
+    const label = show.length <= 3
+      ? show.map((f) => f.name).join(' · ')
+      : show.slice(0, 3).map((f) => f.name).join(' · ') + ' 等 ' + show.length + ' 个';
+    nameEl.textContent = label + ' · ' + size;
     nameEl.classList.add('has');
   } else {
     nameEl.textContent = ui.empty;
@@ -4725,13 +5099,6 @@ function clearPicked() {
   });
   setMsg('');
 }
-
-Object.keys(FILE_UI).forEach((key) => {
-  document.getElementById(FILE_UI[key].input).addEventListener('change', (e) => {
-    setPicked(key, e.target.files && e.target.files[0]);
-    setMsg('');
-  });
-});
 document.getElementById('btnClearFiles').addEventListener('click', () => {
   clearPicked();
   textureFiles.clear();
@@ -4803,39 +5170,136 @@ async function doLoadPicked() {
    *        · 探测顺序：模型名.lilToon.json → 主JSON名.lilToon.json
    *        · 都没有 ⇒ **出厂默认** + 控制台提示「未找到配置」
    */
+  /**
+   * ★ Unity 预制体（`.prefab`）——**最先应用**：
+   *   「哪些部件默认隐藏」只存在 prefab 里（FBX 里没有），先把默认可见性摆对，
+   *   后面套材质 / 加动画才不会打架 ✓
+   */
   try {
-    if (picked.lilConfig) {
-      /**
-       * ★★ **按扩展名分流**（用户的需求：和 Unity 互通。）
-       *
-       *   `.json`           ⇒ 我们自己的 lilToon 配置（原路。）
-       *   `.asset` / `.mat` ⇒ **Unity 的 lilToon 预设 / 材质**。
-       *
-       *   ⚠️ 同一个输入框收三种文件、**不给用户增加「该点哪个」的负担**。
-       *     扩展名是客观事实、比让用户选类型可靠。
-       */
-      const __nm = String(picked.lilConfig.name || '');
-      const __txt = await picked.lilConfig.text();
-      if (/\.(asset|mat)$/i.test(__nm)) {
-        const __r = viewer.importLilPreset(__txt);
-        if (__r.ok) {
-          console.info('[lilToon] 已套用 Unity 预设「' + (__r.name || __nm) + '」：源 ' + __r.total
-            + ' 条 ⇒ 套用 ' + __r.applied + ' 项 · 未识别 ' + __r.skipped.length + ' 个属性名（我们没实现。）');
-          setMsg('已套用 Unity 预设「' + (__r.name || __nm) + '」：套用 ' + __r.applied + ' 项'
-            + (__r.skipped.length ? '，其余 ' + __r.skipped.length + ' 个属性我们没实现（保持默认。）' : ''));
-        } else {
-          setMsg('Unity 预设导入失败：' + __r.reason, true);
-          console.warn('[lilToon] 预设导入失败：', __r);
-        }
+    const prefabs = asFiles(picked.prefabs);
+    if (prefabs.length) {
+      const texts = [];
+      for (const f of prefabs) texts.push({ name: f.name, text: await f.text() });
+      const r = viewer.applyUnityPrefabTexts(texts);
+      if (r.names.length) {
+        setMsg('已按 prefab 隐藏 ' + r.hidden + ' 个网格（' + r.names.join(' · ') + '）', r.hidden === 0);
       } else {
-        const lo = JSON.parse(__txt);
-        viewer.applyLilConfigJSON(lo);
-        console.info('[lilToon] 已套用手动选择的 ' + __nm);
+        setMsg('prefab 里没有 m_IsActive: 0 的部件（Unity 里没有默认隐藏的部件）', false);
+      }
+      console.info('[prefab] 结果：', r);
+    }
+  } catch (e) { console.warn('[prefab] 应用失败：', e); }
+
+  try {
+    const lilFiles = asFiles(picked.lilConfig);
+    if (lilFiles.length) {
+      /**
+       * ★★ **可多选**（用户的需求：同一个模型的不同材质用不同配置。）
+       *
+       *   按扩展名分流（和 Unity 互通、不给用户增加「该点哪个」的负担）：
+       *     `.asset` / `.mat` ⇒ **Unity 的 lilToon 预设 / 材质** ⇒ 按 `m_Name` 找到
+       *                          对应材质、**逐个按材质套用**（多文件各自生效 ✓）
+       *     `.json`           ⇒ 我们自己的 lilToon 配置 ⇒ 按全局套（原路 ✓）
+       *
+       *   ⚠️ 套用必须**一次性**交给 `importLilMatFiles` ——
+       *     它内部先把多份合并好再写回（`setLilCfgByMaterial` 是整表替换 ✗）
+       */
+      const unity = [], ours = [];
+      for (const f of lilFiles) {
+        const txt = await f.text();
+        if (/\.(asset|mat)$/i.test(f.name)) unity.push({ name: f.name, text: txt });
+        else ours.push({ name: f.name, text: txt });
+      }
+      if (unity.length) {
+        const r = viewer.importLilMatFiles(unity);
+        const parts = [];
+        if (r.applied.length) {
+          parts.push('已套用 ' + r.applied.length + ' 个材质：' +
+            r.applied.map((a) => a.material + '（' + a.applied + ' 项' +
+              (a.skipped ? '，' + a.skipped + ' 个属性未实现' : '') + '）').join(' · '));
+        }
+        if (r.unmatched.length) {
+          parts.push('未匹配到材质：' + r.unmatched.map((u) => u.material + '（' + u.file + '）').join(' · '));
+        }
+        if (r.failed.length) parts.push('失败：' + r.failed.map((x) => x.file + '（' + x.reason + '）').join(' · '));
+        setMsg(parts.join('；') || 'Unity 材质配置没有生效（见控制台）', !r.applied.length);
+        console.info('[lilToon] 多文件导入结果：', r);
+      }
+      if (ours.length) {
+        for (const f of ours) {
+          try { viewer.applyLilConfigJSON(JSON.parse(f.text)); }
+          catch (e) { console.warn('[lilToon] ' + f.name + ' 解析失败：', e); }
+        }
+        console.info('[lilToon] 已套用 ' + ours.length + ' 个自有 lilToon 配置（全局）');
       }
     } else if ((viewer.exportConfig().renderer || {}).lilToon?.use) {
       await viewer.probeLilConfig(null);
     }
   } catch (e) { console.warn('[lilToon] 参数套用失败：', e); }
+
+  /**
+   * ★ 外部 Unity 动画（`.anim`，可多选）——**在模型载入后**追加。
+   *   FBX 通常不自带动画，这一段就是把它补上；加完要刷「动作」下拉 ✓
+   */
+  /**
+   * ★★ **换算表必须在追加动画之前注入** ——
+   *   转换是一次性的，表晚到 ⇒ Humanoid 片段早按「不支持」跳过了 ✗
+   *   （拖整个工程的路上没有配置文件，表就是从这里进来的 ✓）
+   */
+  /** ★ Scene 视图相机：**在场景之后套**（有它就以它为准 ✓ 那才是用户看到的视角 ✓）*/
+  if (picked.sceneViewSetup) {
+    try {
+      const rv = viewer.applyUnitySceneViewText(picked.sceneViewSetup);
+      if (rv) log('已套用 Unity Scene 视图相机（pos ' + rv.position.map((x) => +x.toFixed(2)).join(', ') + ' · fov ' + rv.fov + '）');
+    } catch (e) { console.warn('[unity-sceneview] 套用失败：', e); }
+  }
+  /* ★ Unity 场景：模型就绪后套相机 + 打光 ✓ */
+  if (picked.unityScene) {
+    try {
+      const rScene = viewer.applyUnitySceneText(picked.unityScene);
+      if (rScene && rScene.light) log('已套用 Unity 场景：相机 + 主光 ' + rScene.light.azimuth + '° / ' + rScene.light.elevation + '°');
+    } catch (e) { console.warn('[unity-scene] 套用失败：', e); }
+  }
+  /**
+   * ★★ **导入 Unity 工程时，默认切到 lilToon 源码着色器**（用户要求 ✓）
+   *
+   *   为什么：模型本来就是给 lilToon 做的 ✓
+   *     源码后端 = 编译好的**真 lilToon** ⇒ 与 Unity 的明暗/阴影/描边一致 ✓
+   *     我们自建的风格版是近似 ✗ 逐材质对齐代价大 ✗ 收益有限 ✓
+   *   ⚠️ 只在这个入口（**导入 Unity 工程文件夹**）生效 ✓
+   *     单独选模型 / 手动切着色器 / 其他路径**一律保持现状** ✓（用户明确要求 ✓）
+   *   ⚠️ 若用户之后手动切走，我们不再抢回来 ✓（只设这一次 ✓）
+   */
+  try {
+    if (typeof viewer.setShader === 'function') {
+      viewer.setShader('liltoon-src');
+      if (typeof shaderMenu !== 'undefined' && shaderMenu) shaderMenu.value = 'liltoon-src';
+      if (typeof syncRenderUI === 'function') syncRenderUI();
+      log('已按 Unity 工程导入：着色器切到 **lilToon 源码版**（与 Unity 一致 ✓ 可随时手动切回 ✓）');
+    }
+  } catch (e) { console.warn('[shader] 自动切换失败：', e); }
+  if (picked.humanoidProfile) {
+    try { viewer.setHumanoidProfile(picked.humanoidProfile); }
+    catch (e) { console.warn('[humanoid] 注入失败：', e); }
+  }
+
+  try {
+    const animFiles = asFiles(picked.anims);
+    if (animFiles.length) {
+      const texts = [];
+      for (const f of animFiles) texts.push({ name: f.name, text: await f.text() });
+      const r = viewer.addUnityAnims(texts);
+      const n = refreshAnimMenu();
+      const bits = ['已加入 ' + r.added.length + ' 段动画（动作菜单共 ' + n + ' 项）'];
+      if (r.skipped.length) {
+        bits.push('跳过 ' + r.skipped.length + ' 段：' +
+          r.skipped.map((s) => s.name + '（' + s.reason + '）').slice(0, 3).join(' · ') +
+          (r.skipped.length > 3 ? ' 等' : ''));
+      }
+      setMsg(bits.join('；'), r.added.length === 0);
+      console.info('[unity-anim] 上传导入结果：', r);
+    }
+  } catch (e) { console.warn('[unity-anim] 上传动画套用失败：', e); }
   window.__ba3dLilProbed = false;   // ★ 手动载入 ⇒ 允许再探一次。
   setMsg('已加载：' + picked.model.name);
   } catch (err) {

@@ -144,7 +144,7 @@
      style="width:420px;height:430px"&gt;&lt;/div&gt;
 
 &lt;script type="module"&gt;
-  import { autoMount } from './dist/ba3d-viewer.min.js';  // 自包含单文件版，无需 importmap
+  import { autoMount } from './dist/3d-viewer.min.js';  // 自包含单文件版，无需 importmap
   autoMount();
 &lt;/script&gt;</pre>
 
@@ -297,7 +297,7 @@ panel.addEventListener('ba3d:pointerup', (e) =&gt; {
      多刷新几次能看到初始动作在变。</p>
 
   <h2>7. 也可以用 JS 创建（等价）</h2>
-  <pre>import { createViewer } from './dist/ba3d-viewer.min.js';
+  <pre>import { createViewer } from './dist/3d-viewer.min.js';
 
 const viewer = createViewer(document.getElementById('floatPanel'), {
   modelUrl:       './assets/sample.glb',
@@ -345,7 +345,7 @@ viewer.playAction(['Formation_Pickup']);</pre>
 </div>
 
 <script type="module">
-  import { autoMount } from './dist/ba3d-viewer.min.js';
+  import { autoMount } from './dist/3d-viewer.min.js';
 
   const logEl = document.getElementById('log');
   const log = (msg, hi) => {

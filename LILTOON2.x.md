@@ -1,5 +1,7 @@
 # lilToon 2.3.4 → Web (three.js) 移植基线
 
+中文 ｜ [English](LILTOON2.x.en.md) ｜ [日本語](LILTOON2.x.ja.md)
+
 > **本文档是当前生效的基线**。
 > 旧基线（**1.3.7**）的对照表与核对记录见 [`LILTOON1.x.md`](LILTOON1.x.md)。
 > 实现细节与全部配置键见 [`CONFIG.md`](CONFIG.md)。
@@ -205,211 +207,7 @@ Anisotropy → AudioLink → Main2nd → Main3rd → Shadow → Backlight → �
 
 ---
 
-## 五、代码里的行号引用迁移（已完成）
-
-`viewer.js` 里对 lilToon 源码有 **93 处精确行号引用**、基线换到 2.3.4 后**全部迁移完毕**。
-
-### 迁移方法（可复现）
-
-```js
-// 1. 对一个文件的每一行、找出它属于哪个函数（用花括号配对求函数范围）
-// 2. 在 2.3.4 的同名函数里、用「函数内偏移」算出新行号
-//     newLine = nb.start + ( oldLine - fa.start )
-// 3. 校验 newLine 仍落在 nb 的范围内、否则退回到 nb.start
-// 4. 不是函数的、试 #define 宏（同名宏的起始行）
-// 5. 既不是函数也不是宏的（注释 / #if 行）、用「该行的文本」在 2.3.4 里精确匹配
-```
-
-**结果**：`93 / 93` 全部命中、逐个复查**全部落在 2.3.4 的某个函数或宏范围内**。
-
-### ⚠️ 迁移时踩的坑
-
-**第一版脚本的正则只匹配了 `file.hlsl:NNN`**、于是：
-
-```
-lil_common_frag.hlsl:1189-1208   →   lil_common_frag.hlsl:1315-1208、只改了第一个
-lil_common_frag.hlsl:1557 / :1499 →   lil_common_frag.hlsl:1557 / :1499、没改
-```
-
-⇒ 文件里出现**新旧混用**的引用。
-⇒ **教训**：引用的形态不止一种（`A-B` 区间、`A / B` 并列、`A / :B`）。
-   正则要把**整个引用组**吃掉、组内所有数字一起映射。
-⇒ 修好后：**93 组、0 失败、0 落空**。
-
-### 抽查（对着 2.3.4 核实）
-
-| 我们写的 | 2.3.4 该行的实际内容 |
-|---|---|
-| `lil_common_frag.hlsl:1315` | `float3 lilCalcSpecular(inout lilFragData fd, ...)` |
-| `lil_common_frag.hlsl:1557` | `matCapMask = LIL_SAMPLE_2D_ST(_MatCapBlendMask, ...)` |
-| `lil_common_functions.hlsl:550` | `float2 lilCalcMatCapUV(float2 uv1, ...)` |
-
----
-
-## 五点五、实施进度（滚动更新）
-
-> 每完成一项就在这里记一笔、详细经过见 `archive/` 下对应的 `stage-*/MANIFEST.md`。
-
-### 已完成
-
-| 项 | 内容 | 归档 |
-|---|---|---|
-| **①** | 卡通镜面高光（`_ApplySpecular` / `_SpecularToon`）| `stage-20261006-0020-reflection-specular` |
-| **③** | 光照上下限（`_LightMinLimit` / `_LightMaxLimit`）| `stage-20261005-2350-lightclamp-revert-v1` |
-| **B1** | 每材质渲染状态（`_TransparentMode` / `_Cutoff` / `_Cull`）| `stage-20261006-0300-b1-cull-priority-fix` |
-| **B2** | 主色 UV / 色调（`_MainTexHSVG` / `_MainTex_ScrollRotate`）| `stage-20261006-0445-b2-shared-time-uniform` |
-| **A1** | 层 Alpha 模式（`_Main2nd/3rdTexAlphaMode`）| `stage-20261006-0530-a1-layer-alphamode` |
-| **A3** | 抖动 Dither（`_UseDither` / `_DitherTex` / `_DitherMaxValue`）| `stage-20261006-0640-a3-accepted-dither-row-fix` |
-| **B5** | Decal 贴花（`_Main2nd/3rdTexIsDecal` 及 6 个开关 + 图集动画 + ST）| `stage-20261006-0745-b5-decal` |
-
-### ★★ 一个**顺带修掉的长期 bug**（影响面比 B5 大得多）
-
-  做 B5 时用户做了一个关键实验：
-
-      「参与光照比例」（enableLighting）默认 1 ⇒ **完全看不见**
-      调到 0                                ⇒ **可见**
-
-  ⇒ 一下把范围锁到「受光那条路径」上。
-
-  ### 根因：three 的 toon 光照读的是 `material.diffuseColor`
-
-  `lights_toon_pars_fragment`（three r160）：
-
-      void RE_Direct_Toon( ..., const in ToonMaterial material, inout ReflectedLight reflectedLight ) {
-          reflectedLight.directDiffuse += irradiance * BRDF_Lambert( **material.diffuseColor** );   ← ★
-      }
-      void RE_IndirectDiffuse_Toon( ..., const in ToonMaterial material, ... ) {
-          reflectedLight.indirectDiffuse += irradiance * BRDF_Lambert( **material.diffuseColor** ); ← ★
-      }
-
-  用的是那个 **struct `material` 的字段**、不是局部的 `diffuseColor`。
-
-  ### 而我们一直写的是局部 `diffuseColor`
-
-      diffuseColor.rgb = ba3dBlend( diffuseColor.rgb, ba3dLc.rgb, ba3dLc.a * el, bm );
-
-  ⇒ 这句话在 `#include <lights_fragment_begin>` **之前** ⇒ 对**光照**毫无影响。
-  ⇒ 而 `el = 1` 时 after 块又是 `srcA = a × (1-el) = 0` ⇒ **两边都不出力**。
-  ⇒ ⇒ **「参与光照比例 = 1」（默认）时这一层彻底不可见**。
-  ⇒ ⇒ 也就是说 **主色层 2nd / 3rd 在默认设置下一直画不出来**、功能实际是半废的。
-
-  ### ✅ 修法
-
-  生成器额外产出 `afterMaterial`、挂在 `#include <lights_fragment_begin>` **之后**：
-
-      material.diffuseColor.rgb = mix( material.diffuseColor.rgb,
-                                        ba3dColor2nd.rgb, ba3dColor2nd.a * 1.0000 );
-
-  ⚠️ **必须在 include 之后** —— `material` 这个局部 struct 是在**那个 include 里面**被赋值的。
-     写在它前面会被覆盖。
-  ⚠️⚠️ **不能引用 `ba3dLc`** —— 它是 before 那个 `{ }` 块里的局部变量。
-     而 afterMaterial 在块**外面** ⇒ GLSL 没有块外可见性 ⇒ 编译失败。
-     ⇒ 用前导里声明过的 `ba3dColor2nd` / `ba3dColor3rd`。
-
-  ⇒ 现在注入链是**三层**：
-
-      lights_fragment_begin 之前   ⇒ before         （算层色 · 写 diffuseColor）
-      lights_fragment_begin 之后   ⇒ afterMaterial  （喂 material.diffuseColor）★
-      dithering_fragment 之前       ⇒ after          （未受光部分 / 溶解边缘）
-
-  归档：`stage-20261006-1410-layer-enablelighting-material-diffusecolor`
-
-### ★ B2 这一轮固化的 4 条教训（都很典型、值得单独记）
-
-  ① **GLSL 没有函数提升** ⇒ 先用后声明编译不过
-     生成器里的顺序必须是「旋转函数 → 滚动函数 → 调用」
-     ⇒ `check-glsl.mjs` 已加「声明顺序」校验、（比对三个 index 的先后）
-
-  ② **`applyLilConfig` 的顶层白名单只认数字** ⇒ vec4 数组被**静默丢弃**
-     而且面板送来的是**稀疏补丁对象** `{0: 0.5}`（不是数组）
-     ⇒ `lilSet` 用 reduce 逐层建对象 ⇒ 走到数组那层也建成了普通对象。
-     ⇒ 必须按下标**合并** · 并同时支持数组（JSON 导入那条路）
-
-  ③ **登记语句写在 `return` 之后** ⇒ 死代码
-     ⚠️ `node --check` 不会报、语法完全合法。
-     ⇒ 教训：**看到可疑代码就要修**、不要因为它不是当前的根因就留着
-        （我当时看到了 · 判断「它不会阻止日志」就放过 · 结果它就是第二个 bug）
-
-  ④ **「维护 shader 列表 + 事后改 `shader.uniforms`」不生效**
-     three 构建程序时会对 uniforms 做处理 ⇒ 改不到真正上传的那份
-     ⇒ 改成**共享同一个 uniform 对象** · 注入时挂引用而不是新建。
-
-  ⇒ ①② 静态检查能抓（已加）、**③④ 抓不到**
-  ⇒ 只能靠**按功能分组验收** —— 用户把「静态旋转 PASS / 时间相关 FAIL」分开报 ⇒
-     一下就把范围缩到「时间」上。
-
-### 已固化的检查器（`scripts/`）
-
-    check-scope.mjs   作用域 / TDZ / HLSL 残留
-    check-glsl.mjs    花括号平衡 · 嵌套函数 · HLSL-ism · 反斜杠 ·
-                      一元加号 · JS 变量名写进 GLSL · 纹理 uniform 守卫 ·
-                      **GLSL 函数声明顺序**（B2 新增）
-    check-panel.mjs   缺逗号 · lg() 目标 · 孤儿注释 · groupify 位置 · K() 映射 ·
-                      单一 groupifyLilPanel 调用 · 克隆块后缀 · 组白名单 ⊆ applyLilConfig
-
-  ⚠️ **已知盲区**（B2 暴露的）：
-     check-panel 只核对**组名**、不核对**顶层数组键** ⇒ B2 那次漏过去了。
-     ⇒ 待补：LIL_CTRL 里所有顶层键的首段 ⇒
-        必须能在 applyLilConfig 里找到处理路径（数字白名单 / 数组块 / 组白名单）
-
----
-## 六、重新评估的实施顺序
-
-### 已经完成的（覆盖率已对齐）
-
-按 **19 个官方预设的启用率** 对照、常用的都做完了：
-
-| 开关 | 预设启用率 | 我们 |
-|---|---|---|
-| `_UseShadow` | 14/19 | ✓ |
-| `_UseRim` | 7/19 | ✓ |
-| `_UseReflection`（含镜面高光）| 3/19 |、**刚补** |
-| `_UseBacklight` | 2/19 | ✓ |
-| `_UseMatCap` | 1/19 |、（还做了 2nd）|
-| **真正 always-on 的** | — |、光照夹取那类已对齐 |
-
-⇒ 其余（Main2nd/3rd、Bump、Emission、Dissolve、Parallax、Anisotropy …）
-   在 19 个预设里**启用率都是 0**、属于「模型作者手动开」的功能。
-
-### 阶段 A —— 2.3.4 新增里值得做的（建议）
-
-| # | 项 | 属性数 | 工作量 | 理由 |
-|---|---|---|---|---|
-| ~~A1~~ ✅ | ~~Main2nd/3rdTexAlphaMode~~ **已完成 2026-10-06** | 2 | — | 层的 alpha 混合模式（0不改 1替换 2乘 3加 4减）· 只在 Cutout/Transparent 下生效 |
-| **A2** | **DistanceFadeRim** | 3 | 小 | 我们有主色层的距离淡出基础、加几行即可、视觉明显 |
-| **A3** | **Dither** | 3 | 小 | 只有配合 DistanceFade 才有意义（用抖动代替半透明）、WebGL 可做 |
-| **A4** | **RimShade** | 7 | 中 | 独立的新效果层、要新写一个生成器（公式从 `lil_common_frag.hlsl:1222` 起）|
-| **A5** | **IDMask** | 34 | 大 | ❌ **建议不做**、要靠 Unity 侧工具把 ID 烘到顶点/贴图、查看器里没有那套工具、34 个里大部分是「8 个 ID 各自的开关/序号/优先/位图」⇒ 那是工具界面 |
-
-### 阶段 B —— 1.3.x 时代就缺、2.3.4 也没补的
-
-按 **碰到概率** 排（都不是默认开、模型手动才用）：
-
-| # | 项 | 说明 |
-|---|---|---|
-| ~~B1~~ ✅ | ~~每材质 `_TransparentMode` / `_Cutoff`~~ **已完成 2026-10-06** | 还多做了 `_Cull`（0双面 1正面 2背面）· 默认全 `-1 = 不改` ⇒ 零副作用 |
-| ~~B2~~ ✅ | ~~主色贴图 HSV + 滚动~~ **已完成 2026-10-06** | `_MainTexHSVG` 全做（逐字移植 `lilToneCorrection`）· `_MainTex_ScrollRotate` 按方案 A（只改主色自己的 UV） |
-| **B3** | **AlphaMask** | 隐藏部件（帽子下藏头发）|
-| **B4** | **Parallax / POM** | 眼睛 / 衣服的立体感 |
-| **B5** | **Decal**（`_Main2ndTexIsDecal` 一套）| 脸部贴花 / 腮红、lilToon 就这么做脸部装饰 |
-| **B6** | **背面**（`_BackfaceColor` / `_BackfaceForceShadow` / `_FlipNormal`）| 双面头发 / 裙子 |
-| **B7** | **Emission 渐变 LUT**（44 个属性）| 烘焙渐变、靠 Unity 工具生成 ⇒ 优先级低 |
-| **B8** | **Anisotropy**（40 个属性）| 头发 / 拉丝金属、预设 0/19 ⇒ 优先级低 |
-
-### 明确不做（维持原判）
-
-```
-Glitter（21 个）          —— 预设 0/19、但 VRChat 衣服闪粉偶有 · 可重新评估
-AudioLink（20 个）        —— 静态查看器**原理上无法复现**（要有音乐流）
-Lightmap / Light Probe / VRC Light Volumes —— 数据在 Unity 场景里、glTF 里根本不带
-Fur / Tessellation / Gem / Refraction —— 是**独立 shader**（lts_fur / lts_gem / lts_tess / lts_ref）
-                            不在 lts.shader 的属性里 ⇒ 超出我们的对标范围
-IDMask（34 个）           —— 见 A5
-```
-
----
-
-## 七、必须提前知道的几件事
+## 五、必须提前知道的几件事
 
 ### 7.1 `_MatCapVRParallaxStrength` 在非 VR 下是空操作
 
@@ -538,7 +336,7 @@ lilToon 的预设本来就是每个材质一份、我们的架构是「全局默
 
 ---
 
-## 八、对比方法（可复现）
+## 六、对比方法（可复现）
 
 ### 8.1 属性层面
 
@@ -568,7 +366,7 @@ lilToon 的预设本来就是每个材质一份、我们的架构是「全局默
 
 ---
 
-## 九、已知偏差清单（诚实记录）
+## 七、已知偏差清单（诚实记录）
 
 | 项 | 情况 |
 |---|---|
@@ -621,13 +419,53 @@ lilToon 的预设本来就是每个材质一份、我们的架构是「全局默
 
 ---
 
-## 十、参考
+## 八、参考
 
 | 文件 | 内容 |
 |---|---|
-| [`LILTOON1.x.md`](LILTOON1.x.md) | 旧基线（1.3.7）的对照表、源码核对、阶段 1~3 的完成度、描边完整规格、预设按材质的架构方案 |
+| [`LILTOON1.x.md`](LILTOON1.x.md) | 旧基线（1.3.7）与当前基线的对照、描边（Outline）完整规格、预设按材质的架构方案 |
 | [`CONFIG.md`](CONFIG.md) | 全部配置键、实现细节、每轮的坑与教训 |
 | `viewer.js` | 93 处行号引用、已全部对齐 2.3.4 |
-| `scripts/check-glsl.mjs` / `check-scope.mjs` / `check-panel.mjs` / `check-docs.mjs` / `make-deploy.mjs` / `check-layout.mjs` | 六个构建期检查器、都能双向验证、（`check-docs` 管「配置键 ↔ 文档」· `make-deploy --check` 管「部署目录 ↔ 清单」· `check-layout` 是**真·无头浏览器**跑布局） |
 | `liltoon-2.3.4/` | 当前基线源码 |
 | `lilToon/` | 旧基线源码（保留作对照）|
+
+---
+
+## 九、2026-10-10 本轮：风格后端亮度语义对齐（滚动记录）
+
+「lilToon 风格」后端与对照后端（lilToon 源码移植）此前有两处肉眼可见的亮度偏差；
+本轮把风格端的**光照合成 / 输出处理 / 基础色来源**按对照端的实际语义对齐。
+
+### 9.1 改动要点
+
+| 项 | 之前的做法 | 现在的做法 |
+|---|---|---|
+| 直接光 | 逐灯求和的 Lambert 项，再乘一个经验补偿 | **取首盏方向光**，`clamp(主光 + 环境, 下限, 上限)`，**单次** `A × 光色 × R` 合成 |
+| 经验补偿 | 合成里带一个 `1.65` 系数 | 该路径**不再使用**它（默认值本身未改；未改模式的旧通路保留） |
+| 基础色 | 与对照端**不对称**（一侧多乘一遍材质基础色） | 由「有效配置 → 配置映射 → vendor 运行默认」推导，与主贴图、主色层一起合成 |
+| 输出 | 页面色调映射（`LinearToneMapping`，曝光 1.15） | 保留；对齐后受光区的大面积近白裁切消失 |
+| 首次加载 | 只走风格路径时不会装载桥接模块 | 首次进入风格后端时**顺带装载模块**（只加载，不切换渲染后端） |
+
+### 9.2 实测（黑底 α 合成，`L = .2126R + .7152G + .0722B`）
+
+| 状态 | 全图平均绝对差 | 亮度差 > 12 占比 |
+|---|---|---|
+| 首页默认模型，纯默认 | 0.029 | 0.076 % |
+| 首页默认模型，「皮肤 · 动画」全局预设 | 0.000074 | 0.00016 % |
+| Melano（基准姿态） | 0.050 | 0.122 % |
+| Melano，「皮肤 · 动画」全局预设 | 0.00067 | 0.0029 % |
+
+判据：关键区域（头发 / 脸 / 外套 / 袜）平均绝对差 ≤ 3，全图亮度差 > 12 的像素占比 ≤ 1 %。
+
+### 9.3 顺序（与上游一致）
+
+法线 → 接收（receive）→ 普通档 `x/y/z` 与边界过渡档 `w` → 强度 → 各层色 →
+主强度 → 取小 → 边界色 → 最终混合；`_UseShadow = 0` 时整段跳过。
+阴影法线仍保持**无条件赋值**（默认强度 1 也要写），逐层分档含抗锯齿。
+
+### 9.4 尚未验证（诚实记录）
+
+- `_ShadowNormalStrength` 中间强度：滑块可写，对应的着色器分支尚未生效。
+- 主色层第二/第三层启用分支未单独验证。
+- 脸部阴影只核了**亮度**口径，**形状 / 过渡**的独立核对未做。
+- 透明背景分支、其它模型、「指定材质」的预设目标未测。

@@ -20,6 +20,20 @@ import * as THREE from 'three';
  */
 import { LIL_MAP, LIL_BY_NAME, LIL_DERIVED, LIL_PRESET_GUID } from './assets/lilmap.inline.js';
 /**
+ * Unity `.anim`（AnimationClip）→ three AnimationClip。
+ *
+ * 为什么要它：**Unity 导出的 FBX 通常不自带动画** —— 动作与表情都在独立的 `.anim` 里，
+ * 而 three 的 FBXLoader 只读 FBX 自带的 take ⇒ 直接加载会「模型有、动画无」。
+ *
+ * ⚠️ 支持范围（详见 unity-anim.js 头部）：
+ *   ✅ `blendShape.*`（表情）· `m_IsActive`（换装显隐）· 通用变换曲线
+ *   ❌ **Humanoid 肌肉曲线**（`Chest Twist Left-Right` 这类）—— 它相对 Avatar 的 T-pose，
+ *      而 Avatar 映射不在 `.anim` 里 ⇒ 无法解算；遇到时会在控制台**明确指出**、不静默丢
+ */
+import { unityAnimToClip } from './unity-anim.js';
+import { parseUnityScene, unitySceneToViewer } from './unity-scene.js';
+import { parseSceneViewSetup, sceneViewToViewer } from './unity-scene.js';   // Scene 视图相机（编辑器状态 ✓）   // Unity 场景（相机/打光）✓
+/**
  * lilToon 官方预设（**自动生成** ✗ 见 scripts/gen-lilpresets.mjs ✓）
  *
  * ⚠️⚠️ 为什么不再手写：实测手写版有
@@ -226,7 +240,7 @@ const LIL_COMP = { x: 0, y: 1, z: 2, w: 3 };
  */
 function parseLilPresetYaml(text) {
   const lines = String(text).replace(/\r\n?/g, '\n').split('\n');
-  const SEC = { colors: 'colors', m_Colors: 'colors', vectors: 'vectors', m_Vectors: 'vectors', floats: 'floats', m_Floats: 'floats' };
+  const SEC = { colors: 'colors', m_Colors: 'colors', vectors: 'vectors', m_Vectors: 'vectors', floats: 'floats', m_Floats: 'floats', m_Ints: 'floats' };
   /**
    * ⚠️ bases / category 也要读 —— 它们是**预设能不能在 Unity 里显示**的关键 ✓
    *   lilSettingAndPresetGUI.cs:191  按 category 归类（7 个折叠分类 ✓）
@@ -278,6 +292,28 @@ function parseLilPresetYaml(text) {
     /* 材质里的贴图引用 ⇒ 我们只记名字（当前不需要 ✗ 值忽略 ✓）*/
     const mtex = t.match(/^-\s*(_[A-Za-z]\w*):\s*$/);
     if (mtex && inSaved) { curKey = null; continue; }
+    /**
+     * ★★ **材质（`.mat`）的写法**：`- _OutlineWidth: 0.3` / `- _Color: {r: .., g: ..}`
+     *
+     *   ⚠️⚠️ 这是一个**真实缺口**：上面那段只认**预设**写法
+     *      （`- name: _OutlineWidth` + 下一行 `value: 0.3`），
+     *      而 Unity 的 `.mat` 把属性写成 `- 键: 值` 一行 ✗
+     *      ⇒ 用户选 `.mat` 时**一条属性都解析不出来**（会报「没解析出任何 lilToon 属性」）✓
+     */
+    const minline = t.match(/^-\s*(_[A-Za-z]\w*):\s*(.+)$/);
+    if (minline && cur) {
+      const key = minline[1], v = minline[2].trim();
+      if (cur === 'colors') {
+        const m = v.match(/^\{r:\s*([^,}]+),\s*g:\s*([^,}]+),\s*b:\s*([^,}]+),\s*a:\s*([^}]+)\}$/);
+        if (m) out.colors[key] = [1, 2, 3, 4].map((n) => Math.fround(Number(m[n])));
+      } else if (cur === 'vectors') {
+        const m = v.match(/^\{x:\s*([^,}]+),\s*y:\s*([^,}]+),\s*z:\s*([^,}]+),\s*w:\s*([^}]+)\}$/);
+        if (m) out.vectors[key] = [1, 2, 3, 4].map((n) => Math.fround(Number(m[n])));
+      } else if (/^-?[\d.]+(?:[eE][-+]?\d+)?$/.test(v)) {
+        out.floats[key] = Math.fround(Number(v));
+      }
+      continue;
+    }
   }
   return out;
 }
@@ -739,6 +775,32 @@ function dataAttrs(el) {
     hideParts: null,             // 隐藏这些网格（正则片段，匹配网格名或材质名），如 "Calculator|Dron"
     hideOptional: true,          // GLB 里标了 extras.optional 的部件默认隐藏，只有动作用到时才显示
     hideByBoneScale: 0.5,        // 网格骨架里所有骨头缩放都小于此值 → 视为隐藏（模型常用缩放道具来表达"不显示"）；0 = 关闭
+    /**
+     * 外部 Unity `.anim` 列表（`animation.clips`）：FBX 通常不自带动画，动作用这些文件补。
+     *   每一项：{ url: string, name?: string, group?: string }
+     *   ⇒ 相对路径同样按配置文件所在目录解析（与 model.url 一致 ✓）
+     */
+    animClips: [],
+    /** 配置指定的默认动作名（外部 `.anim` 是异步载入的 ⇒ 载入完再应用一次 ✓）*/
+    defaultAnimName: null,
+    /** 外部 `.anim` 的坐标转换（Unity 左手 → three 右手）。默认开；FBX 轴向不同可设 false */
+    animAxisFix: true,
+    /**
+     * ★★ **Humanoid 肌肉换算表**（`animation.humanoid`）——
+     *   由 Unity 侧脚本量出来（tools/unity/ExportHumanoidMuscleAxes.cs）：
+     *   每条肌肉对应哪根骨骼、什么轴、值 1 等于多少度。
+     *   有它 ⇒ 「只有肌肉曲线」的 Humanoid 片段**不再被跳过**，而是被解算成骨骼旋转 ✓
+     */
+    humanoidUrl: null,
+    humanoidProfile: null,
+    /**
+     * 声明式相机（**用 Unity 的单位填**）：复现 Unity 场景的取景。
+     *   { position:[x,y,z], target:[x,y,z], fov, unityModelHeight }
+     *   `unityModelHeight` = 该模型在 Unity 里的实际高度；
+     *   本查看器把模型归一化到 `targetHeight`（默认 2）⇒ 相机值自动乘 K = targetHeight / unityModelHeight。
+     *   （等比缩放不改变 FOV 下的画面构成 ✓ 见 _m3/fit-compare.mjs 的推导）
+     */
+    camera: null,
     lightingScale: 1,            // 打光预设的整体亮度倍率（1 = 原样）
     /**
      * 光照夹取（lilToon 的 _LightMinLimit / _LightMaxLimit）。
@@ -761,6 +823,20 @@ function dataAttrs(el) {
      *     ⇒ 下限才是这个功能真正有用的那个（0.05 = lilToon 默认 · 很轻微 ✓）
      */
     lightClampOn: false,
+  /** 场景环境（方案 A ✓ 由 applyUnitySceneText 写入 ✓ 只给我们 lilToon 风格点亮 ✓）*/
+  unityAmbient: null,
+  lilAmbientBoost: 2.0,
+  /**
+   * ★ 风格版亮度对齐补偿（默认**关** ✓ —— 曾默认开，导致明暗被抬平、阴影发白 ✗ 已纠正）
+   *
+   *   实测：在我们 lilToon 路径与源码版之间，阴影结构一致、只差整体亮度 ≈1.24×
+   *   （根因：MeshToonMaterial 拿不到 envMap ✗）
+   *   ⇒ 用 lilToon 自己的 _LightMinLimit 语义补偿 ✓ 实测 min=0.95 时差 ≈1.6% ✓
+   *   ⚠️ 只作用于我们的 lilToon 补丁材质 ✓ 源码后端不读 ✓
+   *   ⚠️ 配置里写 "lilStyleLightComp": false 可关掉 ✓
+   */
+  lilStyleLightComp: false,
+  lilStyleLightMin: 0.95,
     lightMinLimit: 0.05,   // _LightMinLimit
     lightMaxLimit: 2.2,    // _LightMaxLimit（⚠️ 见下面说明：我们的主光强度是 2.0~2.1 ✓）
     noCastPattern: null,         // 这些材质名的网格不投影（如 "Hair"）。配合 faceNoShadow:false
@@ -810,7 +886,23 @@ function dataAttrs(el) {
   const scene = new THREE.Scene();
   scene.background = null; // 透明（由 setBackground 控制）
 
-  const pmrem = new THREE.PMREMGenerator(renderer);
+  /**
+ * ★ 临时诊断（排查 shader 编译错误用 ✓ 之后可删）：
+ *   把 three 的编译错误钩住，直接打印出**出错那几行 GLSL** —— 不再靠猜 ✗
+ */
+if (typeof window !== 'undefined' && window.__ba3dDebugUI) {
+  window.__ba3dLastBadFS = null;
+  renderer.debug.onShaderError = (gl, program, vs, fs) => {
+    try { window.__ba3dFS = (typeof fs === 'string') ? fs : (fs && gl.getShaderSource ? gl.getShaderSource(fs) : ''); } catch (e) { window.__ba3dFS = ''; }
+    let log = ''; try { log = gl.getShaderInfoLog(fs) || gl.getProgramInfoLog(program) || ''; } catch (e) { log = ''; }
+    const m = log.match(/ERROR: \d+:(\d+)/);
+    const ln = m ? Number(m[1]) : 0;
+    const lines = String(fs).split('\n');
+    window.__ba3dLastBadFS = { line: ln, text: lines.slice(Math.max(0, ln - 3), ln + 3).join('\n'), log: log.slice(0, 400) };
+    console.error('[ba3dShaderErr] line=' + ln + '\n' + window.__ba3dLastBadFS.text);
+  };
+}
+const pmrem = new THREE.PMREMGenerator(renderer);
   scene.environment = pmrem.fromScene(new RoomEnvironment(), 0.04).texture;
 
   const camera = new THREE.PerspectiveCamera(
@@ -824,6 +916,43 @@ function dataAttrs(el) {
   /* ---------- 灯光 ---------- */
   const hemi = new THREE.HemisphereLight(0xffffff, 0x30354a, 0.5);
   scene.add(hemi);
+
+  /**
+   * ★★ **场景环境光（补 Unity 的天空盒环境）** —— 方案 A ✓
+   *
+   *   背景（实测 ✓）：我们 lilToon 风格建在 `MeshToonMaterial` 上 ⇒ **不支持 envMap** ✗
+   *     ⇒ 场景环境（RoomEnvironment / Unity 天空盒间接光）**整个不参与** ✓
+   *     实测：把环境光完全关掉，角色亮度只差 **2.3/255** ✓ ⇒ 几乎是"关掉场景光照"的样子 ✓
+   *       （用户判断准确 ✓）
+   *
+   *   做法：用一盏 `AmbientLight` 把场景环境色**均匀**补回来 ✓
+   *   ⚠️ **只对我们 lilToon 风格启用** ✗（`intensity = 0` 时对其他模式零影响 ✓）
+   *       ⇒ cel / PBR / 源码后端的行为**一个字节都不变** ✓（用 SHA 验证 ✓）
+   *   ⚠️ three 的 Lambert 项带 `1/π` ⇒ 环境色要乘一个倍率才有可见效果 ✓
+   *      默认 `lilAmbientBoost = 2.0` ✓ 可用配置调 ✓
+   */
+  const ambLight = new THREE.AmbientLight(0xffffff, 0);
+  scene.add(ambLight);
+  /**
+   * 只刷新"场景环境灯"这一件事 ✓ —— 绝不碰主光/预设/其他模式 ✓
+   *   （事故：曾在 applyUnitySceneText 里顺手调 applyLightingPreset ⇒ 场景打光被预设盖掉 ✗）
+   */
+  function refreshUnityAmbientLight() {
+    const ua = cfg.unityAmbient || null;
+    const ourLil = (shaderMode === 'lilToon') && !lilSrcUse() && cfg.lilAmbientTuning !== false;
+    if (ourLil && ua && ua.color) {
+      ambLight.color.set(ua.color);
+      ambLight.intensity = Math.max(0, Number(ua.intensity) || 0)
+        * Math.max(0, Number(cfg.lilAmbientBoost !== undefined ? cfg.lilAmbientBoost : 2.0));
+    } else {
+      ambLight.intensity = 0;   // 其他模式必须为 0 ✗（cel/PBR/源码后端零影响 ✓）
+    }
+    if (window.__ba3dDebugUI) {
+      console.debug('[ambLight] ourLil=' + ourLil + ' mode=' + shaderMode
+        + ' unityAmbient=' + (ua ? (ua.color + '@' + ua.intensity) : 'null')
+        + ' -> intensity=' + ambLight.intensity.toFixed(3));
+    }
+  }
 
   const keyLight = new THREE.DirectionalLight(0xffffff, 2.0);
   keyLight.position.set(3, 6, 4);
@@ -1116,6 +1245,75 @@ function dataAttrs(el) {
   let clips = [];
   let currentAction = null;
   let currentClipName = null;
+  /**
+   * 动画片段的附加元信息（**按对象身份**存，不往 clip 上塞字段）：
+   *   { overlay: boolean, kind: 'body'|'face'|'parts', source: 'model'|'unity-anim' }
+   *
+   *   overlay = true 表示这条片段**只驱动表情/显隐**、不动身体姿势 ⇒
+   *   播放它时**不能**淡出当前身体动作（否则角色会瞬间回到绑定姿势 ✓）
+   */
+  const clipMeta = new Map();
+  /** 当前的表情 overlay action（换表情时只淡出它，不动身体动作）*/
+  let overlayFaceAction = null;
+  let overlayFaceName = null;
+  /**
+   * ★ 当前的**换装 overlay** action。
+   *
+   *   ⚠️⚠️ parts 片段（`m_IsActive` 显隐）**同时只能有一个在跑** ——
+   *     它们驱动的往往是同一批网格（鞋/袜/泳装…），两个一起跑就会互相覆盖，
+   *     谁最后写谁赢 ⇒ 结果不确定（实测：连播两个换装片段后鞋子该藏没藏 ✗）
+   *   ⇒ 新片段开始时**立即停掉**上一个（不是淡出：显隐是阶跃语义，淡出会留下中间态）
+   */
+  let overlayPartsAction = null;
+  let overlayPartsName = null;
+  /**
+   * ★★ **换装基线**：第一个换装片段开始**之前**，它驱动的那些网格的 visible 值。
+   *
+   *   ⚠️ 为什么必须有：停掉片段只是不再驱动 —— 但那些网格的 visible **停在片段设的最后一个值**上
+   *      （parka/shirt 没有 hideParts 锁定 ⇒ 没人把它们还原）
+   *      ⇒ 症状：点了两次「脱掉」以后外衣**不会回来**（实测 ✓）
+   *   ⇒ 开始换装时记快照，结束/切换时按快照还原 ✓
+   */
+  let partsBaseline = null;
+
+  /** 记下这些对象当前的 visible（只在还没有基线时记 —— 基线 = 「没有任何换装片段时」的状态 ✓）*/
+  function capturePartsBaseline(objs) {
+    if (partsBaseline) return;
+    partsBaseline = new Map();
+    for (const o of objs) partsBaseline.set(o.uuid, o.visible);
+  }
+
+  /** 按基线还原并清空（换装片段停掉 / 切换时调用）*/
+  function restorePartsBaseline() {
+    if (!partsBaseline) return;
+    for (const [uuid, vis] of partsBaseline) {
+      const o = uuidToObject.get(uuid);
+      if (o) o.visible = vis;
+    }
+    partsBaseline = null;
+    refreshAnimVisibleTargets();
+    if (typeof applyLockedVisibility === 'function') applyLockedVisibility();
+  }
+  /**
+   * ★★ **正在播放的片段所驱动的 `visible` 目标（对象 uuid）** ——
+   *
+   *   ⚠️⚠️ 自动显隐规则（`hideByBoneScale` / 可选部件 / `visibilityRules` / 手动锁定）
+   *      **必须让位给动画轨道**，否则：
+   *        每帧顺序是 `mixer.update()` → `applyBoneScaleHide()`
+   *        ⇒ 规则把 `visible` 强制回「按骨骼缩放算出来的值」
+   *        ⇒ Unity `.anim` 里那些 `m_IsActive`（换装显隐）**等于完全不生效** ✗
+   *      （实测：用片段把某网格写成 `m_IsActive = 0`，运行时 `visible` 仍是 true ✓）
+   */
+  const animVisibleUuids = new Set();
+  /** uuid → 对象（显隐轨道要按 uuid 找网格，每帧遍历整棵树太浪费 ⇒ 载入后建一次）*/
+  const uuidToObject = new Map();
+  /**
+   * ★ uuid → **中性姿态的局部四元数**（必须在播任何动作之前抓 ✓）
+   *   Humanoid 肌肉解算要用它当基准：局部旋转 = 中性 × ∏ 单轴旋转
+   */
+  const bindQuat = new Map();
+  /** 我们自己创建过的 action（判断「谁在播」用）—— `mixer.clipAction()` 都从这里走 */
+  const animActions = new Set();
   let wireframeOn = false;
   let skeletonHelper = null;
   let animPlaying = true;
@@ -1378,10 +1576,324 @@ function dataAttrs(el) {
   }
 
   /* ---------- 动画播放 ---------- */
+  /**
+   * ★ 单个 `.anim` 文本 → three 片段（**URL 载入与本地文件上传两条路共用**）。
+   *
+   * @returns {{clip: object|null, reason: string|null, detail: string, report: object}}
+   *   reason: 'humanoid' | 'unresolved' | 'empty' | 'pptr' | 'nocurve' | 'parse'
+   */
+  /**
+   * ★ 胯骨在**我们场景里**的世界高度（站立姿势）——
+   *   根运动定标用：`scale = 胯高 ÷ 片段里 RootT.y 的中位`
+   *   ⚠️ 不能写死系数：骨架的世界尺度取决于 FBX 自身（这个模型 ~×97），
+   *      换个模型就不同 ⇒ 用模型自己的胯高算才通用 ✓
+   *   （结果缓存；模型重载时会失效重建 ✓）
+   */
+  /** 根运动写到哪个节点：优先 FBX 里的 Armature（查看器不管它 ✓），没有才退回模型根 */
+  let rootMotionNodeCache = null;
+  function rootMotionNode() {
+    if (rootMotionNodeCache && rootMotionNodeCache.root === modelRoot) return rootMotionNodeCache.n;
+    let n = modelRoot;
+    if (modelRoot) n = modelRoot.getObjectByName('Armature') || modelRoot;
+    rootMotionNodeCache = { root: modelRoot, n };
+    return n;
+  }
+
+  let hipsHeightCache = null;
+  /**
+   * 根运动定标用的"胯高"—— ⚠️⚠️ 必须是**根运动目标自己的坐标空间**里的高度 ✗ 不是世界坐标 ✗
+   *
+   *   实测（【我晒干了沉默】）：
+   *     Armature 处在 FBX 的**原始骨骼空间**（胯的局部 Y = 66.13 ⇒ 1 米 ≈ 97 单位 ✓）
+   *     roots 世界高度只有 1.083（查看器把模型归一化过 ✗）
+   *   ⇒ 用世界高度定标 = 1.24（应 ≈ 76 ✗）⇒ 位移被缩到 1/60，肉眼看不见 ✗✓
+   *
+   *   所以取**胯骨在目标节点空间里的局部位移量**（= 胯到 Armature 的距离 ✓）
+   */
+  function hipsWorldHeight() {
+    if (hipsHeightCache && hipsHeightCache.root === modelRoot) return hipsHeightCache.h;
+    let hips = null;
+    if (modelRoot) {
+      const want = (cfg.humanoidProfile && cfg.humanoidProfile.hips) || null;
+      modelRoot.traverse((o) => {
+        if (hips || !o.isBone) return;
+        if (want ? o.name === want : /hips/i.test(o.name)) hips = o;
+      });
+      if (!hips) modelRoot.traverse((o) => { if (!hips && o.isBone && /hips/i.test(o.name)) hips = o; });
+    }
+    let h = 0;
+    if (hips) {
+      const local = Math.abs(hips.position.y);
+      if (local > 1e-3) h = local;                       // ★ 目标空间里的高度 ✓（这个模型 ≈66.13）
+      else { const v = new THREE.Vector3(); hips.getWorldPosition(v); h = Math.abs(v.y); }   // 兜底
+    }
+    hipsHeightCache = { root: modelRoot, h };
+    return h;
+  }
+
+  function convertUnityAnimText(text, label) {
+    let r;
+    try {
+      r = unityAnimToClip(text, {
+        root: modelRoot, axisFix: cfg.animAxisFix !== false,
+        humanoid: cfg.humanoidProfile, bindQuat,
+        /**
+         * ★★ 根运动（RootT / RootQ）= 角色的**位移与转身**
+         *   ⚠️ 之前整段忽略 ✗ ⇒ 大舞"原地不动、不转身"地在跳（实测【我晒干了沉默】转身最大 ≈70°）
+         *   目标 = 模型根；`rootMotionTargetHeight` = **我们场景里胯骨的世界 Y**，
+         *   转换器拿它 ÷ 片段里 RootT.y 的中位来自动定标（骨架尺度与 Unity 米制差 ~×100 ✓）
+         *   想关掉：配置里写 `"animation": { "rootMotion": false }` ✓
+         */
+        /**
+         * ⚠️⚠️ 目标**不能是 modelRoot** —— 查看器每帧自己管它的摆位（自动接地 / 取景居中 ✗）
+         *   ⇒ 根运动写上去会被覆盖（实测：写了但胯骨只动 0.06 ✗）
+         *   ⇒ 改写到 FBX 里的 `Armature` 节点（查看器不碰它 ✓）
+         */
+        rootMotionTarget: (cfg.animRootMotion === false || !modelRoot) ? null : rootMotionNode(),
+        rootMotionTargetHeight: (cfg.animRootMotion === false || !modelRoot) ? undefined : hipsWorldHeight(),
+      }, THREE);
+    } catch (e) {
+      return { clip: null, reason: 'parse', detail: '解析失败：' + (e && e.message), report: {} };
+    }
+    /**
+     * ⚠️ 含 **Humanoid 肌肉曲线 / 根运动** 的片段 ⇒ **整体跳过**，不做「半套用」。
+     *   理由：这类片段的身体姿势全靠肌肉曲线，我们只能拿到它的表情/显隐轨迹；
+     *   若照样播 ⇒ 身体会停在绑定姿势、只有表情在动 —— 观感是**错的**，比不播更糟。
+     */
+    const muscle = (r.report.muscle && r.report.muscle.length) || 0;
+    /** 有换算表 ⇒ 肌肉已被解算（report.humanoid）、根运动曲线只是被忽略 ⇒ 不该判负 ✓ */
+    const solvedHumanoid = !!(cfg.humanoidProfile && r.report.humanoid);
+    /**
+     * ★ 判定要不要跳过这段：
+     *   · **一条都没解出来** ⇒ 跳过（真的不支持）
+     *   · 解出来了一部分（例如骨架没有 UpperChest 骨 ⇒ 3 条 UpperChest 残项）
+     *     ⇒ **照样用**，残项只记日志 ✓（否则整段没了，比缺几根手指更糟）
+     */
+    if ((muscle && !solvedHumanoid) || (r.report.rootMotion && !solvedHumanoid)) {
+      return {
+        clip: null, reason: 'humanoid', report: r.report,
+        /**
+         * ⚠️ 这条消息要**给出路** —— 只说「不支持」用户没法往下走 ✓
+         *   正解：在 Unity 里把该片段**烘成变换曲线**（Unity 有 Avatar、解得对），
+         *   再用「动画文件」框导入 ⇒ 查看器能直接播（含 `m_LocalRotation.x/y/z/w` 分量写法 ✓）
+         */
+        detail: 'Humanoid 片段（肌肉曲线 ' + muscle + ' 条 · 根运动 ' + r.report.rootMotion +
+          ' 条）—— 肌肉值是相对 Avatar T-pose 的、Avatar 映射不在 .anim 里 ⇒ 浏览器端无法解算。' +
+          '出路：在 Unity 里把该片段烘成**变换曲线**（逐帧采样骨骼 local*）后再导入，那种片段可以正常播',
+      };
+    }
+    if (!r.clip) {
+      const total = r.report.curvesTotal;
+      if (total === 0) return { clip: null, reason: 'empty', detail: '空片段（没有曲线）', report: r.report };
+      if (r.report.reason === 'unresolved-targets') {
+        return {
+          clip: null, reason: 'unresolved', report: r.report,
+          detail: '有 ' + total + ' 条受支持的曲线，但模型里找不到对应对象/形态（' + r.report.unresolved +
+            ' 条未解析）—— 例如 FBX 里没有 blendShape 时，表情片段无处可挂',
+        };
+      }
+      if (r.report.reason === 'pptr-only') return { clip: null, reason: 'pptr', detail: '只有贴图/材质切换（m_PPtrCurves）', report: r.report };
+      return { clip: null, reason: 'nocurve', detail: '没有受支持的曲线（' + total + ' 条）', report: r.report };
+    }
+    if (!r.clip.tracks.length) return { clip: null, reason: 'nocurve', detail: '没有生成任何轨道', report: r.report };
+    return { clip: r.clip, reason: null, detail: '', report: r.report };
+  }
+
+  /** 给转换好的片段打上元信息（overlay / kind / source），返回 kind */
+  function tagUnityClip(clip, item) {
+    if (item && item.name) clip.name = item.name;
+    const hasBody = clip.tracks.some((t) => /\.(position|quaternion|scale)$/.test(t.name));
+    const hasVisible = clip.tracks.some((t) => /\.__ba3dVisible$/.test(t.name));
+    /**
+     * kind 的判定顺序：身体 > 显隐 > 表情。
+     *   ⚠️ 换装类片段（Gimmick）**同时**含 blendShape 与显隐轨迹
+     *     ⇒ 若先判表情会被误标成 'face'（当成表情层）✗
+     */
+    const kind = hasBody ? 'body' : (hasVisible ? 'parts' : 'face');
+    /**
+     * ⚠️ 显隐轨道写的是**自定义属性** `__ba3dVisible`（不写布尔的 .visible，见 unity-anim.js）
+     *   ⇒ 属性必须先存在于对象上，否则 three 绑定时会报
+     *      「Trying to update property for track: …__ba3dVisible but it wasn't found」并刷屏 ✗
+     *   ⇒ 建片段时顺手初始化一下 ✓（功能本身由每帧 refreshAnimVisibleTargets 驱动，不依赖绑定）
+     */
+    if (hasVisible) {
+      for (const tr of clip.tracks) {
+        if (!/\.__ba3dVisible$/.test(tr.name)) continue;
+        const obj = uuidToObject.get(tr.name.slice(0, tr.name.lastIndexOf('.')));
+        if (obj && obj.__ba3dVisible === undefined) obj.__ba3dVisible = 0;
+      }
+    }
+    clipMeta.set(clip, { overlay: !hasBody, kind, source: 'unity-anim', group: (item && item.group) || null });
+    return kind;
+  }
+
+  /**
+   * 载入外部 Unity `.anim`（URL 列表，来自配置里的 `animation.clips`）。
+   *
+   * 每条曲线按类型分流（见 unity-anim.js）：
+   *   · 只有 `morphTargetInfluences` ⇒ kind='face'、overlay=true（不改身体姿势）
+   *   · 只有 `visible`              ⇒ kind='parts'、overlay=true（换装显隐）
+   *   · 含 position/quaternion/scale ⇒ kind='body'、overlay=false（接管当前动作）
+   */
+  async function loadUnityAnims(list) {
+    const out = [];
+    for (const item of list) {
+      try {
+        const res = await fetch(item.url);
+        if (!res.ok) { console.warn('[unity-anim] 载入失败 HTTP ' + res.status + '：' + item.url); continue; }
+        const text = await res.text();
+        const label = item.name || item.url;
+        const c = convertUnityAnimText(text, label);
+        if (!c.clip) {
+          if (c.reason === 'empty') console.debug('[unity-anim] 「' + label + '」是空片段 ⇒ 跳过');
+          else console.warn('[unity-anim] 跳过「' + label + '」：' + c.detail);
+          continue;
+        }
+        const kind = tagUnityClip(c.clip, item);
+        out.push(c.clip);
+        console.debug('[unity-anim] 已载入「' + c.clip.name + '」：' + kind +
+          '（表情 ' + c.report.blendShape + ' · 显隐 ' + c.report.active + ' · 变换 ' + c.report.transform + '）');
+      } catch (e) {
+        console.warn('[unity-anim] 解析失败：' + item.url + ' —— ' + (e && e.message));
+      }
+    }
+    if (out.length) console.info('[unity-anim] 外部动画载入完成：' + out.length + ' 段');
+    return out;
+  }
+
+  /**
+   * ★★ **追加外部动画（本地文件）** —— 给「自定义模型」的多选上传用。
+   *
+   * @param {Array<{name:string, text:string}>} files  `.anim` 文本（可由 File.text() 得到）
+   * @returns {{added:string[], skipped:Array<{name:string, reason:string, detail:string}>}}
+   */
+  function addUnityAnimTexts(files) {
+    const added = [], skipped = [];
+    for (const f of files || []) {
+      const label = (f && f.name) || '（未命名）';
+      if (!f || typeof f.text !== 'string') { skipped.push({ name: label, reason: 'parse', detail: '读不到内容' }); continue; }
+      const c = convertUnityAnimText(f.text, label);
+      if (!c.clip) {
+        /* 空片段不值得报错（Unity 里「无表情」就是空 clip）*/
+        if (c.reason !== 'empty') skipped.push({ name: label, reason: c.reason, detail: c.detail });
+        continue;
+      }
+      /**
+       * 文件名去掉扩展名当动作名（用户看到的菜单文字）——
+       * `Melano_smile.anim` ⇒ `Melano_smile` ✓ 比 `.anim` 里那个 m_Name 更贴近文件名。
+       */
+      const nice = label.replace(/\.anim$/i, '');
+      const kind = tagUnityClip(c.clip, { name: nice });
+      clips.push(c.clip);
+      added.push({ name: nice, kind });
+      console.debug('[unity-anim] 已追加「' + nice + '」：' + kind +
+        '（表情 ' + c.report.blendShape + ' · 显隐 ' + c.report.active + ' · 变换 ' + c.report.transform + '）');
+    }
+    if (added.length) {
+      if (!mixer && modelRoot) mixer = new THREE.AnimationMixer(modelRoot);
+      /* 之前一个动作都没有（纯 .anim 模型）⇒ 顺手播一个身体动作，没有就播第一条表情 */
+      if (!currentAction && mixer) {
+        const body = pickDefaultClip();
+        playClip(body || clips.find((c) => (clipMeta.get(c) || {}).kind === 'face') || clips[0]);
+      }
+      emit('ba3d:animations', { count: clips.length });
+    }
+    console.info('[unity-anim] 本地动画：新增 ' + added.length + ' 段 · 跳过 ' + skipped.length + ' 段');
+    return { added, skipped };
+  }
+
+  /* ---------- lilToon 材质配置（Unity .mat / .asset，可多文件）---------- */
+
+  /** lilCfg 深合并（两层：组 → 字段）——**不能浅合并**，否则整组被替换掉 */
+  /**
+   * ⚠️ 这里**不要**再定义 `mergeLilCfg` —— 模块里已有一份（见 lilCfgFor 上方），
+   *   同名的后一个定义会**静默覆盖**前一个（函数声明提升）⇒ 两边行为不一致时极难查 ✓
+   */
+
+
+  /** 建 action 并登记（**所有** mixer.clipAction 都走这里 ⇒ 才能判断「谁在播」）*/
+  function actionFor(clip) {
+    const a = mixer.clipAction(clip);
+    animActions.add(a);
+    return a;
+  }
+
+  /**
+   * 重算「正在播放的片段所驱动的 visible 目标」。
+   *
+   *   ⚠️ 每帧都要在自动显隐规则**之前**刷一次（动作会被淡出/停掉 ⇒ 集合要跟着变）
+   *   ⚠️ 只在片段**正在跑**时算：暂停（timeScale=0）或停掉之后就该让规则接管 ✓
+   */
+  function refreshAnimVisibleTargets() {
+    animVisibleUuids.clear();
+    if (!modelRoot) return;
+    for (const a of animActions) {
+      if (!a || (a.isRunning && !a.isRunning())) continue;
+      const clip = a.getClip ? a.getClip() : null;
+      if (!clip || !clip.tracks) continue;
+      const dur = clip.duration > 0 ? clip.duration : 0;
+      for (const tr of clip.tracks) {
+        if (!/\.__ba3dVisible$/.test(tr.name)) continue;
+        const uuid = tr.name.slice(0, tr.name.lastIndexOf("."));
+        const obj = uuidToObject.get(uuid);
+        if (!obj) continue;
+        animVisibleUuids.add(uuid);
+        /**
+         * ★ 自己按**轨道关键帧 + 当前播放时间**算布尔值（阶跃）——
+         *   不读 three 写进属性的那个数（它被淡入权重污染过 ✓）
+         */
+        const times = tr.times, vals = tr.values;
+        if (!times || !times.length) continue;
+        let tt = a.time || 0;
+        if (dur > 0) tt = tt % dur;
+        let idx = 0;
+        for (let i = 0; i < times.length; i++) { if (times[i] <= tt) idx = i; else break; }
+        obj.visible = !!((vals[idx] !== undefined ? vals[idx] : vals[0]) > 0.5);
+      }
+    }
+  }
+
   function playClip(clip) {
     if (!mixer || !clip) return;
+    refreshAnimVisibleTargets();
+    const meta = clipMeta.get(clip);
+    /**
+     * ★ overlay 片段（表情 / 换装显隐）**不能淡出身体动作** ——
+     *   它们只驱动 morphTargetInfluences 或 visible，
+     *   若按身体动作处理，`currentAction.fadeOut()` 会让角色瞬间回到绑定姿势 ✗
+     */
+    if (meta && meta.overlay) {
+      const act = actionFor(clip);
+      if (meta.kind === 'face' && overlayFaceAction && overlayFaceAction !== act) {
+        overlayFaceAction.fadeOut(0.2);
+      }
+      /**
+       * ⚠️ parts（换装显隐）**互斥**：新片段开始时立刻停掉上一个（见 overlayPartsAction 注释）
+       */
+      if (meta.kind === 'parts' && overlayPartsAction && overlayPartsAction !== act) {
+        overlayPartsAction.stop();
+        overlayPartsAction = null;
+        restorePartsBaseline();          // ★ 切到另一件 ⇒ 先按基线还原上一件的效果 ✓
+      }
+      if (meta.kind === 'parts' && !partsBaseline) {
+        /* 记基线：这个片段将要驱动的那些网格，此刻是什么状态 ✓ */
+        const objs = [];
+        for (const tr of clip.tracks) {
+          if (!/\.__ba3dVisible$/.test(tr.name)) continue;
+          const o = uuidToObject.get(tr.name.slice(0, tr.name.lastIndexOf('.')));
+          if (o) objs.push(o);
+        }
+        capturePartsBaseline(objs);
+      }
+      act.reset().setLoop(THREE.LoopRepeat).fadeIn(0.2).play();
+      if (meta.kind === 'face') { overlayFaceAction = act; overlayFaceName = clip.name; }
+      if (meta.kind === 'parts') { overlayPartsAction = act; overlayPartsName = clip.name; }
+      mixer.timeScale = animPlaying ? 1 : 0;
+      emit('ba3d:action', { name: clip.name });
+      return;
+    }
     if (currentAction) currentAction.fadeOut(0.2);
-    currentAction = mixer.clipAction(clip);
+    currentAction = actionFor(clip);
     currentAction.reset().setLoop(THREE.LoopRepeat).fadeIn(0.2).play();
     currentClipName = clip.name;
     // 保持与「播放/暂停」开关一致
@@ -1755,6 +2267,31 @@ function dataAttrs(el) {
    * ⚠️ 只传 `position` 时**保持看向当前 target** ✓
    * ⚠️ 只传 `target` 时相机**跟着平移**（保持相对方位 ✗ 和 Unity 的「移动观察点」一致 ✓）
    */
+  /**
+   * 声明式相机（配置里的 `camera` 块）：**用 Unity 的单位填**，复现 Unity 场景取景。
+   *
+   * ⚠️ 为什么要乘 K：
+   *   本查看器在载入时把模型归一化到 `targetHeight`（默认 2 个单位），
+   *   而 Unity 里这个模型的真实高度是 `camera.unityModelHeight`
+   *   ⇒ 相机位置/对准点要整体乘 K = targetHeight / unityModelHeight。
+   *   **等比缩放不改变 FOV 下的画面构成** ⇒ 这样得到的就是 Unity 的取景
+   *   （推导见 _m3/fit-compare.mjs 注释）。
+   *
+   * 不填 `unityModelHeight` 时 K=1，即「相机值就按查看器当前空间填」。
+   */
+  function applyDeclarativeCamera() {
+    const cam = cfg.camera;
+    if (!cam) return null;
+    const T = Number(cfg.targetHeight) || 2;
+    const K = cam.unityModelHeight ? (T / cam.unityModelHeight) : 1;
+    const pos = cam.position.map((v) => v * K);
+    const tgt = cam.target.map((v) => v * K);
+    const st = writeCameraState({ position: pos, target: tgt, fov: cam.fov || undefined });
+    console.info('[camera] 已按配置设置声明式相机（K=' + K.toFixed(4) +
+      (cam.unityModelHeight ? '，Unity 模型高度 ' + cam.unityModelHeight : '') + '）');
+    return st;
+  }
+
   function writeCameraState(o) {
     if (!o) return readCameraState();
     if (Array.isArray(o.target) && o.target.length === 3) {
@@ -2047,7 +2584,7 @@ function dataAttrs(el) {
             || (clips || []).find((c) => String(c.name || '').toLowerCase() === String(got).toLowerCase());
           if (editClip) {
             mixer.stopAllAction();
-            const act = mixer.clipAction(editClip);
+            const act = actionFor(editClip);
             act.reset().setEffectiveWeight(1).setEffectiveTimeScale(1).play();
             currentAction = act;
             currentClipName = editClip.name;
@@ -2708,7 +3245,7 @@ function dataAttrs(el) {
       } else show = cre ? cre.test(clip) : true;
       if (r.invert) show = !show;
       modelRoot.traverse((o) => {
-        if (o.isMesh && re.test(o.name || '')) { o.visible = show; touched++; }
+        if (o.isMesh && re.test(o.name || '') && !animVisibleUuids.has(o.uuid)) { o.visible = show; touched++; }
       });
     }
     applyLockedVisibility();   // 被锁定部件的可见性优先
@@ -3551,9 +4088,17 @@ cutoff: -1,
    */
   function mergeLilCfg(base, over) {
     if (!over) return base;
-    const out = Object.assign({}, base);
+    /**
+     * ⚠️⚠️ **base 必须容错** —— 调用方常常是「该材质还没有覆盖」的情况
+     *    （`lilCfgByMaterial[mat]` 是 undefined）。
+     *    原来的 `const b = base[k]` 会直接抛
+     *    `Cannot read properties of undefined (reading 'rim')` ——
+     *    实测：用 `.mat` 导入（首次给某材质建覆盖）时必崩 ✓
+     */
+    const b0 = base || {};
+    const out = Object.assign({}, b0);
     for (const k of Object.keys(over)) {
-      const v = over[k], b = base[k];
+      const v = over[k], b = b0[k];
       const isObj = (x) => x && typeof x === 'object' && !Array.isArray(x);
       out[k] = (isObj(v) && isObj(b)) ? Object.assign({}, b, v) : v;
     }
@@ -3590,8 +4135,63 @@ cutoff: -1,
   /** 取某个材质最终生效的 lilCfg（没覆盖就是全局那份 ✗ 直接返回引用避免无谓分配）*/
   function lilCfgFor(mat) {
     const nm = mat && mat.name;
-    if (!nm || !lilCfgByMaterial[nm]) return normalizeLayerUse(lilCfg);
-    return normalizeLayerUse(mergeLilCfg(lilCfg, lilCfgByMaterial[nm]));
+    if (!nm) return normalizeLayerUse(lilCfg);
+    /**
+     * ★★ **查表前必须还原材质名** —— 这是用户两次报的 bug 的根因 ✓
+     *
+     * 症状：切到「lilToon 源码（three-liltoon）」后端后，
+     *      lilToon 面板改任何参数、换任何预设，**画面完全不变** ✗
+     *
+     * 原因：源码版给表面材质**改名**成 `<原名>__lilSrc`（见 toLilSrcMaterial ✓），
+     *      而按材质覆盖表 `lilCfgByMaterial` 的键是**原名**（面板写入时用的原名 ✓）
+     *      ⇒ 重建材质时按新名字查表**查不到** ⇒ 静默退回全局配置 ✗
+     *      ⇒ 面板的按材质改动就"改了没反应" ✓✓
+     *
+     * 实测证据（用户控制台）：
+     *   按材质覆盖表 = {"Melano_Body_MT_Toon": …}
+     *   查看器材质名 = ["Melano_Body_MT__lilSrc", …]      ← 名字对不上 ✗
+     *
+     * 顺带兼容 three 给重名材质加 " fileN" 后缀的情况（FBX 里常见 ✓）
+     */
+    const keys = [nm];
+    if (nm.endsWith('__lilSrc')) keys.push(nm.slice(0, -'__lilSrc'.length));
+    const m2 = nm.match(/^(.*?)\s+file\d+$/);
+    if (m2) keys.push(m2[1]);
+    if (mat.userData && mat.userData.__lilSrcOf) keys.push(mat.userData.__lilSrcOf);
+    /* _Toon / _Trans 这类 Unity 导入加的尾巴，也试一次去掉 */
+    for (const k of keys.slice()) {
+      const m3 = k.match(/^(.*?)_(Toon|Trans|Cutout)$/i);
+      if (m3) keys.push(m3[1]);
+    }
+    for (const k of keys) {
+      if (lilCfgByMaterial[k]) return normalizeLayerUse(mergeLilCfg(lilCfg, lilCfgByMaterial[k]));
+    }
+    /**
+     * ★★ **容错匹配（最后一道）** —— 实测：覆盖表的键来自 Unity 的 .mat 资产名
+     *    （如 `Melano_Body_MT_Toon`），而网格材质名是 FBX 里的名字
+     *    （如 `Melano_Body_MT` / 源码版再加 `__lilSrc`）
+     *    ⇒ 基名本身就不一样，精确匹配**必然落空** ⇒ 面板/导入的按材质改动全部静默失效 ✗✓
+     *    这里改成「互相包含、取最长键」⇒ 两边任一方带后缀都能对上 ✓
+     */
+    const pool = Object.keys(lilCfgByMaterial);
+    let hitKey = null;
+    for (const cand of keys) {
+      if (!cand || cand.length < 4) continue;
+      for (const k of pool) {
+        if (!k || k.length < 4) continue;
+        if (k === cand) { hitKey = k; break; }
+        if (k.indexOf(cand) >= 0 || cand.indexOf(k) >= 0) {
+          if (!hitKey || k.length > hitKey.length) hitKey = k;
+        }
+      }
+      if (hitKey) break;
+    }
+    if (hitKey) {
+      if (window.__ba3dDiag2) console.debug('[diag2] lilCfgFor name=' + nm + ' → 命中键 ' + hitKey);
+      return normalizeLayerUse(mergeLilCfg(lilCfg, lilCfgByMaterial[hitKey]));
+    }
+    if (window.__ba3dDiag2) console.debug('[diag2] lilCfgFor name=' + nm + ' → 没命中（键池 ' + pool.length + '）');
+    return normalizeLayerUse(lilCfg);
   }
 
   /** 取某个材质最终生效的 celCfg（cel 侧目前不做按材质 ✗ 保留接口）*/
@@ -3720,6 +4320,7 @@ cutoff: -1,
     // 支持按材质覆盖：不传就用全局配置
     const cfg = cfgIn || lilCfg;
     const cc = ccIn || celCfg;
+    if (window.__ba3dDebugUI) console.debug('[factorChain] 进入 celGradientGLSL：shaderMode=' + shaderMode + ' useShadow=' + (cfg.useShadow !== undefined ? cfg.useShadow : '(未定义)') + ' hasBandRamp=' + !!(cc && Array.isArray(cc.bandRamp) && cc.bandRamp.length >= 2));
     const steps = Math.max(2, Math.min(16, Math.round(cc.steps) || 4));
     const dark = Math.max(0, Math.min(1, Number(cc.dark)));
     const c = cc.shadowTint;
@@ -3734,6 +4335,19 @@ cutoff: -1,
      * 没有第 4 个分量时按 1 处理（我们的默认值就是 3 元素 ✓）
      */
     const alphaOf = (a) => ((Array.isArray(a) && a.length >= 4 && isFinite(Number(a[3]))) ? Math.max(0, Math.min(1, Number(a[3]))) : 1);
+    /**
+     * ★★ AA 强度字面量（工作单 17 §3-① / 04 命令 3 / 14 §3 ✓）
+     *
+     * 为什么取 `cfg.reflection.aaStrength`：`LIL_MAP` 里
+     *   `{"p":"reflection.aaStrength","l":"_AAStrength","t":"range"}` ✓（`assets/lilmap.inline.js` 数组条目）
+     * ⇒ 它就是 source 侧 `_Globals._AAStrength` 的**同一份配置** ✓
+     * ⚠️ **真实运行值**（不是从 LIL_MAP 猜 ✗）：`globalUniforms._AAStrength = 1` ✓
+     *   （`_out/2026-10-09-04/albedo-origin/albedo-origin.json` · 真实活跃 `prog#28` ✓）
+     * ⚠️ `_ShadowMaskType == 2` 时 source 把 AA 置 0（`prog#28:1320`）；本夹具实测 `_ShadowMaskType = 0`
+     *   ⇒ 不引入该分支 ✗（若将来要用，须先取该材质的实测值 ✓ 不猜 ✗）
+     */
+    const __aaRaw = (cfg.reflection && cfg.reflection.aaStrength !== undefined) ? cfg.reflection.aaStrength : 1.0;
+    const __aa = Math.max(0, Math.min(4, num(__aaRaw, 1.0))).toFixed(4);
 
     if (shaderMode === 'lilToon') {
       /**
@@ -3758,8 +4372,12 @@ cutoff: -1,
        * ★ 三层阴影各自的 t（_Shadow{,2nd,3rd}NormalStrength · lil_common_frag.hlsl:928-931）
        *
        * lilToon 是 N1/N2/N3 各算一次 shade · 我们这里是同一套公式 · 只是换法线
-       * ba3dShadowN1/2/3 默认就是归一化的 normal（全局初始化值 · 而且强度全 1 时根本不会覆盖）
-       *   ⇒ 不开这个特性时 t1n === t2n === t3n === t · 行为完全一致 ✓
+       *
+       * ⚠️⚠️ **这里曾经写着**"ba3dShadowN1/2/3 默认就是归一化的 normal" —— **那是错的** ✗
+       *   当时全局声明是 vec3(0,0,1) ✗，而赋值语句在三个强度全为 1（默认）时被跳过 ✗
+       *   ⇒ 默认配置下 t1n/t2n/t3n 全是 dot((0,0,1), L) ⇒ 与表面法线**无关** ⇒ 分档"平"掉 ✗✓
+       *   （外部评审 Codex 指出、我复核确认 ✓ 已改成**无条件赋值** ✓ 见 lights_fragment_begin 注入点）
+       *   ⇒ t1n === t2n === t3n === t 只在"赋值正确"时才成立 ✓
        */
       L.push('\tfloat t1n = clamp( dot( ba3dShadowN1, lightDirection ) * 0.5 + 0.5, 0.0, 1.0 );');
       L.push('\tfloat t2n = clamp( dot( ba3dShadowN2, lightDirection ) * 0.5 + 0.5, 0.0, 1.0 );');
@@ -3774,41 +4392,156 @@ cutoff: -1,
        *   ⇒ 用 `if (!__useShadow)` 把后面几条 mix 全跳过 ⇒ outCol 保持 1.0 ✓
        *     （JS 侧生成 ⇒ 关了就**不生成那段 GLSL** ⇒ 连编译都省了 ✓）
        */
-      const __useShadow = Math.round(num(cfg.useShadow, 1)) !== 0;
-      if (!__useShadow) {
-        L.push('\t// _UseShadow = 0 ⇒ 阴影整段跳过（outCol 保持 1.0 ✓）');
-      } else {
-      // 每层是否接收实时阴影（lil_common_frag.hlsl:946-950）
-      //   lns.x *= lerp( 1.0, calculatedShadow, _ShadowReceive )
-      L.push('\tfloat t1 = t1n * mix( 1.0, ba3dShadowMaskG, ' + Math.max(0, Math.min(1, num(cfg.shadowReceive, 1))).toFixed(4) + ' );');
-      // _ShadowBorderRange 只作用于第一层的过渡带下沿（lil_common_functions.hlsl:21）
-      L.push('\tfloat s1 = 1.0 - ba3dLilToonRange( t1, ' + num(cfg.shadowBorder, 0.5).toFixed(4) + ', ' + num(cfg.shadowBlur, 0.1).toFixed(4) + ', ' + Math.max(0, num(cfg.shadowBorderRange, 0)).toFixed(4) + ' );');
-      L.push('\toutCol = mix( outCol, ' + col(cfg.shadowColor || [0.82, 0.76, 0.85]) + ', s1 * ' + alphaOf(cfg.shadowColor || [0.82, 0.76, 0.85]).toFixed(4) + ' );');
-      L.push('\tfloat t2 = t2n * mix( 1.0, ba3dShadowMaskG, ' + Math.max(0, Math.min(1, num(cfg.shadow2ndReceive, 1))).toFixed(4) + ' );');
-      L.push('\tfloat s2 = 1.0 - ba3dLilToon( t2, ' + num(cfg.shadow2ndBorder, 0.15).toFixed(4) + ', ' + num(cfg.shadow2ndBlur, 0.1).toFixed(4) + ' );');
-      L.push('\toutCol = mix( outCol, ' + col(cfg.shadow2ndColor || [0.68, 0.66, 0.79]) + ', s2 * ' + alphaOf(cfg.shadow2ndColor || [0.68, 0.66, 0.79]).toFixed(4) + ' );');
-      if (cfg.shadow3rdColor) {
-        L.push('\tfloat t3 = t3n * mix( 1.0, ba3dShadowMaskG, ' + Math.max(0, Math.min(1, num(cfg.shadow3rdReceive, 1))).toFixed(4) + ' );');
-        L.push('\tfloat s3 = 1.0 - ba3dLilToon( t3, ' + num(cfg.shadow3rdBorder, 0.25).toFixed(4) + ', ' + num(cfg.shadow3rdBlur, 0.1).toFixed(4) + ' );');
-        L.push('\toutCol = mix( outCol, ' + col(cfg.shadow3rdColor) + ', s3 * ' + alphaOf(cfg.shadow3rdColor).toFixed(4) + ' );');
-      }
-      }   // ← 结束「useShadow 开」的分支 ✓
-
-      // ⚠️ _ShadowMainStrength 不在这里做 ✗
-      //    getGradientIrradiance 定义在 map_fragment 之前 ✗ 那时 diffuseColor（含贴图）还没算出来 ✓
-      //    改用片元末尾注入 ✗ 见 patchToonMaterial 里的 ba3dShadowMainStrength ✓
       /**
-       * 浓度（_ShadowStrength）
+       * ★★★ **lilToon 的"乘数等价式"**（lil_common_frag.hlsl L862~1040 ✓）
        *
-       * ⚠️ 允许 0~2 ✗ 超过 1 时靠 mix 的**外推**继续压暗：
-       *     mix( vec3( 1.0 ), outCol, 1.5 ) = 1 + 1.5 * ( outCol - 1 )  ← 比 outCol 更暗
+       *   原版：`col.rgb = lerp(indirectCol, directCol, lns.x)`
+       *         其中 indirectCol = albedo × _ShadowColor.rgb × lightColor ✓
+       *              directCol   = albedo × lightColor ✓
+       *   ⇒ 把 albedo × lightColor 提出来：
+       *         col = albedo × lightColor × **lerp(_ShadowColor.rgb, vec3(1.0), lns.x)**
+       *   ⇒ 正好就是 three 要的"gradient 乘数" ✓ 不需要动 three 的任何分支 ✓
+       *      （之前那次劫持 RE_Direct_Toon 的做法已回退 ✗ —— 数学上等价但风险大 ✓）
        *
-       * 为什么需要 >1：three 的 toon 里环境光是**在分档之外单独加**的
-       * （lights_fragment_begin: irradiance = ambient + lightProbe + gradient*directLight）
-       * 所以阴影有个「环境光地板」✗ 浓度=1（= 正好等于阴影色）时还不够暗 ✓
+       *   ⚠️ 与原版逐条对齐的要点：
+       *     · L972  `lns.x = lerp(1, lns.x, _ShadowStrength)`  ← 强度作用在**受光度**上 ✓
+       *            （旧代码是把强度乘在颜色上 ✗ 方向不同 ✓）
+       *     · L1013 `lns.y = _Shadow2ndColor.a - lns.y * _Shadow2ndColor.a` ← 2 层用 alpha 当强度 ✓
+       *     · L1019 3 层同理 ✓
+       *     · L1009 1 层色就是 `_ShadowColor.rgb`（`_ShadowColor.a` **不**参与强度 ✓）
+       *     · L1035 的 `min(indirectCol, directCol)` 在这个形式下等于 `min(col, 1.0)` ✓
        */
-      L.push('\treturn mix( vec3( 1.0 ), outCol, ' + Math.max(0, Math.min(2, num(cfg.shadowStrength, 1))).toFixed(4) + ' );');
+      const lg = (k, d) => num(cfg[k], d);   // ⚠️ 不能叫 t ✗ 与模块级 t 撞名（TDZ ✓ check-scope 会报）
+      /**
+       * ⚠️ `outCol` 已经在上面声明过（旧代码那句 ✓）—— 这里**不能**再声明一次 ✗
+       *    之前就是这里重复声明导致 `ERROR: 'outCol' : redefinition`（嘴部材质先编译到 ✓）
+       */
+      /**
+       * ★ `_UseShadow = 0` ⇒ 整个阴影块跳过（lil_common_frag.hlsl L1042-1045：col = albedo × lightColor ✓）
+       *   与 `_ShadowReceive = 0` 不同 ⇒ 后者只是不接收**实时阴影贴图**、分档仍在 ✓
+       */
+      const __useShadow = Math.round(num(cfg.useShadow, 1)) !== 0;
+      /**
+       * ★ 环境光在阴影里额外压缩的倍率（配置项 `lilAmbShadow` ✓ 默认 1.0 = 与直接光同比例 ✓）
+       *   < 1 会压得更狠（阴影更深 ✓）；> 1 更轻 ✓
+       *   ⚠️ 声明必须在这里 —— 否则 GLSL 生成时会 ReferenceError（实测踩过一次 ✓）
+       */
+      if (!__useShadow) {
+        L.push('\t// _UseShadow = 0 ⇒ 分档整段跳过（outCol 保持 1.0 ✓）');
+      } else {
+      L.push('\tfloat t1 = t1n * mix( 1.0, ba3dShadowMaskG, ' + Math.max(0, Math.min(1, lg('shadowReceive', 1))).toFixed(4) + ' );');
+      /**
+       * ★ 工作单 04 命令 3 + 08/09 正解：**主分档与 border 因子必须分开** ✓
+       *
+       * 上游（`lil_common_frag.hlsl` 约 923-930）：
+       *   `lns.x/y/z` 用**普通** tooning（border/blur）✓
+       *   `lns.w` 另用**range 展开**的重载（多一个 `_ShadowBorderRange`）✓ —— 只是**另算一份**，
+       *     它的输入是**已经乘过 receive 的** t1（约 924 `lns.w = lns.x` 之后的展开式）✓
+       *
+       * ⚠️ 改之前错在哪（实测确认 ✗）：
+       *   `lnsx = ba3dLilToonRange( t1, border, blur, borderRange )` ✗
+       *   ⇒ 把 `_ShadowBorderRange` 混进了**主分档** ✗（上游的 range 只影响 border color 因子 ✓）
+       *   ⚠️ 但要说清：canonical `shadowBorderRange = 0` 时 `ba3dLilToonRange` 退化成 `ba3dLilToon`
+       *     ⇒ **默认参数下两者数值相同** ⇒ 这项修复在默认值下**不改变画面** ✓（有实测为证 ✓）
+       *     ⇒ 验证必须用**非零 range 的单变量诊断**（命令 3 的完成判据要求 ✓）
+       */
+      L.push('\tfloat lnsx = ba3dLilToonAA( t1, ' + lg('shadowBorder', 0.5).toFixed(4) + ', ' + lg('shadowBlur', 0.1).toFixed(4) + ', ' + __aa + ' );');
+      /**
+       * ★ `lns.w`（border color 专属因子）—— 上游约 924 起那个 **range 展开**的重载结果 ✓
+       *   ⚠️ 它是**全局** `ba3dLnsW`（声明见 <common> 注入处 ✓），供片元后面做 `:1037` 的 border 混合 ✓
+       *   ⚠️ 08 号勘误：它的输入是**已经乘过 receive 的 t1** ✓ 不是"receive 前的受光度"✗
+       */
+      L.push('\tba3dLnsW = ba3dLilToonRangeAA( t1, ' + lg('shadowBorder', 0.5).toFixed(4) + ', ' + lg('shadowBlur', 0.1).toFixed(4) + ', ' + Math.max(0, lg('shadowBorderRange', 0)).toFixed(4) + ', ' + __aa + ' );');
+      L.push('\tfloat t2 = t2n * mix( 1.0, ba3dShadowMaskG, ' + Math.max(0, Math.min(1, lg('shadow2ndReceive', 1))).toFixed(4) + ' );');
+      L.push('\tfloat lnsy = ba3dLilToonAA( t2, ' + lg('shadow2ndBorder', 0.15).toFixed(4) + ', ' + lg('shadow2ndBlur', 0.1).toFixed(4) + ', ' + __aa + ' );');
+      if (cfg.shadow3rdColor) {
+        L.push('\tfloat t3 = t3n * mix( 1.0, ba3dShadowMaskG, ' + Math.max(0, Math.min(1, lg('shadow3rdReceive', 1))).toFixed(4) + ' );');
+        L.push('\tfloat lnsz = ba3dLilToonAA( t3, ' + lg('shadow3rdBorder', 0.25).toFixed(4) + ', ' + lg('shadow3rdBlur', 0.1).toFixed(4) + ', ' + __aa + ' );');
+      }
+      // L972：强度作用在受光度上 ✓
+      L.push('\tlnsx = mix( 1.0, lnsx, ' + Math.max(0, Math.min(2, lg('shadowStrength', 1))).toFixed(4) + ' );');
+      // L1009：1 层色
+      L.push('\tvec3 col = ' + col(cfg.shadowColor || [0.82, 0.76, 0.85]) + ';');
+      // ★ 记下第一层阴影色的原值（供因子归一化 ✓ 工作单 12 §3）
+      L.push('\tba3dShadowCol1 = ' + col(cfg.shadowColor || [0.82, 0.76, 0.85]) + ';');
+      // L1012-1014：2 层（alpha 当强度 ✓）
+      const a2 = alphaOf(cfg.shadow2ndColor || [0.68, 0.66, 0.79]);
+      L.push('\tlnsy = ' + a2.toFixed(4) + ' - lnsy * ' + a2.toFixed(4) + ';');
+      L.push('\tcol = mix( col, ' + col(cfg.shadow2ndColor || [0.68, 0.66, 0.79]) + ', lnsy );');
+      if (cfg.shadow3rdColor) {
+        const a3 = alphaOf(cfg.shadow3rdColor);
+        L.push('\tlnsz = ' + a3.toFixed(4) + ' - lnsz * ' + a3.toFixed(4) + ';');
+        L.push('\tcol = mix( col, ' + col(cfg.shadow3rdColor) + ', lnsz );');
+      }
+      /**
+       * ★★★ **乘数因式分解**（工作单 13 §3 的**精确顺序** ✓ 逐灯局部 ✓）
+       *
+       * 上游 `lil_common_frag.hlsl` 的顺序（每一步都不可互换 ✗）：
+       *   `:1009-1020` 逐层算 `col`（第 1 层 = `_ShadowColor.rgb`，2/3 层按 alpha 权重 mix ✓）
+       *   `:1024`      `col = mix( col, col * A, _ShadowMainStrength )`  ← 只处理 shadow-side ✓
+       *   `:1035`      `col = min( col, vec3(1.0) )`                    ← 已提取非负 A*L ✓
+       *   `:1037`      `col = mix( col, vec3(1.0), lns.w * _ShadowBorderColor.rgb )` ← **逐 RGB 权重** ✓
+       *   `:1040`      `R = mix( col, vec3(1.0), lns.x )`               ← **最后才用主分档** ✓
+       *
+       * ⚠️⚠️ 我上一版错在哪（工作单 13 §2 用**数值反例**证伪 ✓ 我接受 ✓）：
+       *   我写成 `S = outCol/ba3dSC1` → `min` → `:1037` → `min` ✗
+       *   · `col` **本身就是提取 `A*L` 之后的 shadow 因子 `S`** ✓ ⇒ 那个除法是**多余且有害**的 ✗
+       *   · 而且我把 `:1040` 的 mix **提前**做了（还把结果当 shadow-side 去混 border）✗ ⇒ 顺序错 ✗
+       *   · 最后又缺了真正的 `:1040` ✗
+       *   **反例（工作单 13 §2）**：仅第一层、层2/3 alpha=0、mss=0、`lnsx=0`、`w=0`、
+       *     `ShadowColor1=[0.7,0.75,0.85]` ⇒ 上游要求 `R=[0.7,0.75,0.85]` ✓
+       *     我上一版给出 **`[1,1,1]`** ✗ —— 等于**把阴影整块抹掉** ✗✓
+       *   ⇒ 这也解释了为什么那一版的"过亮 +6.6"**不能**用来支持"曝光假设" ✗（父侧已撤回 ✓）
+       *
+       * ⚠️ `lns.w` **只在本次调用内消费** ✓（用"最后一盏灯"的全局值去改总输出是错的 ✗ 工作单 12 §2 ✓）
+       * ⚠️ `_UseShadow = 0` ⇒ 整段跳过、因子保持 1 ✓
+       */
+      const __mssA = Math.max(0, Math.min(1, lg('shadowMainStrength', 0)));
+      const __bc = Array.isArray(cfg.shadowBorderColor) ? cfg.shadowBorderColor : [1, 0.1, 0];
+      const __bcStr = 'vec3( ' + Number(__bc[0] || 0).toFixed(4) + ', ' + Number(__bc[1] || 0).toFixed(4) + ', ' + Number(__bc[2] || 0).toFixed(4) + ' )';
+      if (__mssA > 0) {
+        // :1024 —— 只乘 shadow-side 的颜色因子 ✓（mss=0 时整行不生成 ✓）
+        L.push('\tcol = mix( col, col * ba3dAlbedoA, ' + __mssA.toFixed(4) + ' );');
+      }
+      L.push('\tcol = min( col, vec3( 1.0 ) );');                                   // :1035
+      L.push('\tcol = mix( col, vec3( 1.0 ), ba3dLnsW * ' + __bcStr + ' );');       // :1037（逐 RGB 权重 ✓）
+      L.push('\toutCol = mix( col, vec3( 1.0 ), lnsx );');                          // :1040（最后 ✓）
+      /**
+       * ★ 生成期标记日志（**证据**：证明因子链**真的被生成了** ✓ 而不是"改了代码但没进渲染"✗）
+       *   实测教训：本文件里 `celGradientGLSL()` 有**多条 return 路径**，
+       *   改错了分支会出现"代码改了、数字一格没动"✗ ⇒ 用这条日志定位 ✓
+       */
+      if (window.__ba3dDebugUI) console.debug('[factorChain] 因子链已生成 ✓ mss=' + __mssA + ' border=' + __bcStr + ' useShadow=' + (cfg.useShadow !== undefined ? cfg.useShadow : 1));
+      /** ⚠️ 这里**不再**加 `clamp(lnsx)` —— 上游允许 `_ShadowStrength > 1` 的外推 ✓
+       *  用 clamp 去掩盖那个外推会改变已对齐的行为 ✗（工作单 13 §3 明确 ✓）*/
+      /**
+       * ⚠️ `ba3dShadowG` / `ba3dLnsW` 仍在此赋值（供诊断与其他注入读取 ✓）
+       *   但**命令 4 不再**依赖它们去改 `reflectedLight` / `outgoingLight` ✗
+       *   （工作单 12 §2：那条路会把环境项与"最后一盏灯"的因子混为一谈 ✗ 已废弃 ✓）
+       */
+      L.push('\tba3dShadowG = clamp( lnsx, 0.0, 1.0 );');
+      }   // ← 结束「useShadow 开」分支 ✓
+      /**
+       * ⚠️⚠️ **收尾两行不能少** —— 少了 `return` 和 `}` 会让函数不闭合，
+       *   后面的 GLSL 全被吞进函数体 ⇒ `ERROR: 0:472: '{' : syntax error` ✗
+       *   （实测踩过一次 ✓ 打出来才发现 generated GLSL 缺收尾 ✓）
+       */
+      /**
+       * ★ 把分档结果暴露成全局标量（诊断用 ✓）
+       *   ⚠️ 这里**不再**有"缩放环境光"的逻辑 ✗ —— 那套（`ba3dLilIndG` / 环境随分档压暗）
+       *     已在 `patchToonMaterial` 里被**明确撤销**（原因：多盏光取 min ⇒ 一盏 rim/fill
+       *     不合适就会把整只角色的环境光压暗 ✗ 见那里的详细说明 ✓）
+       *   ⇒ 保留本段只为说明：**分档结果不在这里动环境光** ✓（避免下一个人再照旧注释去改 ✗）
+       */
+      L.push('\treturn outCol;');
       L.push('}');
+      /**
+       * ⚠️ `_ShadowMainStrength` **不在这里**做 ✗
+       *   旧的"片元末尾注入（`ba3dShadowMainStrength`）"写法**已删除** ✓（工作单 13 §3 要求清理 ✓）
+       *   原因（工作单 12 §1/§2 ✓）：那时 three 已完成 tone mapping 与色彩空间编码 ✗，
+       *   且权重用的是**实时遮挡遮罩** ✗、还把整份 `gl_FragColor` 乘了 ✗
+       *   ⇒ 现已在**本函数内**按上游顺序完成（`:1024` → `:1035` → `:1037` → `:1040` ✓）
+       */
       return L.join('\n');
     }
 
@@ -5157,6 +5890,7 @@ cutoff: -1,
     if (!(th > 0)) return;
     for (let k = 0; k < boneScaleTargets.length; k++) {
       const o = boneScaleTargets[k];
+      if (animVisibleUuids.has(o.uuid)) continue;   // 正被动画驱动 ⇒ 规则让位 ✓
       const bones = o.skeleton.bones;
       let allSmall = true;
       for (let i = 0; i < bones.length; i++) {
@@ -5180,8 +5914,14 @@ cutoff: -1,
    *
    * 匹配网格名或材质名（不区分大小写）。
    */
+  /** 由 hideParts 造成的锁定（配置变化时要能撤销 —— 否则改了配置也恢复不了 ✓）*/
+  const hidePartsLocked = new Set();
+
   function applyHideParts() {
     if (!modelRoot) return 0;
+    /* 先撤销上一轮 hideParts 的锁定（配置可能已经改了）*/
+    for (const p of hidePartsLocked) meshLocked.delete(p);
+    hidePartsLocked.clear();
     if (!cfg.hideParts) return 0;
     let re;
     try { re = new RegExp(cfg.hideParts, 'i'); } catch { console.warn('[hideParts] 非法正则：', cfg.hideParts); return 0; }
@@ -5191,10 +5931,23 @@ cutoff: -1,
       const mats = Array.isArray(o.material) ? o.material : [o.material];
       const hit = re.test(o.name || '') || mats.some((m) => m && re.test(m.name || ''));
       if (!hit) return;
-      o.visible = false;
+      setVisibleDeep(o, false);
+      /**
+       * ★★ **隐藏必须一并「锁定」** ——
+       *   hideParts 只在载入 / 改配置时跑一次，而 `applyBoneScaleHide()` **每帧**都会把
+       *   候选网格的 visible 强制成「按骨骼缩放算出来的值」
+       *   ⇒ 不锁定的话，这里设的 false 下一帧就被冲掉（实测：默认该藏的部件照样显示）✗
+       *
+       *   ⚠️ 优先级：**动画轨道 > 锁定 > 自动规则** ——
+       *      `applyLockedVisibility()` 会跳过正被动画驱动的网格 ✓
+       *      ⇒「默认藏起来、换装片段能把它显示出来」这条链路才通 ✓
+       */
+      const key = meshPathOf(o);
+      meshLocked.set(key, false);
+      hidePartsLocked.add(key);
       n++;
     });
-    if (n) console.info('[hideParts] 已隐藏', n, '个网格（', cfg.hideParts, '）');
+    if (n) console.info('[hideParts] 已隐藏并锁定', n, '个网格（', cfg.hideParts, '）');
     return n;
   }
 
@@ -5249,7 +6002,7 @@ cutoff: -1,
     let shown = 0;
     for (const part of optionalParts) {
       const on = part.clips.has(currentClipName);
-      for (const m of part.meshes) m.visible = on;
+      for (const m of part.meshes) { if (animVisibleUuids.has(m.uuid)) continue; m.visible = on; }
       if (on) shown++;
     }
     applyLockedVisibility();   // 被锁定部件优先
@@ -5356,6 +6109,35 @@ cutoff: -1,
       // ① 面部不接收阴影
       if (re && nameHit(re)) o.receiveShadow = !cfg.faceNoShadow;
 
+      /**
+       * ★★ **我们自己的 lilToon 材质要听它自己的 `useShadow` / `shadowReceive`** ——
+       *
+       *   用户问的：「材质里 lilToon 的阴影层明明是关的，为什么角色身上还有投影？」
+       *   ⇒ 因为那层投影来自 **three 的阴影贴图**（`cfg.shadows` + 网格 `receiveShadow` ✓），
+       *      是**查看器级**机制，与材质的 lilToon 参数无关 ✗
+       *   ⇒ lilToon 模式下改为**按材质参数**决定是否接收投影 ✓
+       *      （源码后端本来就听自己材质里的设置 ✓ 所以它更接近 Unity 的表现 ✓）
+       *
+       *   ⚠️ 放在面部规则**之后** ⇒ 材质自己的设置优先 ✓
+       *   ⚠️ 只对我们自己的 lilToon 材质生效（源码后端由它自己的库处理 ✓）
+       */
+      if (shaderMode === 'lilToon' && !lilSrcUse()) {
+        const cfgs = [];
+        for (const m of mats) {
+          if (!m) continue;
+          try { cfgs.push(lilCfgFor(m)); } catch (e) { /* 忽略 */ }
+          if (m.userData && m.userData.__src) { try { cfgs.push(lilCfgFor(m.userData.__src)); } catch (e) { /* 忽略 */ } }
+        }
+        if (cfgs.length) {
+          const want = cfgs.some((c) => {
+            const recv = (c.shadowReceive === undefined || c.shadowReceive === null) ? 1 : Number(c.shadowReceive);
+            const use = (c.useShadow === undefined || c.useShadow === null) ? 1 : Number(c.useShadow);
+            return recv > 0 && use > 0;
+          });
+          o.receiveShadow = want && cfg.shadows;
+        }
+      }
+
       // ② 指定材质不投影 —— 用它换掉"脸完全不收阴影"：
       //    脸恢复接收阴影（自阴影回来），但头发不进阴影图，刘海就不会在脸上投一片
       if (castRe && nameHit(castRe)) { o.castShadow = false; nCast++; }
@@ -5419,6 +6201,16 @@ cutoff: -1,
     return mat;
   }
   function patchToonMaterial(mat, isFace) {
+      /* ===== 生产候选（最小）：只对 shaderMode==='lilToon' 的自建风格主表面生效 =====
+       * guard 逐字同 05 CTL_SET：isMeshToonMaterial && userData.__toon === true
+       *   ⇒ mouth_atlas / outline / ground 保持原逻辑 ✓
+       * 语义：**输出端不执行 tone mapping**（保留 sRGB 与 alpha ✓）
+       *   理由：本候选把 base 换成 source 语义的**线性**合成 ⇒ 再经页面 tone mapping 会偏离源码后端的输出（当前实测 LinearToneMapping）
+       *   ⛔ 不改 cfg.lilToonLightComp 取值 ✗ ⛔ 不改灯/曝光/渲染器 ✗ */
+      if (shaderMode === 'lilToon' && mat.isMeshToonMaterial && mat.userData && mat.userData.__toon === true) {
+        mat.toneMapped = false;          // ★ 关键：函数入口（onBeforeCompile 之前 ⇒ 决定 parameters.toneMapping ✓）
+        mat.userData.__lilProdMin = { toneMapped: false, at: 'patchToonMaterial-entry' };
+      }
     /**
      * ⚠️ 局部 helper ✗ 这个函数**不能**用 lilShaderGLSL / lilMatCapGLSL 里那些同名局部函数。
      *    它们各自在自己的作用域里定义了 num / v3 / col … ✗ 外面根本看不到 ✓
@@ -5544,6 +6336,17 @@ cutoff: -1,
     mat.customProgramCacheKey = () => 'ba3d-cel:' + celProgramVersion + ':' + shaderMode + ':' + (mat.name || '')
       + ':v' + lilMaterialVersion;
     mat.onBeforeCompile = (shader) => {
+
+      /* ===== 生产候选（最小）：剥离输出端 tone mapping include（仅本体主表面 ✓） =====
+       * ⚠️ three 在调 onBeforeCompile **之前**就用 material.toneMapped 决定过 parameters.toneMapping ✗
+       *   ⇒ 入口的 mat.toneMapped=false 只保证"宏不再定义" ✓ 这里再保险地把 include 去掉 ✓ */
+      {
+        const __tmInc = '#include <tonemapping_fragment>';
+        if (mat.userData && mat.userData.__lilProdMin && shader.fragmentShader.indexOf(__tmInc) >= 0) {
+          shader.fragmentShader = shader.fragmentShader.split(__tmInc).join('/* 生产候选：输出端不做 tone mapping ✓ */');
+          mat.userData.__lilProdMin.tmIncludeStripped = true;
+        }
+      }
       // shader='none' → 不注入任何东西，就是 three 原生的 MeshToonMaterial
       if (shaderMode === 'none') return;
       if (window.__ba3dDebugUI && mat.userData.__ba3dDisLog !== shaderMode + ':' + mat.alphaTest) {
@@ -5557,8 +6360,32 @@ cutoff: -1,
             + ' 会注入=' + (shaderMode === 'lilToon' && Math.round(Number(__dd.mode) || 0) > 0));
         }
       }
-      shader.fragmentShader = shader.fragmentShader.replace(
-        '#include <gradientmap_pars_fragment>', celGradientGLSL(__cfgM, celCfgFor(mat)));
+      /**
+       * ★ 锚点存在性检查（**证据**，不是推断 ✗）
+       *   `replace(anchor, expr)` 的第二个参数是**立即求值**的 ⇒
+       *   若锚点不存在，`replace` **不会调用** `celGradientGLSL` ✗ 也**不会报错** ✗
+       *   ⇒ 表现就是"改了代码、画面一格没动"✗ —— 必须显式记录锚点在不在 ✓
+       */
+      const __GM_ANCHOR = '#include <gradientmap_pars_fragment>';
+      const __gmFound = shader.fragmentShader.indexOf(__GM_ANCHOR) >= 0;
+      if (window.__ba3dDebugUI) console.debug('[factorChain] onBeforeCompile mat=' + (mat.name || '?') + ' shaderMode=' + shaderMode + ' 锚点存在=' + __gmFound + ' 片元长度=' + shader.fragmentShader.length);
+      if (__gmFound) {
+        shader.fragmentShader = shader.fragmentShader.replace(__GM_ANCHOR, celGradientGLSL(__cfgM, celCfgFor(mat)));
+      } else {
+        /**
+         * ⚠️ 回退：锚点不在（某些派生片元可能没有它）⇒ 挂到 `<common>` 之后 ✓
+         *   `getGradientIrradiance()` 只要**定义在片元里**、`main()` 之前被调用即可 ✓
+         *   `<common>` 一定存在（three 所有片元都有 ✓）
+         */
+        const __CM_ANCHOR = '#include <common>';
+        if (shader.fragmentShader.indexOf(__CM_ANCHOR) >= 0) {
+          shader.fragmentShader = shader.fragmentShader.replace(__CM_ANCHOR,
+            __CM_ANCHOR + '\n' + celGradientGLSL(__cfgM, celCfgFor(mat)) + '\n');
+          if (window.__ba3dDebugUI) console.debug('[factorChain] 已用 <common> 回退注入 ✓ mat=' + (mat.name || '?'));
+        } else if (window.__ba3dDebugUI) {
+          console.debug('[factorChain] ✗✗ 两个锚点都不在 ⇒ 无法注入分档（会退回 three 原生 toon ✓）mat=' + (mat.name || '?'));
+        }
+      }
 
       /**
        * 遮罩取值函数（lilToon 的 triMask ✗）。
@@ -5672,17 +6499,98 @@ cutoff: -1,
           // ⚠️ 必须在这里（<common> 之后）声明 ✗ 因为 getGradientIrradiance 定义在
           //    gradientmap_pars_fragment ✗ 比 diffuseColor（map_fragment 前）更早 ✓
           'float ba3dShadowMaskG = 1.0;\n' +
+          /**
+           * ★ **lilToon 分档的亮度**（= getGradientIrradiance 算出的 outCol 的亮度 ✓）
+           *   用途：让 `reflectedLight.indirectDiffuse`（环境光/半球光 ✓）
+           *        也跟着分档一起压暗 ✓ —— lilToon 原版里环境光是含在阴影色里的 ✓
+           *   为什么需要：不压的话阴影里还留着满满的环境光 ⇒ 发白 ✗
+           *        （用户实测"浓度要 1.8 才一致"就是这个原因 ✓）
+           */
           // lil_common_functions.hlsl:21 的 5 参重载（多一个 borderRange）
+          /**
+           * ★★ **分母必须防 0** —— 用户实测：材质里 `_ShadowBlur = 0`（lilToon 里很常见，
+           *   表示"硬边"✓）⇒ `bMax - bMin = 0` ⇒ GLSL 下 `x / 0` 是**未定义**（NaN/Inf ✗）
+           *   ⇒ `saturate(NaN)` 结果不可预期 ⇒ **明暗分界直接画不出来**（脸看起来是平的 ✗）
+           *   现场证据：浏览器控制台出现
+           *     `THREE.WebGLProgram: Program Info Log: warning X4008: floating point division by zero`
+           *
+           *   lilToon 原式是 HLSL 的 `(value-bMin)/saturate(bMax-bMin)` —— 在 HLSL 里
+           *   除以 0 得到 ±Inf ⇒ saturate 后正好是**硬边** ✓；但 GLSL 不保证这个行为 ✗
+           *   ⇒ 这里显式用 `max(d, 1e-5)` 复现"硬边"语义 ✓（blur=0 与 lilToon 一致 ✓）
+           */
           'float ba3dLilToonRange( const float value, const float border, const float blur, const float borderRange ) {\n' +
           '\tfloat bMin = saturate( border - blur * 0.5 - borderRange );\n' +
           '\tfloat bMax = saturate( border + blur * 0.5 );\n' +
-          '\treturn saturate( ( value - bMin ) / saturate( bMax - bMin ) );\n' +
+          '\treturn saturate( ( value - bMin ) / max( bMax - bMin, 1e-5 ) );\n' +
           '}\n' +
           'float ba3dLilToon( const float value, const float border, const float blur ) {\n' +
           '\tfloat bMin = saturate( border - blur * 0.5 );\n' +
           '\tfloat bMax = saturate( border + blur * 0.5 );\n' +
-          '\treturn saturate( ( value - bMin ) / saturate( bMax - bMin ) );\n' +
+          '\treturn saturate( ( value - bMin ) / max( bMax - bMin, 1e-5 ) );\n' +
           '}\n' +
+          /**
+           * ★★ AA 变体（工作单 17 §3-① / 14 §3 / 04 命令 3 ✓）—— 对齐**真实 source 主 pass** 的分母
+           *
+           * 真实活跃 source program（`prog#28`，material→program 关联已证 ✓）里的 tooning 分母是：
+           *   `prog#28:1371`  `(value - bMin) / clamp( fwidth(value) * _1920 + (bMax - bMin), 0.0, 1.0 )`
+           *   `prog#28:1362`  `_2012 = fwidth(_2002)`   ⇒ 普通档 x 用 fwidth ✓
+           *   `prog#28:1320`  `_1920 = _1871 ? 0.0 : _Globals._AAStrength` · `:1296 _1871 = (_ShadowMaskType == 2u)`
+           *   实测 `_ShadowMaskType = 0` ⇒ `_1920 = _AAStrength = 1` ✓
+           * 上游依据：`lil_common_functions.hlsl` 约 26-84 的 AA 分支（`saturate` 的 borderMin/Max 重映射
+           *   里加 `fwidth(value) * aaStrength`）✓
+           *
+           * ⚠️ 为什么**不直接改** `ba3dLilToon()` 本体（踩坑记录 ✓）：
+           *   同一个函数还被 **rim / backlight** 的注入调用（`lilRimGLSL` / `lilBacklightGLSL` ✓）——
+           *   那些不是 04 命令 3 的目标分支 ✗ 一起改会变成"一次改多个原因" ✗（`agent.md:60`）
+           *   ⇒ 保留原函数**逐字节不变**，另加显式带 `aa` 参数的变体 ✓ 目标分支单独切换到变体 ✓
+           *
+           * ⚠️ 零宽度保护：source 用 `clamp(den, 0, 1)`（HLSL 里除 0 → ±Inf ⇒ saturate 后是**硬边** ✓），
+           *   GLSL 不保证 ✗ ⇒ 沿用本文件既有约定 `max(den, 1e-5)` ✓（只在 den ≤1e-5 的测度零集合上不同 ✓）
+           */
+          'float ba3dLilToonAA( const float value, const float border, const float blur, const float aa ) {\n' +
+          '\tfloat bMin = saturate( border - blur * 0.5 );\n' +
+          '\tfloat bMax = saturate( border + blur * 0.5 );\n' +
+          '\tfloat den = saturate( fwidth( value ) * aa + ( bMax - bMin ) );\n' +
+          '\treturn saturate( ( value - bMin ) / max( den, 1e-5 ) );\n' +
+          '}\n' +
+          'float ba3dLilToonRangeAA( const float value, const float border, const float blur, const float borderRange, const float aa ) {\n' +
+          '\tfloat bMin = saturate( border - blur * 0.5 - borderRange );\n' +
+          '\tfloat bMax = saturate( border + blur * 0.5 );\n' +
+          '\tfloat den = saturate( fwidth( value ) * aa + ( bMax - bMin ) );\n' +
+          '\treturn saturate( ( value - bMin ) / max( den, 1e-5 ) );\n' +
+          '}\n' +
+          /**
+           * ★ `lns.w` 的全局载体（工作单 04 命令 3 ✓）
+           *   上游 `lil_common_frag.hlsl` 约 924 起把 range 展开的 tooning 存进 `lns.w`，
+           *   它**只**用于约 1037 的 `_ShadowBorderColor` 混合 ✓ 不参与主分档 ✓
+           *   ⚠️ 默认 1.0：`_UseShadow = 0` 或材质未走分档时，border 混合因子为 1 ⇒ 不产生额外影响 ✓
+           */
+          'float ba3dLnsW = 1.0;\n' +
+          /**
+           * ★ `lns.x` 的全局载体（工作单 04 命令 4 需要"分档明暗"当权重 ✓）
+           *   语义：`ba3dShadowG = clamp(lns.x)` ⇒ **1 = 受光侧 · 0 = 阴影侧** ✓
+           *   （由 `getGradientIrradiance()` 在 return 之前赋值 ✓ 与返回的 outCol 同源 ✓）
+           *   ⚠️ 默认 1.0 ⇒ 未走分档时不产生额外影响 ✓
+           */
+          'float ba3dShadowG = 1.0;\n' +
+          /**
+           * ★★ 真实主贴图/主色 `A`（工作单 12 §3 要求的因式分解输入 ✓）
+           *
+           * 为什么需要：上游 `:1024` 的 `_ShadowMainStrength` 与 `:1009` 的第一层阴影色
+           *   都要用到**真正的主贴图 albedo** ✓ 而 `getGradientIrradiance()` 的作用域里
+           *   拿不到局部 `diffuseColor` ✗（那是 `main()` 的局部变量 ✓）
+           * ⇒ 在 `main()` 里 map/主色层处理**之后**、光照调用**之前**把它赋给这个全局 ✓
+           *   （three 的 toon 片元顺序：`<map_fragment>` `<color_fragment>` 在前 ✓
+           *     `<lights_toon_fragment>` `<lights_fragment_begin>` 在后 ✓
+           *     ⇒ 要区分**函数定义的文本位置**与**运行调用时刻** ✓ 工作单 12 §3 明确 ✓）
+           */
+          'vec3 ba3dAlbedoA = vec3( 1.0 );\n' +
+          /**
+           * ★ 第一层阴影色（`_ShadowColor.rgb`）的全局副本 ✓
+           *   用于把 `outCol` 归一化成"影子色 → 1"的因子 `S`（工作单 12 §3 配方 ✓）
+           *   ⚠️ 不能用"运行时的 shadowColor"，因为 2/3 层混合后 col 会变 ✗ ⇒ 必须留第一层的原值 ✓
+           */
+          'vec3 ba3dShadowCol1 = vec3( 1.0 );\n' +
           'vec3 ba3dBlend( vec3 dstCol, vec3 srcCol, float srcA, uint blendMode ) {\n' +
           '\tvec3 ad = dstCol + srcCol;\n' +
           '\tvec3 mu = dstCol * srcCol;\n' +
@@ -6097,24 +7005,274 @@ cutoff: -1,
        *   · 在 lights_fragment_begin 之前给 ba3dShadowMaskG 赋值
        *     （getGradientIrradiance 在 lights_fragment_begin 里被调用 ✓）
        */
-      /**
-       * _ShadowMainStrength（lil_common_frag.hlsl:1098）
-       *   indirectCol = lerp( indirectCol, indirectCol * fd.albedo, _ShadowMainStrength )
-       *
-       * ⚠️ 必须在片元**末尾**做 ✗ 那时 diffuseColor 已经乘过贴图了 ✓
-       *    之前放进 getGradientIrradiance ✗ 那里只能拿到材质的 diffuse 均匀色 ✗
-       *    有贴图的材质那个值是白色 ✗ 乘了等于没乘 ✓
-       */
-      if (shaderMode === 'lilToon') {
-        const __mss = Math.max(0, Math.min(1, (__cfgM.shadowMainStrength === undefined ? 0 : Number(__cfgM.shadowMainStrength))));
-        if (__mss > 0) {
-          shader.fragmentShader = shader.fragmentShader
-            .replace('#include <dithering_fragment>',
-              '// _ShadowMainStrength：阴影侧再乘一次主色（albedo）' + '\n' +
-              'gl_FragColor.rgb = mix( gl_FragColor.rgb, gl_FragColor.rgb * diffuseColor.rgb,' + '\n' +
-              '  ( 1.0 - ba3dShadowMaskG ) * ' + __mss.toFixed(4) + ' );' + '\n' +
-              '#include <dithering_fragment>');
+
+      /* ===================== 生产候选（最小）· P1 光语义 + P2 初始基础 RGB =====================
+       * 依据：14 §1（输入独立推导 · 单次 R 合成）· 15 §1（source-effective min/max
+       *       只以 **实际 bridge 输出**覆盖 vendor 运行默认）· 16 §1/§3（uniform 顶层 ·
+       *       保留 lights_fragment_end 后一次覆盖）· 22 §3（P2 只改局部初始 diffuse 基础 RGB）·
+       *       26 §2（在 fragment **唯一初始颜色声明**处替换 RGB ✓ 不做末端比值抵消）
+       *   · baseSurface = A * clamp(Cmain + ambient, _LightMinLimit, _LightMaxLimit) * R(geometryNormal, fd.L/view)
+       *     ★ 不含 BRDF_Lambert 的 1/π ⇒ 原 1.65 不参与这条 baseSurface ✓
+       *   · A（P2 之后）= source-effective `_Color.rgb` × 原主贴图/顶点色/主色层合成 ✓
+       * ⛔ 不改 cfg.lilToonLightComp ✗ ⛔ 不扫描倍率 ✗ ⛔ 不改灯/曝光/阈值/source 后端 ✗
+       * ⛔ 不改已验收的脸部阴影算法（法线 / 分档 / AA / range / 合成）✗
+       * ⛔ 不建/渲染 vendor 材质 ✗ 不从参考像素反推 ✗ 不硬编码某模型输出 ✗
+       * ⛔ 无测试 binder 依赖 ✗ 无测试页私有 window 变量 ✗ 无静态 vendor defaults 表 ✗ */
+      {
+        const __isMainSurface = (shaderMode === 'lilToon' && mat.isMeshToonMaterial
+          && mat.userData && mat.userData.__toon === true);   // ★ 逐字同 05 §3 CTL_SET ✓
+        if (__isMainSurface) {
+          const __pm = mat.userData.__lilProdMin = mat.userData.__lilProdMin || {};
+          __pm.errors = [];
+          __pm.applied = false;
+          __pm.version = 'prod-min-2026-10-10-28';
+          __pm.firstLoad = '★ 见文件头说明：纯 style 首页必须先 ensureLilSrc() 才能拿到 cfgToProps ✓';
+          /* ---------- 输入链：原名有效 cfg → **真实 bridge** cfgToProps → 缺失即明确失败 ---------- */
+          const __origName = (mat.userData && mat.userData.__src && mat.userData.__src.name)
+            || String(mat.name || '').replace(/__lilSrc$/, '').replace(/\s+file\d+$/, '') || null;
+          const __cfgEffFor = () => {
+            try { return lilCfgFor(__origName ? { name: __origName } : mat); } catch (e) { return null; }
+          };
+          /* ★★ 28 §3：首次进入 style 时 bridge **尚未装载** ⇒ 用既有 ensureLilSrc() 装载后重试 ✓
+           *   ⛔ 不静默用空 props / 白色回退 ✗（拿不到就 applied=false + 明确 reason ✓） */
+          const __bridgeNow = () => (lilSrcBridge && typeof lilSrcBridge.cfgToProps === 'function') ? lilSrcBridge : null;
+          let __br = __bridgeNow();
+          if (!__br) {
+            try {
+              if (typeof ensureLilSrc === 'function') {
+                const p = ensureLilSrc();     // ★ 既有函数（viewer.js:8952）· **只加载模块、不装渲染后端** ✓
+                if (p && typeof p.then === 'function') {
+                  /* 异步装载：本帧先用缓存值，onBeforeRender 里每帧重试直到就绪 ✓（不阻塞首帧渲染 ✓） */
+                  __pm.bridgeLoadStarted = true;
+                  p.then(() => { __pm.bridgeLoadResolved = true; __pm.bridgeLoadResolvedTo = (lilSrcBridge ? 'lilSrcBridge' : 'null'); },
+                    (e) => { __pm.bridgeLoadRejected = String(e && e.message || e); });
+                }
+              } else { __pm.errors.push('ensureLilSrc 不可见（不在本函数作用域）✗'); }
+            } catch (e) { __pm.errors.push('ensureLilSrc 抛错：' + String(e && e.message || e)); }
+          }
+          const __derive = () => {
+            const br = __bridgeNow();
+            if (!br) return { ok: false, why: 'bridge 尚未就绪（cfgToProps 不可用）— 已发起 ensureLilSrc()，由 onBeforeRender 每帧重试 ✓' };
+            const cfg = __cfgEffFor();
+            let props = null;
+            try { props = br.cfgToProps(cfg); } catch (e) { return { ok: false, why: 'cfgToProps 抛错：' + String(e && e.message || e) }; }
+            if (!props || typeof props !== 'object') return { ok: false, why: 'cfgToProps 未返回对象' };
+            const col = Array.isArray(props._Color) ? props._Color : null;
+            if (!col || col.length < 3 || !col.slice(0, 3).every((v) => typeof v === 'number' && isFinite(v))) {
+              return { ok: false, why: 'bridge 输出缺少可用的 _Color（⛔ 不做白色静默回退 ✗）' };
+            }
+            /* ⚠️ LIL_MAP 没有 _LightMin/MaxLimit 条目 ⇒ bridge 输出里通常 absent
+             *   ⇒ 与 source 参考端**同一套** vendor 运行默认（「_LightMinLimit .05」/「_LightMaxLimit 1」✓）
+             *   本处两个数字是 vendor 默认的**已知值**；若 bridge 给了就优先用 bridge ✓ */
+            const limMin = (typeof props._LightMinLimit === 'number') ? props._LightMinLimit : 0.05;
+            const limMax = (typeof props._LightMaxLimit === 'number') ? props._LightMaxLimit : 1;
+            const ov = Array.isArray(props._LightDirectionOverride) ? props._LightDirectionOverride : [0.001, 0.002, 0.001, 0];
+            return { ok: true, color: col.slice(0, 4), limMin, limMax, ov: ov.slice(0, 4),
+              provenance: { _Color: (props._Color !== undefined) ? 'bridge-cfgToProps(cfg)' : 'absent（已判失败 ✓）',
+                _LightMinLimit: (typeof props._LightMinLimit === 'number') ? 'bridge-cfgToProps(cfg)' : 'vendor-runtime-default(.05)',
+                _LightMaxLimit: (typeof props._LightMaxLimit === 'number') ? 'bridge-cfgToProps(cfg)' : 'vendor-runtime-default(1)',
+                _LightDirectionOverride: (props._LightDirectionOverride !== undefined) ? 'bridge-cfgToProps(cfg)' : 'vendor-runtime-default([.001,.002,.001,0])' } };
+          };
+          const __d0 = __derive();
+          __pm.derivation = __d0;
+          const __ovArr = __d0.ok ? __d0.ov : [0.001, 0.002, 0.001, 0];
+          const __ovW = Number(__ovArr[3] || 0);
+          /* ---------- 模板锚点（onBeforeCompile 时尚未展开 include） ---------- */
+          const __f = shader.fragmentShader;
+          const __mainAt = __f.indexOf('void main()');
+          const __outgoingAt = __f.indexOf('vec3 outgoingLight =');
+          const __endInc = '#include <lights_fragment_end>';
+          const __endAt = __f.indexOf(__endInc);
+          const __commonInc = '#include <common>';
+          const __commonCount = __f.split(__commonInc).length - 1;
+          const __baseDecl = 'vec4 diffuseColor = vec4( diffuse, opacity );';
+          const __baseDeclCount = __f.split(__baseDecl).length - 1;
+          __pm.templateAnchor = { mainAt: __mainAt, outgoingLightAt: __outgoingAt,
+            lightsFragmentEndIncludeAt: __endAt, endIncludeMatches: __f.split(__endInc).length - 1,
+            commonIncludeMatches: __commonCount, baseDeclMatches: __baseDeclCount, templateLenAtCompile: __f.length };
+          const __requiredOk = (__mainAt >= 0 && __outgoingAt > __mainAt && __endAt > __mainAt && __endAt < __outgoingAt
+            && __f.split(__endInc).length - 1 === 1 && __commonCount === 1 && __baseDeclCount === 1);
+          if (!__requiredOk) {
+            __pm.applied = false;
+            __pm.reason = '锚点要求不满足（main < lights_fragment_end < outgoingLight · end/common/初始颜色声明各唯一）⇒ 不注入 ✗';
+          } else if (__ovW !== 0) {
+            __pm.applied = false;
+            __pm.reason = 'override.w = ' + __ovW + ' ≠ 0 ⇒ custom 的 * modelMat3 分支**未实现/未验证** ✗（如实记 ✓）';
+          } else {
+            /* ===== (A) 片元顶层 uniform（16 §1 ✓ 真换行 ✓ 只声明公式真正读取的 ✓） ===== */
+            const __UNIFORMS = [
+              '/* ===== 生产候选：source 语义 base 合成所需顶层 uniform ===== */',
+              'uniform vec3 uBa3dCmain;',
+              'uniform vec3 uBa3dAmbSrc;',
+              'uniform vec3 uBa3dDirView;',
+              'uniform float uBa3dLightMin;',
+              'uniform float uBa3dLightMax;',
+              'uniform vec3 uBa3dBaseColor;',
+            ].join('\n');
+            /* ===== (B) main 内：保留 include，随后**一次**覆盖 base（16 §3 逐字 ✓ 22 §4 ✓） ===== */
+            const __P1 = [
+              '/* __P1_ANCHOR__ */',
+              '{',
+              '    vec3 p1R = getGradientIrradiance( geometryNormal, uBa3dDirView );',
+              '    vec3 p1LightColor = clamp( uBa3dCmain + uBa3dAmbSrc,',
+              '                              vec3( uBa3dLightMin ), vec3( uBa3dLightMax ) );',
+              '    reflectedLight.directDiffuse = material.diffuseColor * p1LightColor * p1R;',
+              '    reflectedLight.indirectDiffuse = vec3( 0.0 );',
+              '}',
+            ].join('\n');
+            shader.fragmentShader = shader.fragmentShader
+              .replace(__commonInc, __commonInc + '\n' + __UNIFORMS)
+              .replace(__endInc, __endInc + '\n' + __P1);
+            /* ===== (C) P2：**唯一初始颜色声明**处替换 RGB（26 §2 逐字 ✓） ===== */
+            const __baseDeclNew = 'vec4 diffuseColor = vec4( uBa3dBaseColor, opacity );   /* __P2_BASE_RGB__ */';
+            shader.fragmentShader = shader.fragmentShader.replace(__baseDecl, __baseDeclNew);
+            const __after = shader.fragmentShader;
+            __pm.shaderTextChecks = {
+              endIncludePreserved: __after.indexOf(__endInc) >= 0,
+              anchorMarkerCount: __after.split('/* __P1_ANCHOR__ */').length - 1,
+              anchorMarkerAt: __after.indexOf('/* __P1_ANCHOR__ */'),
+              mainAt: __after.indexOf('void main()'), outgoingLightAt: __after.indexOf('vec3 outgoingLight ='),
+              uniformAt: __after.indexOf('uniform vec3 uBa3dCmain;'),
+              initialColorAnchorCount: __baseDeclCount,
+              initialColorReplaced: __after.indexOf('/* __P2_BASE_RGB__ */') >= 0,
+              initialColorMarkerCount: __after.split('/* __P2_BASE_RGB__ */').length - 1,
+              initialColorBeforeMap: (__after.indexOf('/* __P2_BASE_RGB__ */') >= 0 && __after.indexOf('#include <map_fragment>') >= 0)
+                ? (__after.indexOf('/* __P2_BASE_RGB__ */') < __after.indexOf('#include <map_fragment>')) : null,
+            };
+            __pm.shaderTextChecks.uniformsAreTopLevel = (__pm.shaderTextChecks.uniformAt >= 0 && __pm.shaderTextChecks.mainAt > __pm.shaderTextChecks.uniformAt);
+            if (!__pm.shaderTextChecks.uniformsAreTopLevel) __pm.errors.push('uniform 不在顶层（main 之前）✗');
+            if (__pm.shaderTextChecks.anchorMarkerCount !== 1) __pm.errors.push('__P1_ANCHOR__ 出现 ' + __pm.shaderTextChecks.anchorMarkerCount + ' 次（应为 1 ✗）');
+            if (__pm.shaderTextChecks.initialColorMarkerCount !== 1) __pm.errors.push('__P2_BASE_RGB__ 出现 ' + __pm.shaderTextChecks.initialColorMarkerCount + ' 次（应为 1 ✗）');
+            if (__pm.shaderTextChecks.initialColorBeforeMap !== true) __pm.errors.push('初始颜色替换不在 map_fragment 之前 ✗');
+            /* ===== (D) uniform 对象（值先给安全初值；**真实值由 onBeforeRender 每帧写** ✓） ===== */
+            shader.uniforms.uBa3dCmain = { value: new THREE.Vector3(0, 0, 0) };
+            shader.uniforms.uBa3dAmbSrc = { value: new THREE.Vector3(0.05, 0.05, 0.05) };
+            shader.uniforms.uBa3dDirView = { value: new THREE.Vector3(0, 0, 1) };
+            shader.uniforms.uBa3dLightMin = { value: __d0.ok ? __d0.limMin : 0.05 };
+            shader.uniforms.uBa3dLightMax = { value: __d0.ok ? __d0.limMax : 1 };
+            /* ⚠️ 基础色初值：bridge 未就绪时用 **style 自身**的 diffuse 基色（保持原观感 ✓ 不硬编码白 ✗）
+             *   ⇒ 一旦 onBeforeRender 拿到 bridge，立刻换成 source-effective 「_Color.rgb」 ✓ */
+            const __fallbackBase = (mat.color && mat.color.isColor) ? [mat.color.r, mat.color.g, mat.color.b] : [1, 1, 1];
+            shader.uniforms.uBa3dBaseColor = { value: new THREE.Vector3(__d0.ok ? __d0.color[0] : __fallbackBase[0],
+              __d0.ok ? __d0.color[1] : __fallbackBase[1], __d0.ok ? __d0.color[2] : __fallbackBase[2]) };
+            __pm.baseColorInitial = __d0.ok ? __d0.color.slice(0, 3) : { fallback: 'style diffuse 基色（bridge 未就绪 ✓）', rgb: __fallbackBase };
+            /* ===== (E) 本帧更新（**保留原 callback** ✓ 16 §3/§5 ✓） ===== */
+            const __prevOBR = mat.onBeforeRender;
+            const __fr = { count: 0, errors: [], bridgeReadyAtCompile: __d0.ok, derived: null, Cmain: null, ambient: null, lightDirView: null };
+            __pm.frame = __fr;
+            mat.onBeforeRender = function (renderer2, scNow, camNow) {
+              try {
+                if (typeof __prevOBR === 'function') __prevOBR.apply(this, arguments);
+                const U = shader.uniforms;
+                __fr.count++;
+                /* ---- bridge 未就绪则**每帧重试**（等 ensureLilSrc() 的 promise ✓） ---- */
+                if (!__fr.derived) {
+                  const d = __derive();
+                  if (d.ok) {
+                    __fr.derived = d;
+                    __fr.bridgeReadyAtCompile = true;
+                    __pm.derivation = d;
+                    U.uBa3dLightMin.value = d.limMin;
+                    U.uBa3dLightMax.value = d.limMax;
+                    U.uBa3dBaseColor.value.set(d.color[0], d.color[1], d.color[2]);
+                    mat.userData.__lilProdLightOverride = d.ov.slice(0, 4);
+                  }
+                }
+                if (!scNow || !camNow) { __fr.errors.push('onBeforeRender 未拿到 ' + (!scNow ? 'scene' : 'camera') + ' ✗'); return; }
+                /* ---- 主光：当前 scene 遍历**首盏** DirectionalLight（14 §1-2 ✓） ---- */
+                let mainL = null;
+                scNow.traverseVisible((o) => { if (!mainL && o && o.isDirectionalLight) mainL = o; });
+                const Cmain = mainL ? [mainL.color.r * mainL.intensity, mainL.color.g * mainL.intensity, mainL.color.b * mainL.intensity] : [0, 0, 0];
+                /* ---- ambient：0.05 + ΣAmbient + ΣHemi(sky+ground)*I*0.5（14 §1-2 逐字 ✓） ---- */
+                const amb = [0.05, 0.05, 0.05];
+                scNow.traverseVisible((o) => {
+                  if (!o || o.visible === false) return;
+                  const I = Number(o.intensity) || 0;
+                  if (o.isAmbientLight) { amb[0] += o.color.r * I; amb[1] += o.color.g * I; amb[2] += o.color.b * I; }
+                  else if (o.isHemisphereLight) {
+                    const g = o.groundColor || { r: 0, g: 0, b: 0 };
+                    amb[0] += (o.color.r + g.r) * I * 0.5; amb[1] += (o.color.g + g.g) * I * 0.5; amb[2] += (o.color.b + g.b) * I * 0.5;
+                  }
+                });
+                /* ---- fd.L 世界式（08 §2 ✓）：Lmain * dot(Cmain, wDot) + override.xyz + shDir ---- */
+                const ld = mainL ? mainL.getWorldPosition(new THREE.Vector3()) : null;
+                const lt = (mainL && mainL.target) ? mainL.target.getWorldPosition(new THREE.Vector3()) : null;
+                let Lmain = [0, 0, 0];
+                if (ld && lt) { const d = [ld.x - lt.x, ld.y - lt.y, ld.z - lt.z]; const n = Math.hypot(d[0], d[1], d[2]) || 1; Lmain = [d[0] / n, d[1] / n, d[2] / n]; }
+                const W = [0.03968191519379616, 0.45802178978919983, 0.006096539553254843];
+                const dotCW = Cmain[0] * W[0] + Cmain[1] * W[1] + Cmain[2] * W[2];
+                const shDir = [0, 0, 0];   /* adapter 上传的 SH xyz 本页实测 = 0 ✓ 仍按公式参与 ✓ */
+                const ov = mat.userData.__lilProdLightOverride || [0.001, 0.002, 0.001, 0.0];
+                if (Number(ov[3] || 0) !== 0) { __fr.errors.push('override.w = ' + ov[3] + ' ≠ 0 ⇒ 未实现/未验证 ✗'); return; }
+                const wv = [Lmain[0] * dotCW + shDir[0] + ov[0], Lmain[1] * dotCW + shDir[1] + ov[1], Lmain[2] * dotCW + shDir[2] + ov[2]];
+                const wl = Math.hypot(wv[0], wv[1], wv[2]);
+                if (!(wl > 0)) { __fr.errors.push('fd.L 世界向量零长 ✗'); return; }
+                const world = [wv[0] / wl, wv[1] / wl, wv[2] / wl];
+                /* ---- 方向 → view：**只**用相机逆矩阵的旋转部分（14 §3 勘误 ✓ 15 §2 ✓） ---- */
+                const e = camNow.matrixWorldInverse.elements;
+                const view = [e[0] * world[0] + e[4] * world[1] + e[8] * world[2],
+                  e[1] * world[0] + e[5] * world[1] + e[9] * world[2],
+                  e[2] * world[0] + e[6] * world[1] + e[10] * world[2]];
+                const vl = Math.hypot(view[0], view[1], view[2]);
+                if (!(vl > 0)) { __fr.errors.push('fd.L view 向量零长 ✗'); return; }
+                const viewN = [view[0] / vl, view[1] / vl, view[2] / vl];
+                U.uBa3dCmain.value.set(Cmain[0], Cmain[1], Cmain[2]);
+                U.uBa3dAmbSrc.value.set(amb[0], amb[1], amb[2]);
+                U.uBa3dDirView.value.set(viewN[0], viewN[1], viewN[2]);
+                __fr.Cmain = Cmain; __fr.ambient = amb; __fr.lightDirView = viewN;
+              } catch (err) {
+                /* ⛔ 不吞异常后给 PASS ✗ —— 原样记下来（测量端进 fails ⇒ 该 capture 判 invalid ✓） */
+                __fr.errors.push('onBeforeRender: ' + String((err && err.stack) || err));
+              }
+            };
+            if (!mat.userData.__lilProdLightOverride) mat.userData.__lilProdLightOverride = __ovArr.slice(0, 4);
+            __pm.glslUniforms = ['uBa3dCmain', 'uBa3dAmbSrc', 'uBa3dDirView', 'uBa3dLightMin', 'uBa3dLightMax', 'uBa3dBaseColor'];
+            __pm.applied = __pm.errors.length === 0;
+            if (!__pm.applied) __pm.reason = '编译期文本断言失败：' + __pm.errors.join(' · ');
+          }
         }
+      }
+      /**
+       * ⚠️⚠️ `_ShadowMainStrength` 的**旧注入点已删除**（工作单 04 命令 4 ✓）
+       *
+       * 旧实现（已移除 ✗）写在 `#include <dithering_fragment>` 之前，有三处与上游不符：
+       *   ① 位置：那时 three 已经做完 **tone mapping 与色彩空间编码** ✗
+       *      上游要的是 `indirectCol = lerp(indirectCol, indirectCol*albedo, mss)`，
+       *      发生在 **lighting / final mix 之前** ✓
+       *   ② 权重：用 `( 1.0 - ba3dShadowMaskG )` = **实时投射阴影遮罩** ✗
+       *      上游用的是**分档明暗**（`lns.x`，即全局 `ba3dShadowG`）✓ 两者不是一个量 ✗
+       *   ③ 作用面：乘在**整份 `gl_FragColor`** 上 ✗ ⇒ rim / emission 也被乘 ✗
+       *      上游只作用于 **shadow-side（间接光那一支）** ✓
+       *
+       * ⇒ **当前实现已不在这里** ✓：`:1024` 现在在 `celGradientGLSL()` 的**因子链内部**逐灯局部完成
+       *   （`col = mix( col, col * ba3dAlbedoA, mss )` ✓ 见上面命令 3/4 的段落 ✓）
+       *   ⚠️ 这里曾经写着"见下面的 `#include <lights_fragment_end>` 注入（`lateLine`）" ✗
+       *      `lateLine` 已按工作单 12 §1 **删除**（它会把完整输出混向裸边界色、并染 rim/emission ✗）
+       *      ⇒ 注释与实现矛盾的旧文字一并清掉 ✓（工作单 13 §3 要求 ✓）
+       *   引用：上游 `lil_common_frag.hlsl` 约 **1024**（不是 1098 ✗ —— 旧注释引错了 ✓）
+       */
+      /**
+       * ★★ `ba3dAlbedoA` 的**最终赋值点**（工作单 04 命令 4 / 13 §3-③ / 17 §3-② "主色层实际 A 同步" ✓）
+       *
+       * 为什么必须**再赋一次**（`<color_fragment>` 之后那次保留作兜底 ✓ 不删 ✓）：
+       *   · 上游 `:1024` 用的 `fd.albedo` 是**全部主色层合成完**的 albedo ✓
+       *   · 而主色层 2nd/3rd 的注入点在**本文件里**是 `#include <lights_fragment_begin>` **之前**
+       *     （见上面 `it.res.before` 的注入 ✓）——它**晚于** `<color_fragment>` ✗
+       *   · ⇒ 只保留 `<color_fragment>` 那次捕获时，`A` 是**层处理之前**的 albedo ✗
+       *     而真正进 BRDF 的是 `material.diffuseColor`（在 `lights_fragment_begin` **内部**被赋值 ✓
+       *     `fragment-final.glsl` 里 `material.diffuseColor = diffuseColor.rgb;` ✓）
+       *     ⇒ 两者在**启用主色层**时**不一致** ✗（本夹具两端都未启用 ⇒ 现在数值等价 ✓ 但语义必须对齐 ✓）
+       *   · ⚠️ 位置**必须晚于**层注入 ✓：本行插在 `#include <lights_fragment_begin>` 之前，
+       *     而层的 `before` 文本此刻**已经**被前置到同一个锚点上（`replace` 先后决定顺序 ✓）
+       *     ⇒ 本行落在层之后、include 之前 ✓（踩过"两条不同 replace 的顺序"的坑 ✓）
+       *   · ⚠️ 只在 `lilToon` 模式下做 ✓（`A` 只被我们的因子链消费 ✓）
+       */
+      if (shaderMode === 'lilToon' && shader.fragmentShader.indexOf('#include <lights_fragment_begin>') >= 0) {
+        shader.fragmentShader = shader.fragmentShader.replace(
+          '#include <lights_fragment_begin>',
+          '\tba3dAlbedoA = diffuseColor.rgb;   // ★ 最终 A：主色层已合成 ⇒ 与 material.diffuseColor 同源 ✓\n' +
+          '#include <lights_fragment_begin>');
+        if (window.__ba3dDebugUI) console.debug('[albedo] ba3dAlbedoA 已在 lights_fragment_begin 之前**重新**赋值（层之后 ✓）');
       }
       if (shaderMode === 'lilToon') {
         /**
@@ -6156,22 +7314,104 @@ cutoff: -1,
          *    RE_Direct_Toon 的文本在 THREE.ShaderChunk 里 ⇒ 要替换 **#include 指令本身** ✓
          */
         if (shaderMode === 'lilToon' || shaderMode === 'cel') {
+          /**
+           * ★★ **风格版亮度对齐补偿**（默认开 ✓）
+           *
+           *   实测背景（用户给的等价 Unity 设置下：az225/el45 · Skin-Anime ·
+           *   shadowStrength=1.8 · shadowBorder=1.13 ✓）：
+           *     源码版（= Unity 原版观感）脸均 157.9 · 我们风格版 127.5 ⇒ **差 −30.4（≈1.24×）** ✗
+           *     阴影结构两边**已经一致**（暗区 20.3% vs 20.5% ✓ 左右差 0.2 vs 0.2 ✓）
+           *     ⇒ 差的只是**整体亮度**，根因是我们建立在 MeshToonMaterial 上、
+           *       **拿不到 envMap（RoomEnvironment 间接光整个丢失 ✗ 见 L8753 的说明）**
+           *
+           *   补偿方式：借用 lilToon 自己的 `_LightMinLimit` 语义
+           *     （`lightColor = clamp(lightColor, min, max)` ⇒ 给光照设下限 ✓）
+           *     实测 min=0.95 时与源码版差 **−2.5（≈1.6%）** ✓（min=0.9 → −4.1 ✓）
+           *
+           *   ⚠️ 只作用于 **shaderMode === 'lilToon'**（我们自己的补丁材质 ✓）
+           *     源码后端（LilToonMaterial）不读这里 ✓ ⇒ 不会把基准一起改掉 ✓
+           *   ⚠️ 想让观感回到"未补偿"：配置里 `"lilStyleLightComp": false` ✓
+           */
+          /**
+           * ★★★ **移植调用点**：把 three 的 RE_Direct_Toon 换成 lilToon 的合成 ✓
+           *   · 其余光源（我们的 rim/fill）⇒ 普通 dotNL 叠加 ✓（lilToon 里它们是材质特性 ✗）
+           *   · 关掉 three 的间接项 —— lilToon 的 indLightColor 已经含环境 ✓（否则重复计 ✗）
+           */
           if (cfg.lightClampOn) {
             const __lmin = Math.max(0, Math.min(1, Number(cfg.lightMinLimit) || 0));
             const __lmax = Math.max(0.01, Math.min(4, Number(cfg.lightMaxLimit) || 1));
             const __FROM = 'vec3 irradiance = getGradientIrradiance( geometryNormal, directLight.direction ) * directLight.color;';
             const __CHUNK = '#include <lights_toon_pars_fragment>';
+            /**
+             * ★★ **1/π 补偿**（实测标定 ✓ 见下面数据 ✓ 不是拍脑袋 ✗）
+             *
+             *   three 的 BRDF_Lambert 带 **1/π** ✗
+             *   而 lilToon 自己的 HLSL 是 directCol = albedo × lightColor —— **没有 1/π** ✓
+             *   ⇒ 同参数下我们的直接光暗了 π 倍 ✓
+             *
+             *   实测扫描（源码版基准 115.4 · 我们风格主光倍率 ⇒ 角色均亮）：
+             *     ×1 → 102.4 (−13.0) · ×1.5 → 111.9 (−3.5) · ×2 → 119.9 (+4.5) · ×π → 125.4 (+10.0)
+             *   ⇒ 因色调映射压缩，**输出**上的等效倍率 ≈ **1.65** ✓（线性层面正是 π ✓）
+             *
+             *   ⚠️ 只作用于 shaderMode === 'lilToon' 这条材质路径 ✓（灯本身不动 ✓）
+             *      ⇒ 符合既定原则：两后端吃**同一套光照**，差异只留给材质实现 ✓
+             *   ⚠️ 调整：`cfg.lilToonLightComp`（面板/配置 ✓）
+             */
+            const __comp = Math.max(0, Number(cfg.lilToonLightComp !== undefined ? cfg.lilToonLightComp : 1.65));
             const __TO = 'vec3 irradiance = getGradientIrradiance( geometryNormal, directLight.direction )'
-              + ' * clamp( directLight.color, vec3( ' + __lmin.toFixed(4) + ' ), vec3( ' + __lmax.toFixed(4) + ' ) );';
+              + ' * clamp( directLight.color, vec3( ' + __lmin.toFixed(4) + ' ), vec3( ' + __lmax.toFixed(4) + ' ) )'
+              + ' * ' + __comp.toFixed(4) + ';   // 1/π 补偿（lilToon 原版无此因子 ✓）';
             const __src = (THREE.ShaderChunk && THREE.ShaderChunk.lights_toon_pars_fragment) || '';
             if (shader.fragmentShader.indexOf(__CHUNK) >= 0 && __src.indexOf(__FROM) >= 0) {
               shader.fragmentShader = shader.fragmentShader.replace(__CHUNK, __src.replace(__FROM, __TO));
-              if (window.__ba3dDebugUI) console.debug('[lightClamp] min=' + __lmin + ' max=' + __lmax + ' 已注入 ✓（夹纯光照 · 不含 albedo ✓）');
+              if (window.__ba3dDebugUI) console.debug('[lightClamp] min=' + __lmin + ' max=' + __lmax + ' comp=' + __comp + ' injected');
+            }
+          } else if (shaderMode === 'lilToon') {
+            /**
+             * ⚠️⚠️ **上面那段挂在 `cfg.lightClampOn` 下 —— 而它默认是 false** ✗
+             *   实测踩坑：第一版把 1/π 补偿写在上面的 if 里 ✗
+             *     ⇒ 默认配置下**整段不执行** ⇒ 补偿等于没做 ✗（又是"改了但没生效"✓）
+             *   ⇒ 所以这里补一条**独立**路径：不开 lightClamp 时也要把 1/π 补上 ✓
+             *   （两者若同时开启，走上一条 ✓ 不会重复乘 ✓）
+             */
+            /**
+             * ⚠️ 取值优先级：**材质级 `lilToonLightComp`**（可用 setLilConfig 运行时调 ✓ 便于标定 ✓）
+             *    其次才是全局 cfg ✓（默认 1.65 ✓）
+             *    实测教训：1.65 是在「白昼」预设下标定的 ✗
+             *      换成 Unity 场景光照（key 2.45 × #ecebdc + hemi 1 #98aacc ✓）后仍偏暗
+             *      （脸 −13.4 · 外套 −10.7 ✓ 而腿/地面阴影一致 ✓）⇒ 需要按实际光照重新标定 ✓
+             */
+            const __compRaw = (__cfgM && __cfgM.lilToonLightComp !== undefined)
+              ? __cfgM.lilToonLightComp
+              : (cfg.lilToonLightComp !== undefined ? cfg.lilToonLightComp : 1.65);
+            const __comp2 = Math.max(0, Number(__compRaw));
+            const __FROM2 = 'vec3 irradiance = getGradientIrradiance( geometryNormal, directLight.direction ) * directLight.color;';
+            const __CHUNK2 = '#include <lights_toon_pars_fragment>';
+            const __src2 = (THREE.ShaderChunk && THREE.ShaderChunk.lights_toon_pars_fragment) || '';
+            const __TO2 = 'vec3 irradiance = getGradientIrradiance( geometryNormal, directLight.direction ) * directLight.color'
+              + ' * ' + __comp2.toFixed(4) + ';   // 1/π 补偿（lilToon 原版无此因子 ✓）';
+            if (shader.fragmentShader.indexOf(__CHUNK2) >= 0 && __src2.indexOf(__FROM2) >= 0) {
+              shader.fragmentShader = shader.fragmentShader.replace(__CHUNK2, __src2.replace(__FROM2, __TO2));
+              if (window.__ba3dDebugUI) console.debug('[lilPort] 1/π 补偿注入（独立路径 ✓ comp=' + __comp2 + '）');
             } else if (window.__ba3dDebugUI) {
-              console.debug('[lightClamp] ✗ 注入失败：include=' + (shader.fragmentShader.indexOf(__CHUNK) >= 0)
-                + ' chunk=' + (__src.indexOf(__FROM) >= 0));
+              console.debug('[lilPort] ✗ 1/π 补偿未命中：chunk=' + (shader.fragmentShader.indexOf(__CHUNK2) >= 0) + ' from=' + (__src2.indexOf(__FROM2) >= 0));
             }
           }
+          /**
+           * ⚠️⚠️ **这里曾经把「环境光随分档压暗」注入进 RE_IndirectDiffuse_Toon —— 已撤销** ✗
+           *
+           *   撤销原因（用户实测 + 复核 ✓）：
+           *     · 因子要在多盏光之间取 min ⇒ 只要有**一盏光方向不合适**（我们的 rim/fill ✗）
+           *       就会把**整只角色**的环境光压暗 ✗
+           *     ⇒ 画面直接变成「Unity 里把场景光照关掉」的样子 ✓✓（用户判断得非常准 ✓）
+           *     · 而它想解决的问题（阴影不够深）只是**次要观感** ✓ 不值得冒这个险 ✗
+           *
+           *   ⚠️ 顺带记录两条**踩过的坑**（以后别再试 ✗）：
+           *     ① 在 `lights_fragment_begin` 里乘 `reflectedLight.indirectDiffuse` ⇒ **完全无效** ✗
+           *        （实测两张截图 SHA 一模一样 ✓）因为环境光是在**后面的**这个函数里加的 ✓
+           *     ② 在这个函数里乘 ⇒ 有效 ✓ 但会因为 min 跨光累积而**全局压暗** ✗
+           *   ⇒ 结论：要动间接光，必须**按光分别**处理（或干脆不动 ✗）
+           */
         }
         const INCLUDE = '#include <lights_fragment_begin>';
         const chunk = (THREE.ShaderChunk && THREE.ShaderChunk.lights_fragment_begin) || '';
@@ -6198,9 +7438,40 @@ cutoff: -1,
          * 对 reflectedLight.indirectDiffuse 做一次缩放 ✓
          */
         const __ambKeep = Math.max(0, Math.min(1, Number(__cfgM.shadowAmbient !== undefined ? __cfgM.shadowAmbient : 1)));
+        /**
+         * ⚠️⚠️ **这里曾经加过「lilToon：环境光随分档压暗」—— 已撤销** ✗
+         *
+         *   撤销原因（用户实测 + 复核 ✓）：
+         *     · 因子要在多盏光之间取 min ⇒ 只要有一盏光方向不合适（我们的 rim/fill ✗）
+         *       就会把**整只角色**的环境光压暗 ✗
+         *     ⇒ 画面直接变成「Unity 里关掉场景光照」的样子 ✓✓（用户判断极准 ✓）
+         *     · 它想解决的（阴影不够深）只是次要观感 ✓ 不值得冒这个险 ✗
+         *   ⚠️ 另外记两条坑，避免以后再试：
+         *     ① 在 `lights_fragment_begin` 里乘 `reflectedLight.indirectDiffuse` ⇒ **完全无效** ✗
+         *        （实测两张截图 SHA 一模一样 ✓）
+         *     ② 在 `RE_IndirectDiffuse_Toon` 里乘 ⇒ 有效 ✓ 但会因 min 跨光累积而**全局压暗** ✗
+         *   ⇒ 结论：动间接光必须**按光分别**处理（或干脆不动 ✓）
+         */
+        /* 只保留"阴影环境光"这一条（`shadowAmbient` ✓ 放在 lights_fragment_begin 之后 ✓） */
         const ambLine = (__ambKeep < 1)
           ? 'reflectedLight.indirectDiffuse *= mix( ' + __ambKeep.toFixed(4) + ', 1.0, ba3dShadowMaskG );   // 阴影环境光' + '\n'
           : '';
+        /**
+         * ★★ 把**真实主贴图/主色 `A`** 存进全局（工作单 12 §3：A 的来源已授权 ✓）
+         *
+         * 位置：`#include <color_fragment>` **之后** —— 此时 `<map_fragment>` 与 `<color_fragment>`
+         *   都已执行完 ⇒ `diffuseColor.rgb` 就是**含主贴图的真实 albedo** ✓
+         *   而光照（`<lights_toon_fragment>` / `<lights_fragment_begin>`）**还没跑** ✓
+         *   ⇒ 等 `getGradientIrradiance()` 被调用时，全局 `ba3dAlbedoA` 已经是正确值 ✓
+         *
+         * ⚠️ 不要去改成品 `gl_FragColor` / `outgoingLight` ✗（工作单 12 §1/§2 ✓）
+         */
+        if (shaderMode === 'lilToon' && shader.fragmentShader.includes('#include <color_fragment>')) {
+          shader.fragmentShader = shader.fragmentShader.replace('#include <color_fragment>',
+            '#include <color_fragment>\n' +
+            '\tba3dAlbedoA = diffuseColor.rgb;   // 真实主贴图 albedo（供 _ShadowMainStrength 与阴影层色因式分解 ✓）\n');
+          if (window.__ba3dDebugUI) console.debug('[albedo] 已把 diffuseColor.rgb 存入 ba3dAlbedoA（color_fragment 之后 ✓）');
+        }
         if (chunk && shader.fragmentShader.includes(INCLUDE)) {
           shader.fragmentShader = shader.fragmentShader.replace(INCLUDE,
             'ba3dShadowMaskG = getShadowMask();   // 投影只走这条路（见上面说明）' + '\n' +
@@ -6213,7 +7484,19 @@ cutoff: -1,
              * ⚠️ 这里能拿到 nonPerturbedNormal 和 normal · 因为 normal_fragment_begin 更早
              *    而 getGradientIrradiance 是在下面的 #include <lights_fragment_begin> 里被调的
              *    ⇒ 顺序正确
-             * ⚠️ 三个强度都是 1（默认）时**一个字符都不发** · 零开销、零行为变化
+             *
+             * ★★★ **必须无条件赋值**（外部评审 Codex 指出、我复核确认 ✓ 这是个大 bug ✗）
+             *
+             *   旧版写的是"三个强度都是 1（默认）时一个字符都不发 · 零行为变化" ✗
+             *   可**全局声明处**把这三者初始化为 `vec3(0.0, 0.0, 1.0)` ✗（见上面的声明）
+             *   ⇒ 默认配置下根本不赋值 ⇒ 分档一直在拿 **写死的 (0,0,1)** 去点乘光源 ✗✓✓
+             *   ⇒ 后果：明暗因子与**表面法线无关** ⇒ 整只模型的分档"平"掉 ✗
+             *      （这正是"外套对任何倍率都不响应""分档看着不对"的一大来源 ✓）
+             *
+             *   正确做法：永远发这三行 ✓
+             *     strength = 1 ⇒ normalize( normal )      = fd.N（lilToon 的默认 ✓）
+             *     strength = 0 ⇒ normalize( nonPerturbedNormal ) = fd.origN ✓
+             *   ⇒ 顺带修掉我原来那句**错误注释**（"默认就是归一化的 normal" ✗ 当时是假的 ✓）
              */
             (function () {
               if (shaderMode !== 'lilToon') return '';
@@ -6221,17 +7504,36 @@ cutoff: -1,
               const s1 = g('shadowNormalStrength', 1);
               const s2 = g('shadow2ndNormalStrength', 1);
               const s3 = g('shadow3rdNormalStrength', 1);
-              if (s1 === 1 && s2 === 1 && s3 === 1) return '';
-              if (window.__ba3dDebugUI) console.debug('[shadow] 法线强度 1st=' + s1 + ' 2nd=' + s2 + ' 3rd=' + s3);
+              if (window.__ba3dDebugUI) console.debug('[shadow] 法线赋值（无条件 ✓）1st=' + s1 + ' 2nd=' + s2 + ' 3rd=' + s3);
               return 'ba3dShadowN1 = normalize( mix( normalize( nonPerturbedNormal ), normal, ' + s1.toFixed(4) + ' ) );\n'
                 + 'ba3dShadowN2 = normalize( mix( normalize( nonPerturbedNormal ), normal, ' + s2.toFixed(4) + ' ) );\n'
                 + 'ba3dShadowN3 = normalize( mix( normalize( nonPerturbedNormal ), normal, ' + s3.toFixed(4) + ' ) );\n';
             })() +
-            neutral(chunk) + '\n' + ambLine);
+            neutral(chunk) + '\n' + ambLine)
         } else {
           shader.fragmentShader = shader.fragmentShader.replace(INCLUDE,
             'ba3dShadowMaskG = getShadowMask();' + '\n' + ambLine + INCLUDE);
         }
+        /**
+         * ⚠️⚠️ 这里**曾经**有一个 `lateLine` 注入（在片元后段改 `outgoingLight`）—— **已删除** ✗
+         *
+         * 工作单 12 §1 纠正（我实测确认 ✓）：
+         *   ① 它插在 `lights_fragment_end` 之后，而那时 `outgoingLight` **还没声明** ✗
+         *      ⇒ 真实 GLSL 报 `ERROR: 'outgoingLight' : undeclared identifier` ✗（连错三次 ✓）
+         *   ② 更根本的是**语义就错了** ✗：上游 `lil_common_frag.hlsl` 约 1037 是
+         *        `indirectCol = mix( indirectCol, directCol, lns.w * _ShadowBorderColor.rgb )`
+         *      ⇒ 边界色是**逐通道权重**（乘进去的）✓、目标是 **directCol** ✓
+         *      ⇒ 它**不**把完整输出混向"裸边界色" ✗、**不**染 rim / emission / 环境项 ✗
+         *   ③ 我也试过 `mix(outgoingLight, outgoingLight*bc, lns.w)`（乘性修正 ✓ 更接近）
+         *      但仍是在**成品**上做 ⇒ 仍会染到非 shadow-side 的成分 ✗
+         *
+         * 工作单 12 §2 同时纠正：`reflectedLight.indirectDiffuse` 是 three 的**环境/半球光项** ✗
+         *   不是上游的 `indirectCol` ✗；而且全局因子会被**各盏 direct light** 依次覆盖 ✗
+         *   ⇒ 那条 `_ShadowMainStrength` 替代公式也**已删除** ✓
+         *
+         * ⇒ 正确做法见下方 `celGradientGLSL()` 里的**乘数因式分解**（工作单 12 §3 配方 ✓）：
+         *    `S → (mainStrength) → min(·,1) → (border) → R`，全部在**同一盏灯的局部因子**里完成 ✓
+         */
         /**
          * 一次性诊断（详细日志打开时）✗ 直接看注入有没有命中：
          *   · includeFound   —— #include <lights_fragment_begin> 在不在
@@ -7469,7 +8771,8 @@ const SHADOW_UNIFORM_KEYS = [
     modelRoot.traverse((o) => {
       if (!o.isMesh || o.userData.__isLilOutline) return;
       const key = meshPathOf(o);
-      if (meshLocked.has(key)) { setVisibleDeep(o, meshLocked.get(key)); hit++; }
+      /* ⚠️ 锁定也**让位给动画**：片段正在驱动这个网格时，以片段为准 ✓（与 Unity 里动画驱动显隐一致）*/
+      if (meshLocked.has(key) && !animVisibleUuids.has(o.uuid)) { setVisibleDeep(o, meshLocked.get(key)); hit++; }
     });
     return hit;
   }
@@ -7735,6 +9038,11 @@ const SHADOW_UNIFORM_KEYS = [
       }
     }
     if (!modelRoot) return renderMode;
+    /* 第 4 后端：FBX 源要补翻 V（幂等，只有状态真的变了才动几何体）。
+       放在这里是为了覆盖「换模型」「配置导入把模式切走」等所有入口 ——
+       不变式：**V 被翻转 ⇔ 正在用他们的材质**，否则我们自己的着色器会把贴图镜像。 */
+    if (lilSrcUse()) setLilSrcUVFlip(lilSrcNeedsUVFlip());
+    else if (lilSrcUVFlipped) setLilSrcUVFlip(false);
     modelRoot.traverse((o) => {
       if (!o.isMesh || !o.material) return;
       const isArr = Array.isArray(o.material);
@@ -7748,6 +9056,26 @@ const SHADOW_UNIFORM_KEYS = [
           return toUnlitMaterial(src);
         }
         if (renderMode === 'toon') {
+          /**
+           * ★ 第 4 后端：表面材质换成他们的（真 lilToon 源码）。
+           *
+           * ⚠️ 必须放在下面「卡通材质复用判断」**之前**。
+           *   否则：已经从卡通材质建过一次之后（__celVersion/__celShader 都一致），
+           *   复用判断会直接 return 旧的卡通材质，根本走不到这里 —— 实测出现
+           *   「模式已切到 liltoon-src、UV 也补翻了，但表面还是卡通材质」的假成功。
+           *   复用判据用 __lilSrc 标记，与卡通材质天然区分开。
+           */
+          if (lilSrcUse()) {
+            if (m.userData && m.userData.__lilSrc && m.userData.__src === src &&
+                m.userData.__lilSrcVersion === celProgramVersion) {
+              if (window.__ba3dDiag2) console.debug('[diag2] 源码材质 复用 name=' + m.name + ' ver=' + celProgramVersion);
+              return m;
+            }
+            if (window.__ba3dDiag2) console.debug('[diag2] 源码材质 重建 src=' + (src && src.name) + ' 旧材质=' + (m && m.name) + ' ver=' + celProgramVersion);
+            const lm = toLilSrcMaterial(src);
+            if (window.__ba3dDiag2) console.debug('[diag2] toLilSrcMaterial 返回 ' + (lm ? lm.name : 'null'));
+            if (lm) return lm;
+          }
           // 已是卡通材质**且版本一致**才复用；setCel() 递增版本号后这里会重建，
           // 让 onBeforeCompile 闭包重新读到最新的 celCfg（否则改参数无反应）
           if (m.userData && m.userData.__toon && m.userData.__src === src &&
@@ -7813,15 +9141,198 @@ const SHADOW_UNIFORM_KEYS = [
    * 外扩量乘 pos.w 做透视补偿 → 屏幕上宽度基本恒定。
    *
    * 可调参数：
-   *   thickness 粗细（NDC 偏移量；0.004 ≈ 2px @900px 宽视口）
+   *   thickness 粗细（NDC 偏移量；0.002 ≈ 1px @900px 宽视口）
    *   color     颜色（官方一般不是纯黑，而是偏暖的深色）
    *   alpha     透明度
    * 单个材质可用 material.userData.outlineParameters = { visible: false } 关掉描边。
    */
-  const OUTLINE_DEFAULT = { thickness: 0.004, color: [0.10, 0.07, 0.11], alpha: 1.0 };
+  const OUTLINE_DEFAULT = { thickness: 0.002, color: [0.10, 0.07, 0.11], alpha: 1.0 };
   let outlineEffect = null;
   let outlineOn = true; // 默认开启（官方观感）
   const outlineParams = Object.assign({}, OUTLINE_DEFAULT);
+
+  /* ==================================================================================
+   * 第 4 个着色后端：真 lilToon 源码（three-liltoon）
+   *
+   * 设计：**不做成独立的第四个模式，而是 lilToon 模式的一个变体**（多一个 lilSrcOn 开关）。
+   *
+   * 为什么这样最稳：
+   *   `shaderMode === 'lilToon'` 这个判断在文件里有 30 处（贴图解析、模板、自定义 pass、
+   *   溶解、描边接管……）。做成变体，这些全都照常工作，**唯一的差别只在材质构建**：
+   *   表面材质换成他们的 LilToonMaterial，别的（我们的描边、光照、配置面板）一律照旧。
+   *   现有三个模式的代码路径一行都不动，lilSrcOn 恒为 false。
+   *
+   * 分工：
+   *   表面着色 → 他们的库（真 lilToon 编译产物，已与 Unity 对拍：简单路径 2.22%、阴影+边缘光 5.37%）
+   *   描边     → 我们自己的 applyLilOutline()（他们发布版的描边实测不可用：
+   *              会创建代理并绘制，但选到的顶点程序里 _OutlineWidth 只声明不使用，
+   *              外壳不外扩 ⇒ 被本体遮住，任何宽度都看不见）
+   *
+   * 三个实测坑固化在 liltoon-bridge.js 里，这里只负责接线。
+   * 详见 THREE-LILTOON-M2.md 第八、九、十节。
+   * ================================================================================== */
+  const LIL_SRC_MODE = 'liltoon-src';
+  let lilSrcOn = false;            // 后端开关（只有它和 lilSrcReady 同时为真才替换材质）
+  let lilSrcBridge = null;         // 适配层模块
+  let lilSrcLib = null;            // 他们的库
+  let lilSrcReady = false;         // 库已就绪
+  let lilSrcLoading = null;        // 加载中的 promise（防并发重复加载）
+  let lilSrcUVFlipped = false;     // 几何体的 V 是否已补翻（可逆，切走必须翻回来）
+  let lilSrcRelease = null;        // enableLilToon() 的释放句柄（切走必须调）
+  let lilSrcVendorUrl = null;      // vendor 根 URL（装上/卸下时要复用）
+
+  /** 当前是否要用他们的表面材质 */
+  function lilSrcUse() { return lilSrcOn && lilSrcReady && shaderMode === 'lilToon'; }
+
+  /**
+   * 只做**模块加载**（不装渲染器后端）。
+   *
+   * ⚠️ 为什么把「加载模块」和「装渲染器后端」拆开：
+   *   他们的 enableLilToon(renderer) 会**包装 renderer.render**，并可能把渲染改道
+   *   经 RenderTarget。实测：包装一直装着的话，切回 cel 后抗锯齿会变
+   *   ⇒ 整个角色沿轮廓出现约 3% 的像素差（画面看着一样，边缘一变就全差）。
+   *   ⇒ 只在用这个后端时装，切走必须卸（见 deactivateLilSrcBackend）。
+   *
+   * 用 `new URL(..., import.meta.url)` 而不是字面量 './liltoon-bridge.js'：
+   *   字面量会被 esbuild 静态解析，把那 1.95 MB 的 GLSL chunk 打进 dist 单文件。
+   *   这样写它解析不了，保持为运行时 fetch，部署时随静态文件一起发。
+   */
+  function ensureLilSrc() {
+    if (lilSrcLib) return Promise.resolve(lilSrcLib);
+    if (lilSrcLoading) return lilSrcLoading;
+    const bridgeUrl = new URL('./liltoon-bridge.js', import.meta.url).href;
+    lilSrcVendorUrl = new URL('./vendor/three-liltoon/', import.meta.url).href;
+    lilSrcLoading = (async () => {
+      lilSrcBridge = await import(/* @vite-ignore */ bridgeUrl);
+      lilSrcLib = await lilSrcBridge.loadBackend(lilSrcVendorUrl);
+      console.debug('[lil-src] three-liltoon 模块已加载（渲染器后端尚未装）');
+      return lilSrcLib;
+    })().catch((e) => {
+      lilSrcLoading = null;
+      lilSrcOn = false;
+      console.error('[lil-src] 加载失败，已退回 lilToon 风格模式：', e);
+      applyRender(renderMode);
+      /**
+       * 让工具栏的「着色」下拉框跟着回退 ——
+       * 否则界面会显示成「已选中 lilToon 源码」，实际跑的却是风格模式（用户会以为工具坏了）。
+       * 沿用本文件既有的全局同步钩子写法（见 __ba3dSyncGroundUI）。
+       */
+      if (typeof window !== 'undefined' && typeof window.__ba3dSyncShaderUI === 'function') {
+        try { window.__ba3dSyncShaderUI(); } catch (e2) { /* 界面没接就算了 */ }
+      }
+      throw e;
+    });
+    return lilSrcLoading;
+  }
+
+  /**
+   * 需不需要装他们那层**自动 pass**（enableLilToon 的包装）？
+   *
+   * 结论：**默认要装**。实测（浏览器内 CDP TaskDuration，12 网格、动画在播、网格隐藏）：
+   *
+   *     不装这层            0.43 ms/帧（与 cel 同级）
+   *     装这层              1.33 ms/帧   ← 多约 0.9 ms/帧
+   *     装层但关掉描边书签    0.38~0.42 ms/帧（每帧只差 0.037 ms，且画面 0.000% 一致）
+   *     ⇒ 那 0.9 ms 的大头**不是**描边书签，而是每网格每帧的簿记
+   *        （scene.traverse + owners map + 每网格装/拆投影 depth 钩子 + 每帧一个闭包
+   *          + 他们多做的 scene.updateMatrixWorld）
+   *
+   * ⚠️ 但**不能为了省这 0.9 ms 就不装**：
+   *    实测不装会**丢掉面部自阴影**（同一姿势对比相差 0.555% 像素，方向是"变亮 1538 / 变暗 0"，
+   *    也就是刘海投在脸上的那层阴影没了）。那层里的 `customDepthMaterial` + `onBeforeShadow`
+   *    正是让投影按 lilToon 的 alphaTest/opacity 正确生成的关键。
+   *
+   * ⇒ 保留一个**诊断/性能开关**：`window.__ba3dLilSrcLayer = 'off'` 可临时跳过（用于测性能上限），
+   *   默认（auto/on）都装。想真正砍掉这 0.9 ms 需要改上游那套每帧装卸的设计（风险大，暂不做）。
+   */
+  function lilSrcNeedsLayer() {
+    if (typeof window !== 'undefined' && window.__ba3dLilSrcLayer === 'off') return false;
+    return true;
+  }
+
+  /** 装上他们的渲染器后端（自动 pass）+ 重建材质 */
+  async function activateLilSrcBackend() {
+    await ensureLilSrc();
+    const wantLayer = lilSrcNeedsLayer();
+    if (wantLayer) {
+      if (!lilSrcRelease) {
+        lilSrcRelease = await lilSrcBridge.enableBackend(renderer, lilSrcVendorUrl);
+        console.debug('[lil-src] 渲染器后端已装（自动 pass：透明/毛发等）');
+      }
+    } else if (!lilSrcRelease) {
+      console.debug('[lil-src] 跳过安装自动 pass 层（无透明/毛发需求，省下每帧 Θ(网格数) 的开销）');
+    }
+    lilSrcReady = true;
+    if (lilSrcUse()) applyRender(renderMode);
+  }
+
+  /** 卸掉他们的渲染器后端（必须做，否则会影响其他模式的抗锯齿）*/
+  function deactivateLilSrcBackend() {
+    if (lilSrcRelease) {
+      try { lilSrcRelease(); } catch (e) { console.warn('[lil-src] 卸载后端时报错：', e); }
+      lilSrcRelease = null;
+      console.debug('[lil-src] 渲染器后端已卸');
+    }
+    lilSrcReady = false;
+  }
+
+  /**
+   * FBX 几何体补翻 V，可逆。
+   *
+   * 为什么必须做：他们的 normalizeLilToonTexture() **强制 `texture.flipY = false`**
+   * （glTF 约定，UV 原点在左上）。而 three 的 FBXLoader 产出的是 FBX/OpenGL 约定
+   * （原点左下），本来靠 three 默认的 flipY = true 抵消，被他们关掉后贴图就上下镜像。
+   * 实测症状：袖子采到贴图里的粉白区、腿上采到深色区、头发发白。
+   *
+   * GLB/glTF 源本来就是左上原点，不要翻（`lilSrcNeedsUVFlip()` 判据）。
+   * 切走时必须翻回来，否则我们自己的着色器会把贴图镜像。
+   */
+  function setLilSrcUVFlip(on) {
+    if (!modelRoot || on === lilSrcUVFlipped) return 0;
+    let n = 0;
+    modelRoot.traverse((o) => {
+      if (!o.isMesh || !o.geometry) return;
+      const g = o.geometry;
+      const already = !!(g.userData && g.userData.__vFlippedForLilSrc);
+      if (on === already) return;
+      for (const key of Object.keys(g.attributes)) {
+        if (!/^uv\d*$/.test(key)) continue;
+        const a = g.attributes[key];
+        for (let i = 0; i < a.count; i++) a.setY(i, 1 - a.getY(i));
+        a.needsUpdate = true;
+      }
+      if (!g.userData) g.userData = {};
+      g.userData.__vFlippedForLilSrc = on;
+      n++;
+    });
+    lilSrcUVFlipped = on;
+    if (n) console.debug('[lil-src] UV ' + (on ? '已补翻 V（FBX→glTF 约定）' : '已翻回（FBX 约定）') + '：' + n + ' 个网格');
+    return n;
+  }
+
+  /** 只有 FBX 源需要补翻；GLB/glTF 源不用 */
+  function lilSrcNeedsUVFlip() { return !!cfg.__isFbx; }
+
+  /** 由原始材质构建他们的表面材质（贴图沿用模型自带的，与另外三个模式一致） */
+  function toLilSrcMaterial(src) {
+    if (!lilSrcReady || !lilSrcBridge || !lilSrcLib) return null;
+    const mCfg = lilCfgFor(src);
+    const props = lilSrcBridge.cfgToProps(mCfg);
+    const mat = lilSrcBridge.createSurfaceMaterial(lilSrcLib, props);
+    const texMap = {};
+    if (src.map) texMap._MainTex = src.map;
+    if (src.normalMap) texMap._BumpMap = src.normalMap;
+    if (src.emissiveMap) texMap._EmissionMap = src.emissiveMap;
+    lilSrcBridge.applyTextures(mat, texMap);
+    mat.name = (src.name || 'material') + '__lilSrc';
+    mat.side = src.side;                       // 双面/单面跟随原材质
+    mat.transparent = !!src.transparent;
+    mat.alphaTest = src.alphaTest || 0;
+    mat.depthWrite = src.depthWrite;
+    /* __lilSrcOf 记下**原名**：lilCfgFor 查覆盖表时用它兜底 ✓ */
+    mat.userData = { __lilSrc: true, __src: src, __lilSrcVersion: celProgramVersion, __lilSrcOf: src.name };
+    return mat;
+  }
 
   function applyShader(mode) {
     const next = (mode === 'lilToon') ? 'lilToon' : (mode === 'cel' ? 'cel' : 'none');
@@ -7850,6 +9361,7 @@ const SHADOW_UNIFORM_KEYS = [
       lilCfg.outline.color = [Number(cl[0]) || 0, Number(cl[1]) || 0, Number(cl[2]) || 0, isFinite(al) ? al : 1];
       lilMaterialVersion++;
       celProgramVersion++;
+      try { applyFaceNoShadow(); } catch (e) { /* 忽略 */ }
       console.debug('[shader] 已自动接管描边 → lilToon 反壳：width=' + lilCfg.outline.width.toFixed(3)
         + '（由 cel thickness ' + th + ' 换算 ✗ ×100 ✓）color=' + JSON.stringify(lilCfg.outline.color));
     }
@@ -7886,6 +9398,41 @@ const SHADOW_UNIFORM_KEYS = [
     if (!p) return null;
     const cel = shaderActive();   // 只有 toon + 着色器时才补偿 ✓ PBR/Unlit 保持原样
     /**
+     * ★★ **我们自己实现的 lilToon 材质不套 cel 那套灯光补偿** ——
+     *
+     *   症状（用户实测）：切到「lilToon 风格」时**环境光明显偏暗**、阴影也和预设不一样 ✗，
+     *     而「lilToon 源码（three-liltoon）」后端与 Unity 里的预设表现接近 ✓
+     *
+     *   原因：下面那组倍率（hemi ×0.48 / key ×1.22 / rim·fill ×0.15）是**为 cel 调**的 ——
+     *     cel 靠分档明暗，刻意压环境光、让主光主导（见下方长注释 ✓）；
+     *     而 lilToon 的观感恰恰**依赖环境光**（RoomEnvironment 的间接光 + 半球光 ✓）
+     *     ⇒ 把 cel 的补偿套到 lilToon 上 = 把环境光压掉 ⇒ 发暗 ✗
+     *
+     *   ⚠️ 只对**我们自己的** lilToon 材质生效；源码后端（lilSrcUse() ✓）自带光照/环境处理，
+     *      动它会破坏它现在正确的表现 ✗
+     */
+    /**
+     * ⚠️⚠️ **两个 lilToon 后端必须吃到同一套场景光照** ——
+     *   曾经试过"只给我们自己的 lilToon 换光照"（跳过 cel 补偿 + 环境光 ×1.45 ✗），
+     *   结果 **lilToon 风格与 lilToon 源码表现明显不一样了** ✗（用户实测）
+     *   ⇒ 回退：两个后端一律等同处理，差异只留给材质实现本身 ✓
+     *     （源码后端此前那套 cel 补偿就是"基准观感"的唯一来源，不能单方面改一边 ✗）
+     *
+     * ★★ **例外（有实测依据 ✓）：环境光那一档（hemi ×0.48）对我们 lilToon 风格免除** ✓
+     *   实测（同机位三组）：
+     *     cel + 场景光 106.6 · lilToon + 场景光 112.8 · lilToon **关掉环境光** 110.5
+     *     ⇒ 关掉环境光只差 **2.3** ✓ ⇒ 环境光对角色几乎**没贡献** ✗
+     *   原因两条：
+     *     ① `MeshToonMaterial` **不支持 envMap** ⇒ 场景环境 IBL 整个丢掉 ✗（结构性 ✓ 无法绕 ✗）
+     *     ② 剩下那点半球光又被 cel 补偿 **×0.48** 砍半 ✗✓✓
+     *   ⇒ ② 是我们能修的 ⇒ 只对**我们 lilToon 风格**免除 hemi 那一斧 ✓
+     *     直射光/边缘/补光/曝光的补偿**保持不变** ✓ ⇒ 改动面最小 ✓
+     *     （源码后端不读我们的场景光 ✗ 所以它自然不受影响 ✓ 也不会因此"两版不一致"✗✓）
+     */
+    const applyCelTuning = cel;
+    /** 环境光补偿是否对我们 lilToon 风格免除（实测必要 ✓ 可用配置 lilAmbientTuning: false 关掉 ✓）*/
+    const ourLilStyle = cel && shaderMode === 'lilToon' && !lilSrcUse() && cfg.lilAmbientTuning !== false;
+    /**
      * 卡通模式的灯光补偿。
      *
      * MeshToonMaterial 不支持 envMap，RoomEnvironment 的环境照明整个丢掉，所以确实要补 ——
@@ -7914,17 +9461,47 @@ const SHADOW_UNIFORM_KEYS = [
     hemi.groundColor.set(p.hemi.ground);
     // 倍率已按实测定标烘入：滑块 lightingScale 在 2.1 时观感与无光照一致，
     // 这里直接把 2.1 折进倍率，于是滑块保持 1.0 = 默认即正确（想再调仍可动滑块）
-    hemi.intensity = p.hemi.intensity * (cel ? 0.48 : 1);
+    /**
+     * ★★ lilToon 模式要**反过来补环境光**：
+     *   MeshToonMaterial **不支持 envMap** ⇒ RoomEnvironment 的间接光整个丢掉 ⇒ 画面偏暗 ✗
+     *   （cel 靠分档明暗、刻意压环境光让主光主导 ✓ 那套倍率在 lilToon 上正好相反 ✗）
+     *   实测（白昼预设 · 固定窗口）：脸的亮度 我们 178.8 ✗ vs 源码版 229.8 ✓ ⇒ 暗 22%
+     *   ⇒ lilToon 下把半球光**抬高**补偿丢掉的 IBL；源码后端自带光照处理，不受影响 ✓
+     */
+    // ★ lilToon 风格免除这一斧（实测：环境光贡献被砍到几乎为零 ✗ 见上面的实测数据 ✓）
+    /**
+     * ⚠️ **收回"给 lilToon 风格免除 hemi ×0.48"的例外** ✗
+     *   实测：免除后 hemi 0.5（源码版 0.24 ✗）⇒ 两后端光照就不一致了 ✗
+     *   而用户早先明确要求「两个 lilToon 后端吃同一套光照，差异只留给材质实现」✓
+     *   ⇒ 亮度差改由**材质路径**补偿（`lilToonLightComp` = 1/π 补偿 ✓ 见 lightClamp 处 ✓）
+     */
+    hemi.intensity = p.hemi.intensity * (applyCelTuning ? 0.48 : 1);
+    /**
+     * ★★ **方案 A：把场景环境光补给我们 lilToon 风格** ✓
+     *
+     *   `MeshToonMaterial` 拿不到 envMap ✗ ⇒ 场景环境整个丢失 ✓
+     *   ⇒ 用 `ambLight` 均匀补回来 ✓（颜色/强度来自 `applyUnitySceneText` 解析的场景环境 ✓）
+     *   ⚠️ **只在我们 lilToon 风格下点亮** ✗ 其他模式强度置 0 ⇒ 零影响 ✓（SHA 验证 ✓）
+     *   ⚠️ three 的 Lambert 带 1/π ⇒ 用 `lilAmbientBoost`（默认 2.0 ✓）补偿可见度 ✓
+     */
+    refreshUnityAmbientLight();   // 只刷环境灯 ✓ 不碰主光 ✓
+    /**
+     * ⚠️⚠️ **这里曾经残留一行引用旧变量 `ua` 的调试日志 —— 已删除** ✗
+     *   后果（实测踩到 ✓）：每次切换着色模式时 applyLightingPreset **中途抛 ReferenceError** ✗
+     *     ⇒ 后面的主光/边缘/补光/曝光设置**整段被跳过** ✗
+     *     ⇒ 表现为"改了参数却没反应"✓（我做补偿扫描时四个值画面完全一样 ✓ 就是它 ✓）
+     *   ⇒ 教训：把代码块换成函数调用时，一定要连带删掉块内引用旧局部变量的语句 ✓
+     */
     keyLight.color.set(p.key.color);
-    keyLight.intensity = p.key.intensity * (cel ? 1.22 : 1);
+    keyLight.intensity = p.key.intensity * (applyCelTuning ? 1.22 : 1);
     keyLight.position.set(p.key.position[0], p.key.position[1], p.key.position[2]);
     rimLight.color.set(p.rim.color);
-    rimLight.intensity = p.rim.intensity * (cel ? 0.15 : 1);
+    rimLight.intensity = p.rim.intensity * (applyCelTuning ? 0.15 : 1);
     fillLight.color.set(p.fill.color);
-    fillLight.intensity = p.fill.intensity * (cel ? 0.15 : 1);
+    fillLight.intensity = p.fill.intensity * (applyCelTuning ? 0.15 : 1);
     // 卡通用 LinearToneMapping（数学上就是 ×exposure，等比缩放 → 阴影对比原样保留），
     // 亮度则交给 toneMappingExposure 精确控制。NoToneMapping 会**忽略** exposure，没法调。
-    renderer.toneMappingExposure = p.exposure * (cel ? 1.15 : 1);
+    renderer.toneMappingExposure = p.exposure * (applyCelTuning ? 1.15 : 1);
     if (typeof updateLightHelper === 'function') updateLightHelper();   // ★ 主光方向指示器跟着走 ✓
     // 整体亮度倍率（lightingScale）：不想改预设数值就能微调明暗
     const ls = Number(cfg.lightingScale);
@@ -8336,8 +9913,16 @@ const SHADOW_UNIFORM_KEYS = [
   /** 默认动作：在名字含 idle 的动作里随机；一个都没有就退回第一段 */
   function pickDefaultClip() {
     if (!clips.length) return null;
-    const idles = clips.filter((c) => /idle/i.test(c.name));
-    const pool = idles.length ? idles : clips;
+    /**
+     * ⚠️ **只从「身体动作」里挑** ——
+     *   overlay 片段（表情 / 换装显隐）不能当默认动作：
+     *   它们不改姿势，被选成默认会让角色一直是绑定姿势 ✗
+     *   （纯表情模型没有身体动作 ⇒ 返回 null，由调用处回退到「播第一条表情」✓）
+     */
+    const body = clips.filter((c) => !(clipMeta.get(c) || {}).overlay);
+    if (!body.length) return null;
+    const idles = body.filter((c) => /idle/i.test(c.name));
+    const pool = idles.length ? idles : body;
     const c = pool[Math.floor(Math.random() * pool.length)];
     defaultClipName = c ? c.name : null;
     return c;
@@ -8373,7 +9958,7 @@ const SHADOW_UNIFORM_KEYS = [
    *                   "mouthAtlas": "./assets/mouth/Character_Mouth_2.png" },
    *   "pivot":      { "x": 0.25, "z": 0.30 },
    *   "renderer":   { "shading": "pbr" | "cel",
-   *                   "outline": true, "outlineThickness": 0.004,
+   *                   "outline": true, "outlineThickness": 0.002,
    *                   "outlineColor": [0.10, 0.07, 0.11], "outlineAlpha": 1,
    *                   "targetHeight": 2.0, "fov": 30, "shadows": true },
    *   "lighting":   { "preset": "day" | "golden" | "night", "exposure": 1.0 },
@@ -8408,6 +9993,13 @@ const SHADOW_UNIFORM_KEYS = [
       'shadowBorderRange', 'shadowMainStrength',
       'shadowReceive', 'shadow2ndReceive', 'shadow3rdReceive',
       'shadowAmbient',
+      /**
+       * ★ 我们 lilToon 风格的亮度补偿（1/π 补偿 ✓ 见 onBeforeCompile 处 ✓）
+       *   ⚠️ 之前**不在白名单里** ⇒ `setLilConfig({lilToonLightComp: X})` 被静默丢弃 ✗
+       *     ⇒ 我做补偿标定时四个值画面完全一样 ✓（就是这个原因 ✓）
+       *   ⇒ 这属于**我们自己的扩展键**，不是 lilToon 原生材质属性 ✓
+       */
+      'lilToonLightComp',
       // 渲染状态（lilToon 的 _TransparentMode / _Cutoff / _Cull ✗ 默认 -1 = 不改 ✓）
       'transparentMode', 'cutoff', 'cull']) {
       const v = num(o[k]); if (v !== undefined) T[k] = v;
@@ -8593,6 +10185,7 @@ const SHADOW_UNIFORM_KEYS = [
     // 参数是烘进 GLSL 的字面量 ✗ → 改完必须重建材质
     lilMaterialVersion++;
     celProgramVersion++;
+    try { applyFaceNoShadow(); } catch (e) { /* 忽略 */ }
     // 描边是**独立的网格**（不是烘进 GLSL 的字面量），改完要立刻同步
     applyLilOutline();
     console.debug('[lilToon] 已应用配置' + (perMat ? '（材质 ' + matName + '）' : '') +
@@ -8602,6 +10195,43 @@ const SHADOW_UNIFORM_KEYS = [
   function applyConfigPreLoad(c) {
     if (!c) return;
     const m = c.model || {};
+    /**
+     * —— 外部 Unity `.anim` 与声明式相机（**必须在载入模型前读到**）——
+     *
+     * ⚠️ `animation.clips` 里的相对路径按「配置文件所在目录」解析 ⇒ 与 model.url 同一套规则，
+     *   所以这里只存原始 url，真正的解析交给载入后的 `loadUnityAnims()`（那时才知道 baseUrl ✓）。
+     */
+    if (c.animation && Array.isArray(c.animation.clips)) {
+      cfg.animClips = c.animation.clips
+        .filter((x) => x && typeof x === 'object' && x.url)
+        .map((x) => ({ url: String(x.url), name: x.name ? String(x.name) : null, group: x.group ? String(x.group) : null }));
+    }
+    if (c.animation && c.animation.axisFix !== undefined) cfg.animAxisFix = !!c.animation.axisFix;
+    /**
+     * ★ Humanoid 肌肉换算表：给 URL（相对配置文件解析 ✓）或直接内联对象
+     *   ⚠️ 必须在**载入片段之前**就位 —— 转换是一次性的（见 loadUnityAnims ✓）
+     */
+    if (c.animation && c.animation.humanoid) {
+      if (typeof c.animation.humanoid === 'string') cfg.humanoidUrl = c.animation.humanoid;
+      else if (typeof c.animation.humanoid === 'object') cfg.humanoidProfile = c.animation.humanoid;
+    }
+    /** 默认动作名要记下来：外部 `.anim` 是异步载入的，那时列表里可能还没有它 ✓ */
+    if (c.animation && c.animation.name) cfg.defaultAnimName = String(c.animation.name);
+    if (c.camera && typeof c.camera === 'object') {
+      const cam = c.camera;
+      const pos = Array.isArray(cam.position) ? cam.position.map(Number) : null;
+      const tgt = Array.isArray(cam.target) ? cam.target.map(Number) : null;
+      if (pos && pos.length === 3 && pos.every(Number.isFinite)) {
+        cfg.camera = {
+          position: pos,
+          target: (tgt && tgt.length === 3 && tgt.every(Number.isFinite)) ? tgt : [0, pos[1], 0],
+          fov: Number.isFinite(Number(cam.fov)) ? Number(cam.fov) : null,
+          unityModelHeight: Number.isFinite(Number(cam.unityModelHeight)) ? Number(cam.unityModelHeight) : null,
+        };
+      } else {
+        console.warn('[camera] camera.position 必须是三元数组 ⇒ 已忽略');
+      }
+    }
     /**
      * ★ 记下「原样字符串」和「解析后的值」（导出时要比对 ✓）
      *   ⚠️ 只有**从配置文件读来的**才有 `__rawUrls` ✗ 手写 opts / data-* 没有 ✓
@@ -8694,10 +10324,18 @@ const SHADOW_UNIFORM_KEYS = [
         z: Number(r.modelOffset.z) || 0,
       });
     }
-    /** ★ 光照手动值（导出时会带；载入时套回去 ✓）*/
-    if (r.lightState && typeof r.lightState === 'object') {
-      try { setLightState(r.lightState); } catch (e) { console.warn('[config] lightState 套用失败：', e); }
-    }
+    /**
+     * ★ 光照手动值**不在这里套** ✗ —— 必须等下面的「打光预设」套完再套 ✓
+     *
+     *   实测（用户报的）：基准 JSON 里同时有
+     *     `lighting.preset`            ⇒ 预设会把主光角度/强度/曝光整套写一遍 ✓
+     *     `renderer.lightState`        ⇒ 手动角度
+     *   原来在这里先套 lightState ✗ 随后 L9776 的 applyLightingPreset 又**整套覆盖** ✗
+     *   ⇒ JSON 里的角度看起来"完全没生效" ✓✓
+     *
+     *   ⇒ 改为：预设先套 ✓ 手动值后套 ✓（见下面「打光」段落之后的代码 ✓）
+     *      并且有手动值就清掉预设名 ⇒ 之后 applyRender 也不会再把预设套回来 ✓
+     */
     if (r.lilToon !== undefined && typeof r.lilToon === 'object'
         && (r.lilToon.config || r.lilToon.byMaterial)) {
       // 兼容**老配置**（lilToon 参数还内嵌在主 JSON 里的那种 ✓）
@@ -8783,6 +10421,8 @@ const SHADOW_UNIFORM_KEYS = [
     if (r.lightingScale !== undefined) cfg.lightingScale = Number(r.lightingScale) > 0 ? Number(r.lightingScale) : 1;
     // 光照夹取（lilToon 的 _LightMinLimit / _LightMaxLimit · 可选 ✓）
     if (r.lightClampOn !== undefined) cfg.lightClampOn = !!r.lightClampOn;
+      if (r.lilStyleLightComp !== undefined) cfg.lilStyleLightComp = !!r.lilStyleLightComp;
+      if (r.lilStyleLightMin !== undefined) cfg.lilStyleLightMin = Math.max(0, Math.min(1, Number(r.lilStyleLightMin) || 0.95));
     if (r.lightMinLimit !== undefined) cfg.lightMinLimit = Math.max(0, Math.min(1, Number(r.lightMinLimit) || 0));
     if (r.lightMaxLimit !== undefined) cfg.lightMaxLimit = Math.max(0, Math.min(4, Number(r.lightMaxLimit) || 1));
     // 渲染状态（顶层 · 每材质可覆盖 ✓）
@@ -8802,6 +10442,24 @@ const SHADOW_UNIFORM_KEYS = [
 
     // —— 打光 ——
     if (l.preset && LIGHTING_PRESETS[l.preset]) applyLightingPreset(l.preset);
+    /**
+     * ★★ **手动光照值：必须在预设之后套** ✓（见上面那段说明 ✓）
+     *
+     *   导出语义（L11693 ✓）：只在「手动改过」（`cfg.lightingPreset === null`）时才写 `lightState` ✓
+     *   ⇒ 载入时若两者都在，以**手动值**为准 ✓ 并把预设名清掉 ✓
+     *     否则 `applyRender()` 末尾会 `applyLightingPreset(currentLighting)` 又把它顶回去 ✗
+     */
+    if (r.lightState && typeof r.lightState === 'object') {
+      try {
+        writeLightState(r.lightState);   // ⚠️ 必须用模块级函数 ✗ setLightState 只是 API 方法（这里取不到 ⇒ 之前一直被 try/catch 吞掉 ✓）
+        cfg.lightingPreset = null;
+        currentLighting = null;
+        if (window.__ba3dDebugUI) {
+          const s = readLightState();
+          console.debug('[config] 手动 lightState 已套用（在预设之后 ✓ 不再被覆盖 ✓）：az=' + s.azimuth + ' el=' + s.elevation);
+        }
+      } catch (e) { console.warn('[config] lightState 套用失败：', e); }
+    }
     // ⚠️ 这里**不能**直接写 renderer.toneMappingExposure ✗
     //    上一行的 applyLightingPreset 已经按「预设 × 卡通补偿(×1.15)」算好了 ✗
     //    直接赋值会把它顶回预设原值 → 初始画面比切换后暗 11% ✗
@@ -8822,6 +10480,30 @@ const SHADOW_UNIFORM_KEYS = [
       } else {
         const played = playAction(a.name); // 允许写「包含匹配」的简写
         if (played) defaultClipName = played;
+      }
+    }
+
+    /**
+     * —— 声明式相机（放最后）——
+     * ⚠️ 必须**最后**才设置：本函数前面的 pivot / modelOffset / 取景都会调用 `frameModel()`
+     *    重新算相机位置，先设会被覆盖 ✓
+     */
+    if (cfg.camera) applyDeclarativeCamera();
+
+    /**
+     * ★★ **配置里的显隐规则必须在这里再应用一次** ——
+     *
+     *   ⚠️⚠️ 实测踩过的坑：`applyHideParts()` / `applyVisibilityRules()` 在**模型载入过程中**
+     *      就会调用一次，而 `renderer.*` 这些配置是在**载入之后**的 `applyConfigPostLoad()`
+     *      里才解析的 ⇒ 那一次跑的时候 `cfg.hideParts` 还是 undefined
+     *      ⇒ **配了 hideParts 却什么都没隐藏**（连日志都没有，因为函数直接 return 0）✗
+     *      （用户报「FBX 默认该藏的部件没藏」就是这个 ✓）
+     */
+    if (modelRoot) {
+      try { applyHideParts(); } catch (e) { console.warn('[hideParts] 应用失败：', e); }
+      try { applyVisibilityRules(); } catch (e) { console.warn('[visibilityRules] 应用失败：', e); }
+      if (cfg.hideOptional) {
+        try { collectOptionalParts(); applyOptionalParts(); } catch (e) { console.warn('[optional] 应用失败：', e); }
       }
     }
   }
@@ -8902,6 +10584,16 @@ const SHADOW_UNIFORM_KEYS = [
       const tm = json.renderer.textureMap;
       if (tm && typeof tm === 'object') {
         for (const k of Object.keys(tm)) tm[k] = fixUrl(tm[k]);
+      }
+    }
+    // Humanoid 换算表的路径同理
+    if (json && json.animation && typeof json.animation.humanoid === 'string') {
+      json.animation.humanoid = fixUrl(json.animation.humanoid);
+    }
+    // 外部 Unity .anim 的路径同理（`animation.clips[].url`）
+    if (json && json.animation && Array.isArray(json.animation.clips)) {
+      for (const c of json.animation.clips) {
+        if (c && typeof c.url === 'string') c.url = fixUrl(c.url);
       }
     }
     return json;
@@ -9211,13 +10903,73 @@ const SHADOW_UNIFORM_KEYS = [
             meshCache.push(obj);
           });
 
+          /**
+           * ★★ uuid → 对象 映射：**显隐轨道要按 uuid 找网格**（轨道名是 `<uuid>.__ba3dVisible`）。
+           *
+           *   ⚠️ 只声明不填充的话，`refreshAnimVisibleTargets()` 找不到对象 ⇒
+           *      既不会豁免自动规则、也不会去设置 visible
+           *      ⇒ 表现是「换装片段完全没反应」（实测踩过 ✓）
+           */
+          uuidToObject.clear();
+          bindQuat.clear();
+          modelRoot.traverse((o) => { uuidToObject.set(o.uuid, o); bindQuat.set(o.uuid, o.quaternion.clone()); });
+          console.debug('[anim] uuid 映射表已建：' + uuidToObject.size + ' 个对象');
+
           if (gltf.animations && gltf.animations.length > 0) {
             clips = gltf.animations;
+            for (const c of clips) clipMeta.set(c, { overlay: false, kind: 'body', source: 'model' });
             // 抹掉根骨骼的水平位移（行走/舞台类动作会把角色整体挪出画面）
             if (cfg.stripRootMotion) stripRootMotion();
-            mixer = new THREE.AnimationMixer(modelRoot);
-            // 默认动作：没配置指定的话，在名字含 idle 的动作里随机
-            playClip(pickDefaultClip() || clips[0]);
+          }
+          /**
+           * ★ 外部 Unity `.anim`：**异步**载入（这里不是 async 函数，用 promise 链）——
+           *   载入完成后再把片段并进列表、按需建 mixer。
+           *
+           * ⚠️ 时序陷阱：`applyConfigPostLoad()` 里应用「配置指定的默认动作」时，
+           *   外部片段可能**还没下载完** ⇒ 那时找不到、会静默回退。
+           *   ⇒ 把配置里的名字记在 `cfg.defaultAnimName`，这里载入完**再应用一次** ✓
+           */
+          /**
+           * ★★ 载入顺序：**先取 Humanoid 换算表 → 再载片段** ——
+           *   转换是一次性的（`unityAnimToClip` 在载入时就决定肌肉能不能解算）
+           *   ⇒ 表晚到就等于没表（那些片段早按「不支持」跳过了）✗
+           */
+          const humanoidReady = (cfg.humanoidUrl && !cfg.humanoidProfile)
+            ? fetch(cfg.humanoidUrl).then((r) => (r.ok ? r.json() : null)).then((j) => {
+              if (j && j.muscles) {
+                cfg.humanoidProfile = j;
+                console.info('[humanoid] 换算表已载入：肌肉 ' + j.muscles.length + ' 条 · ' + (j.avatar || ''));
+              } else console.warn('[humanoid] 换算表内容不对（缺 muscles）：' + cfg.humanoidUrl);
+              return cfg.humanoidProfile;
+            }).catch((e) => { console.warn('[humanoid] 换算表载入失败：' + (e && e.message)); return null; })
+            : Promise.resolve(cfg.humanoidProfile);
+
+          if (cfg.animClips.length || cfg.humanoidUrl) {
+            humanoidReady.then(() => (cfg.animClips.length ? loadUnityAnims(cfg.animClips) : [])).then((ext) => {
+              if (!ext.length) return;
+              clips = clips.concat(ext);
+              if (!mixer) mixer = new THREE.AnimationMixer(modelRoot);
+              const want = cfg.defaultAnimName;
+              const hit = want ? clips.find((x) => x.name === want) : null;
+              if (hit) { playClip(hit); defaultClipName = hit.name; }
+              else if (!currentAction) {
+                const body = pickDefaultClip();
+                playClip(body || clips[0]);
+                /* bodyClip 为空表示「只有 overlay 片段」⇒ 播第一条表情，身体保持绑定姿势 */
+              }
+              emit('ba3d:animations', { count: clips.length });
+            }).catch((e) => console.warn('[unity-anim] 载入过程出错：' + (e && e.message)));
+          }
+          if (clips.length) {
+            if (!mixer) mixer = new THREE.AnimationMixer(modelRoot);
+            /**
+             * 默认动作：
+             *   · 有身体动作 ⇒ 按原来的规则挑（名字含 idle 的随机）
+             *   · **只有 overlay 片段**（例如纯表情的 FBX）⇒ 播第一条表情，
+             *     身体保持绑定姿势 —— 这也是 Unity 里「只挂面部动画」的观感 ✓
+             */
+            const bodyClip = pickDefaultClip();
+            playClip(bodyClip || clips[0]);
           }
 
           fitModelToView(modelRoot);
@@ -9402,6 +11154,11 @@ const SHADOW_UNIFORM_KEYS = [
     applyGroundOffset();   // ★ 落地微调（根位移补偿只碰 x/z ✗ 不冲突 ✓）
     maybeAutoSnapGround();  // ★ 只在加载后贴一次（见函数注释 ✓）
 
+    /**
+     * ★★ **自动显隐规则之前**先算出「哪些网格正被动画驱动 visible」——
+     *    规则必须避开它们，否则会把动画的换装显隐每帧压回去 ✗
+     */
+    refreshAnimVisibleTargets();
     // 按骨骼缩放隐藏道具（缩放随动作变化，必须每帧判定）
     applyBoneScaleHide();
 
@@ -9454,8 +11211,293 @@ const SHADOW_UNIFORM_KEYS = [
 
     /** 返回所有动画片段（按文件顺序），供菜单使用 */
     getAnimations() {
-      return clips.map((c, i) => ({ index: i, name: c.name, duration: c.duration }));
+      /**
+       * ⚠️ 带出 `overlay` / `kind` / `source` ——
+       *   外部 Unity `.anim` 与模型自带动作混在同一份列表里，
+       *   调用方（控制台 UI / 内嵌页）要能区分「身体动作」与「表情/换装」才能正确分组 ✓
+       */
+      return clips.map((c, i) => {
+        const meta = clipMeta.get(c) || {};
+        return {
+          index: i, name: c.name, duration: c.duration,
+          overlay: !!meta.overlay, kind: meta.kind || 'body', source: meta.source || 'model',
+        };
+      });
     },
+    /**
+     * ★★ **注入 Humanoid 肌肉换算表**（拖整个工程时用 —— 那条路上没有配置文件 ✓）
+     *
+     *   ⚠️ 必须在**追加动画之前**调用：转换是一次性的，
+     *      表晚到 ⇒ 那些片段早按「不支持」跳过了 ✗（实测踩过）
+     */
+    setHumanoidProfile(obj) {
+      if (!obj || !Array.isArray(obj.muscles) || !obj.muscles.length) {
+        console.warn('[humanoid] 换算表内容不对（缺 muscles 数组）⇒ 忽略');
+        return false;
+      }
+      cfg.humanoidProfile = obj;
+      console.info('[humanoid] 换算表已注入：肌肉 ' + obj.muscles.length + ' 条 · 骨骼 ' +
+        new Set(obj.muscles.map((m) => m.bone)).size + ' 根 · ' + (obj.avatar || '') +
+        (obj.zeroQuat ? ' · 含零姿势 ✓' : ' · **无零姿势**（旧版导出，角度可能偏大）'));
+      return true;
+    },
+
+    /** 当前表情 overlay 的名字（没有则 null）—— 供 UI 显示「正在用的表情」*/
+    getFaceOverlay() { return overlayFaceName; },
+
+    /**
+     * ★ 读骨骼状态（调试 / 校验用）——
+     *   Humanoid 肌肉解算对不对，光看画面很难判断（手指差 5 度看不出来）
+     *   直接读局部四元数、自己算角度才靠谱。
+     *
+     * @param {string} [nameOrPath] 骨骼名，或「A/B/C」形式的路径；不传则返回全部骨骼
+     * @returns {{name:string, path:string, quaternion:number[], position:number[]}|Array|null}
+     */
+    getBoneState(nameOrPath) {
+      if (!modelRoot) return null;
+      const one = (o) => {
+        /**
+         * ⚠️ 世界坐标也要给 —— 判断"手指有没有朝掌心卷"这类问题，
+         *   只看局部四元数是不够的（轴对不对要落到位置上才看得出来）✓
+         */
+        o.updateWorldMatrix(true, false);
+        const wp = new THREE.Vector3(); const wq = new THREE.Quaternion();
+        o.getWorldPosition(wp); o.getWorldQuaternion(wq);
+        return {
+          name: o.name, path: meshPathOf(o),
+          quaternion: [o.quaternion.x, o.quaternion.y, o.quaternion.z, o.quaternion.w],
+          position: [o.position.x, o.position.y, o.position.z],
+          world: [wp.x, wp.y, wp.z],
+          worldQuaternion: [wq.x, wq.y, wq.z, wq.w],
+        };
+      };
+      if (nameOrPath) {
+        const parts = String(nameOrPath).split('/').filter(Boolean);
+        let node = null;
+        if (parts.length > 1) {
+          /* ⚠️ 名字别叫 walk —— 模块里另有一个 walk（check-scope 会判成 TDZ 风险 ✗），改名避免同名遮蔽 */
+          const walkPath = (obj, i) => {
+            if (i === parts.length) return obj;
+            for (const c of obj.children || []) {
+              if (c.name === parts[i]) { const r = walkPath(c, i + 1); if (r) return r; }
+            }
+            return null;
+          };
+          node = walkPath(modelRoot, 0);
+        }
+        if (!node) modelRoot.traverse((o) => { if (!node && o.name === nameOrPath) node = o; });
+        return node ? one(node) : null;
+      }
+      const out = [];
+      modelRoot.traverse((o) => { if (o.isBone) out.push(one(o)); });
+      return out;
+    },
+
+    /**
+     * ★★ **从 Unity 预制体（`.prefab`）解析「Unity 里默认隐藏的部件」并应用**
+     *
+     * 为什么必须靠 prefab：
+     *   Unity 用 GameObject 的 `m_IsActive: 0` 表达「这件衣服/道具默认不显示」，
+     *   而这个状态**只在 prefab / 场景里** ——
+     *   **FBX 里不存**（实测 melano.fbx：`Visibility` 只出现在属性模板声明处，
+     *   逐节点的可见性一个都没有；`AnimCurve` 0 个），`.anim` 也不存默认值 ✓
+     *   ⇒ 「只导入 FBX 就自动藏对部件」在信息上是不可能的，必须把 prefab 一起给它 ✓
+     *
+     * @param {Array<{name:string, text:string}>} files 一个或多个 `.prefab` 文本
+     * @returns {{hidden:number, names:string[], hideParts:string|null, hint?:string}}
+     */
+    /**
+     * ★★ **应用 Unity 场景（.unity / YAML）里的相机与打光** ✓
+     *
+     *   为什么：以前要靠"试角度"逼近 Unity 观感 ✗（试出 ≈122°/50° ✓）
+     *     而场景文件能**直接算出**这两个角 ✓（实测 Melano_scene.unity ⇒ 122.4° / 50° ✓）
+     *   ⇒ 拖工程文件夹时自动读它 ✓ 不用再手调 ✓
+     *
+     *   ⚠️ Unity 光强 1.0 与我们的面板标度不同 ✗
+     *      默认按 keyIntensity = unityIntensity × 2.45 映射（opt.keyIntensity 可覆盖 ✓）
+     *      ⇒ Unity 的 1.0 正好落回你惯用的 2.45 ✓
+     */
+    /**
+     * ★ **应用 Unity 的 Scene 视图相机**（`Library/LastSceneManagerSetup.txt` ✓）
+     *
+     *   为什么单独一个入口：用户"看着对"的那个视角常常是 **Scene 视图** ✗
+     *   而 .unity 里只有 Main Camera（可能压根没摆过、停在原点 ✗）
+     *   ⇒ 有这份编辑器状态时就能把视角精确搬过来 ✓
+     *   （Scene 视图默认正交 ✗ 我们用 size 与距离反推等效 FOV ✓）
+     */
+    applyUnitySceneViewText(text, opt) {
+      try {
+        const list = parseSceneViewSetup(String(text || ''));
+        const viewCfg = sceneViewToViewer(list, opt || {});
+        if (!viewCfg) { console.warn('[unity-sceneview] 没解析到可用视角'); return null; }
+        writeCameraState({ position: viewCfg.position, target: viewCfg.target, fov: viewCfg.fov });
+        if (window.__ba3dDebugUI) console.debug('[unity-sceneview] 已套用 ' + viewCfg.name + ' ⇒ pos ' + JSON.stringify(viewCfg.position) + ' fov ' + viewCfg.fov);
+        return viewCfg;
+      } catch (e) { console.warn('[unity-sceneview] 解析失败：', e); return null; }
+    },
+    applyUnitySceneText(text, opt) {
+      const o = opt || {};
+      let parsed = null, sceneCfg = null;
+      try { parsed = parseUnityScene(String(text || '')); sceneCfg = unitySceneToViewer(parsed, o); } catch (e) {
+        console.warn('[unity-scene] 解析失败：', e);
+        return null;
+      }
+      const factor = (o.intensityFactor !== undefined) ? Number(o.intensityFactor) : 2.45;
+      if (sceneCfg.light) {
+        writeLightState({
+          azimuth: sceneCfg.light.azimuth,
+          elevation: sceneCfg.light.elevation,
+          keyColor: sceneCfg.light.color || '#ffffff',
+          keyIntensity: (o.keyIntensity !== undefined) ? Number(o.keyIntensity) : (Number(sceneCfg.light.intensity) || 1) * factor,
+        });
+        // 手动值 ⇒ 清掉预设名（否则 applyRender 末尾会把预设又套回来 ✗）
+        cfg.lightingPreset = null;
+        currentLighting = null;
+      }
+      /**
+       * ★★ **把场景的环境光也套上** ✓（之前只解析没套 ⇒ 观感自然不一致 ✗）
+       *
+       *   · 场景是 **Color / Gradient 模式**（`m_AmbientMode` = 3 / 1 ✓）⇒ 有明确的天/地颜色 ✓ 直接映射：
+       *       天空色 → `hemiSky` · 地面色 → `hemiGround` · 强度 → `hemiIntensity` ✓
+       *   · 场景是 **Skybox 模式**（= 0 ✓）⇒ 颜色其实来自天空盒 ✗ 文件里只有一份"平均反射色" ✓
+       *       ⇒ 只把 `m_IndirectSpecularColor` 当天色、`m_AmbientGroundColor` 当地色（近似 ✓ 并标注 ✓）
+       *   ⚠️ 只在**没有显式给 keyIntensity/hemiIntensity**时套强度 ✗ 免得覆盖调用者的意图 ✓
+       */
+      if (sceneCfg.ambient && sceneCfg.ambient.sky) {
+        const amb = sceneCfg.ambient;
+        writeLightState({
+          hemiSky: amb.sky,
+          hemiGround: amb.ground || undefined,
+          hemiIntensity: (o.hemiIntensity !== undefined)
+            ? Number(o.hemiIntensity)
+            : (Number(amb.intensity) > 0 ? Number(amb.intensity) : 1),
+        });
+        /**
+         * ★★ **方案 A：把场景环境存下来，供我们 lilToon 风格的 `ambLight` 用** ✓
+         *
+         *   为什么：`MeshToonMaterial` 不支持 envMap ✗ ⇒ 环境整个丢失 ✓
+         *     半球光补不动（实测关掉环境光只差 2.3/255 ✗）⇒ 用均匀环境项补 ✓
+         *   ⚠️ 这里只**存**，不点亮 ✗ 点亮在 `applyLightingPreset` 里按模式决定 ✓
+         *      ⇒ cel / PBR / 源码后端**完全不受影响** ✓
+         */
+        cfg.unityAmbient = {
+          color: amb.sky || '#ffffff',
+          intensity: Number(amb.intensity) > 0 ? Number(amb.intensity) : 1,
+          from: amb.from,
+        };
+        /**
+         * ⚠️⚠️ **这里绝对不能调 `applyLightingPreset(...)`** ✗ —— 实测事故记在这里 ✓
+         *
+         *   我第一版为了"让环境立刻生效"，顺手调了一次 applyLightingPreset ✗
+         *   而它会把**预设的主光整套重写**（角度/强度/颜色 ✓）
+         *   ⇒ 刚套好的**场景打光被预设盖掉** ✗✓✓
+         *     用户实测：「Unity 场景光照读取坏掉了」✓（判断准确 ✓）
+         *
+         *   ⇒ 正确做法：只刷新那盏**环境灯**（`refreshUnityAmbientLight()` ✓）
+         *     它只写 `ambLight` ⇒ 主光/预设/其他模式**一个字节都不动** ✓
+         */
+        refreshUnityAmbientLight();
+      }
+      /**
+       * ★★ **默认不套场景里的相机** ✗ —— 实测踩坑记在这里 ✓
+       *
+       *   场景里的 Main Camera 常常**停在 (0,0,0) 没摆过**（= 模型脚底的原点 ✓）
+       *   ⇒ 一旦套上去就变成"站在脚底往前看" ⇒ 画面里只剩腿 ✗
+       *     （用户整包导入后实拍到的就是这个 ✓）
+       *   ⇒ 默认**只套打光** ✓
+       *     要相机请显式传 `{ camera: true }` ✓
+       *     或者给 Unity 的 Scene 视图文件（`Library/LastSceneManagerSetup.txt` ✓）
+       *       —— 那才是用户真正看着的那个视角 ✓（由 applyUnitySceneViewText 负责 ✓）
+       */
+      if (sceneCfg.camera && o.camera === true) {
+        writeCameraState({ position: sceneCfg.camera.position, target: sceneCfg.camera.target, fov: sceneCfg.camera.fov });
+      }
+      if (window.__ba3dDebugUI) {
+        console.debug('[unity-scene] 相机=' + (o.camera === true && sceneCfg.camera
+          ? JSON.stringify(sceneCfg.camera.position) + ' fov ' + sceneCfg.camera.fov
+          : '跳过（默认不套 ✓ 场景里的 Main Camera 常在原点 ✗）') +
+          ' · 光 az=' + (sceneCfg.light ? sceneCfg.light.azimuth : '-') + ' el=' + (sceneCfg.light ? sceneCfg.light.elevation : '-') +
+          ' · 环境=' + (sceneCfg.ambient ? sceneCfg.ambient.from : '-'));
+      }
+      return sceneCfg;
+    },
+    applyUnityPrefabTexts(files) {
+      const names = [];
+      for (const f of (files || [])) {
+        if (!f || typeof f.text !== 'string') continue;
+        const lines = f.text.split(/\r?\n/);
+        for (let i = 0; i < lines.length; i++) {
+          if (!/^\s*m_IsActive:\s*0\s*$/.test(lines[i])) continue;
+          /* 往上找最近的 m_Name（GameObject 块里 m_Name 在 m_IsActive 之前 ✓）*/
+          for (let j = i; j >= Math.max(0, i - 40); j--) {
+            const m = lines[j].match(/^\s*m_Name:\s*(.+?)\s*$/);
+            if (m) { names.push(m[1]); break; }
+          }
+        }
+      }
+      const uniq = [...new Set(names)];
+      if (!uniq.length) {
+        return { hidden: 0, names: [], hideParts: cfg.hideParts || null, hint: 'prefab 里没有 m_IsActive: 0 的 GameObject' };
+      }
+      /** ⚠️ 部件名进的是**正则**，必须转义（名字里可能有 () . 等）*/
+      const esc = (s) => String(s).replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+      const add = uniq.map(esc).join('|');
+      cfg.hideParts = cfg.hideParts ? (cfg.hideParts + '|' + add) : add;
+      const n = applyHideParts();
+      console.info('[prefab] 默认隐藏部件 ' + uniq.length + ' 个：' + uniq.join(' · ') + ' ⇒ 实际隐藏 ' + n + ' 个网格');
+      return { hidden: n, names: uniq, hideParts: cfg.hideParts };
+    },
+
+    /**
+     * ★★ **追加外部动画（本地文件）** —— 给「自定义模型」面板的多选上传用。
+     *
+     * @param {Array<{name:string, text:string}>} files `.anim` 文本（`await file.text()` 的结果）
+     * @returns {{added:Array<{name,kind}>, skipped:Array<{name,reason,detail}>}}
+     */
+    addUnityAnims(files) { return addUnityAnimTexts(files); },
+
+    /**
+     * ★★ **换装片段的开/关切换**（用户要的：选一下换上、再选一下脱掉）
+     *
+     *   `kind === 'parts'` 的片段驱动 `m_IsActive`（部件显隐），本身没有"逆动作"可用
+     *   （工程里只有 \`*_ON\`、几乎没有 \`*_OFF\`）⇒ 关掉的正确做法是
+     *   **停掉这个 overlay**：停掉后它不再驱动那批网格，
+     *   于是 hideParts 的锁定值与每帧规则重新接管 ⇒ 部件回到默认状态 ✓
+     *
+     * @returns {{name:string, on:boolean}|null} on=true 表示已换上、false 表示已脱掉
+     */
+    toggleAnimation(nameOrIndex) {
+      if (!mixer || !clips.length) return null;
+      let idx = -1;
+      if (typeof nameOrIndex === 'number') idx = nameOrIndex;
+      else {
+        const want = String(nameOrIndex || '').toLowerCase();
+        idx = clips.findIndex((c) => String(c.name).toLowerCase() === want);
+        if (idx < 0) idx = clips.findIndex((c) => String(c.name).toLowerCase().includes(want));
+      }
+      const clip = clips[idx];
+      if (!clip) return null;
+      const meta = clipMeta.get(clip) || {};
+      if (meta.kind !== 'parts') {          // 不是换装片段 ⇒ 当普通动作播
+        playClip(clip);
+        return { name: clip.name, on: true };
+      }
+      /* 已是当前换装片段的**同一条** ⇒ 再点一次 = 脱掉 */
+      if (overlayPartsAction && overlayPartsName === clip.name) {
+        overlayPartsAction.stop();
+        overlayPartsAction = null;
+        overlayPartsName = null;
+        restorePartsBaseline();            // ★ 按基线还原 ⇒ 真正「脱掉」回原样 ✓
+        emit('ba3d:action', { name: clip.name, on: false, parts: true });
+        return { name: clip.name, on: false };
+      }
+      playClip(clip);
+      emit('ba3d:action', { name: clip.name, on: true, parts: true });
+      return { name: clip.name, on: true };
+    },
+
+    /** 当前换装片段名（没有则 null）—— 供 UI 高亮 */
+    getPartsOverlay() { return overlayPartsName; },
 
     /** 按名字或序号切换播放动作；返回实际选中的片段名，找不到返回 null */
     setAnimation(nameOrIndex) {
@@ -9776,13 +11818,59 @@ const SHADOW_UNIFORM_KEYS = [
         { key: 'none', label: '不注入（原生）' },
         { key: 'cel', label: 'Cel 分档' },
         { key: 'lilToon', label: 'lilToon 风格' },
+        { key: LIL_SRC_MODE, label: 'lilToon 源码' },
       ];
     },
-    getShader() { return shaderMode; },
-    setShader(mode) { return applyShader(mode); },
+    getShader() { return (lilSrcOn && shaderMode === 'lilToon') ? LIL_SRC_MODE : shaderMode; },
+    /**
+     * 第 4 后端是 lilToon 模式的**变体**：shaderMode 仍是 'lilToon'，
+     * 只把表面材质换成他们的（见 lilSrcOn）。
+     * 这样现有那些 `shaderMode === 'lilToon'` 的判断全部照常工作。
+     */
+    setShader(mode) {
+      if (mode === LIL_SRC_MODE) {
+        lilSrcOn = true;
+        const r = applyShader('lilToon');
+        activateLilSrcBackend().catch(() => {});   // 加载 + 装后端；完成后自己重建材质
+        return r;
+      }
+      if (lilSrcOn) {
+        lilSrcOn = false;
+        deactivateLilSrcBackend();                 // 先卸后端（不卸会影响其他模式的抗锯齿）
+        setLilSrcUVFlip(false);                    // 再把 UV 翻回 FBX 约定
+        /**
+         * ⚠️⚠️ **必须显式重建材质** —— 这是用户实测报过的 bug 的根因。
+         *
+         * 第 4 后端是 lilToon 的**变体**（shaderMode 一直是 'lilToon'），
+         * 所以切回「lilToon 风格」时 `applyShader()` 里 `next === shaderMode`
+         * ⇒ `changed === false` ⇒ **不会调用 applyRender** ⇒ 网格上继续挂着他们的
+         * `__lilSrc` 材质。
+         *
+         * 症状：切回「lilToon 风格」后角色在阴影处**偏亮 / 像丢了阴影**
+         *      （他们的材质没有注入我们的阴影处理 patchShadowSoften），
+         *      而「切到 cel 再切回来」会恢复 —— 因为切 cel 时 shaderMode 真的变了，
+         *      才触发了重建。
+         */
+        if (modelRoot) applyRender(renderMode);
+      }
+      return applyShader(mode);
+    },
 
     /** 两轴一起读，便于界面同步 */
-    getRenderState() { return { render: renderMode, shader: shaderMode }; },
+    /**
+     * `shader`   = 底层着色模式（'none' | 'cel' | 'lilToon'）—— 面板可用性判断用它，
+     *              所以第 4 后端在这里**仍然报 'lilToon'**（它本来就是 lilToon 的变体，
+     *              lilToon 参数面板在它下面必须保持可用）。
+     * `shaderKey`= 界面下拉框该显示的 key —— 第 4 后端要报 'liltoon-src'，
+     *              否则选完会立刻被同步回「lilToon 风格」（用户实测报过这个 bug）。
+     */
+    getRenderState() {
+      return {
+        render: renderMode,
+        shader: shaderMode,
+        shaderKey: (lilSrcOn && shaderMode === 'lilToon') ? LIL_SRC_MODE : shaderMode,
+      };
+    },
 
     // —— lilToon 参数：读取 / 修改 / 导出 ——
 
@@ -9815,6 +11903,7 @@ const SHADOW_UNIFORM_KEYS = [
         }
         lilMaterialVersion++;
         celProgramVersion++;
+        try { applyFaceNoShadow(); } catch (e) { /* 忽略 */ }
         applyLilOutline();
         if (modelRoot) applyRender(renderMode);
         console.debug('[lilToon] 已重置为默认' + (matName ? '（材质 ' + matName + ' 的覆盖已清除）' : '（全局）'));
@@ -9984,6 +12073,93 @@ const SHADOW_UNIFORM_KEYS = [
      * ⇒ 量到多少 ✗ 就把 `-gap` 填进面板的「落地微调」✓
      */
     probeGround(perMesh) { return measurePosedBottom(modelRoot, perMesh); },
+    /**
+     * ★★ **只读诊断快照**（不改任何状态 ✓ 不改渲染 ✓）
+     *
+     *   用途（用户要求 ✓）：报「lilToon 风格比源码版暗一大截」这类问题时，
+     *     在**页面控制台**跑一行就能把定位所需的全部信息拿到 ✓ 不用来回猜 ✗
+     *
+     *   用法：
+     *     copy(JSON.stringify(viewer.diagReport(), null, 1))     // 直接复制到剪贴板 ✓
+     *     或 console.log(JSON.stringify(viewer.diagReport(), null, 1))
+     *
+     *   ⚠️ 请**两个模式各跑一次**（lilToon 风格 / lilToon 源码 ✓）把两份发回来 ✓
+     *      两份的差异本身就是答案 ✓
+     */
+    diagReport() {
+      const lights = [];
+      try {
+        scene.traverse((o) => {
+          if (!o || !o.isLight) return;
+          lights.push({
+            type: o.type,
+            name: o.name || '',
+            color: o.color ? '#' + o.color.getHexString() : null,
+            ground: o.groundColor ? '#' + o.groundColor.getHexString() : undefined,
+            sky: o.color && o.isHemisphereLight ? '#' + o.color.getHexString() : undefined,
+            intensity: o.intensity !== undefined ? +Number(o.intensity).toFixed(4) : null,
+            visible: o.visible !== false,
+            castShadow: !!o.castShadow,
+            pos: o.position ? [+o.position.x.toFixed(3), +o.position.y.toFixed(3), +o.position.z.toFixed(3)] : undefined,
+          });
+        });
+      } catch (e) { /* ignore */ }
+      const materials = [];
+      try {
+        for (const m of this.listMeshes()) {
+          const arr = Array.isArray(m.material) ? m.material : [m.material];
+          for (const x of arr) {
+            if (!x) continue;
+            materials.push({
+              mesh: m.name || '',
+              name: x.name || '',
+              type: x.type || (x.constructor && x.constructor.name) || '?',
+              lilSrc: !!(x.userData && x.userData.__lilSrc),
+              lilSrcOf: (x.userData && x.userData.__lilSrcOf) || null,
+              toonPatched: !!(x.userData && x.userData.__toon),
+              color: x.color ? '#' + x.color.getHexString() : null,
+              hasEnvMap: !!x.envMap,
+              transparent: !!x.transparent,
+              side: x.side,
+            });
+          }
+        }
+      } catch (e) { /* ignore */ }
+      let lil = null;
+      try { lil = this.getLilConfig(); } catch (e) { /* ignore */ }
+      let ls = null;
+      try { ls = this.getLightState(); } catch (e) { /* ignore */ }
+      return {
+        mode: (this.getShader ? this.getShader() : null),
+        renderMode,
+        lighting: {
+          preset: cfg.lightingPreset || null,
+          scale: cfg.lightingScale,
+          clampOn: !!cfg.lightClampOn,
+          clamp: { min: cfg.lightMinLimit, max: cfg.lightMaxLimit },
+          unityAmbient: cfg.unityAmbient || null,
+          lilAmbientBoost: cfg.lilAmbientBoost,
+          lilAmbientTuning: cfg.lilAmbientTuning !== false,
+          lightState: ls,
+        },
+        lights,
+        environment: {
+          hasEnvironment: !!scene.environment,
+          envIntensity: (scene.environmentIntensity !== undefined ? scene.environmentIntensity : null),
+          background: scene.background ? (scene.background.isColor ? '#' + scene.background.getHexString() : scene.background.type || 'tex') : null,
+        },
+        renderer: {
+          outputColorSpace: renderer.outputColorSpace,
+          toneMapping: renderer.toneMapping,
+          toneMappingExposure: +Number(renderer.toneMappingExposure).toFixed(4),
+          shadowMap: !!renderer.shadowMap.enabled,
+          programs: (renderer.info && renderer.info.programs) ? renderer.info.programs.length : null,
+        },
+        lilCfg: lil,
+        lilCfgByMaterialKeys: Object.keys(lilCfgByMaterial || {}),
+        materials,
+      };
+    },
     /** ★ 修正模型位置 XYZ（世界单位 ✗ 移动的是模型本体 ✓）*/
     getModelOffset() { return getModelOffset(); },
     setModelOffset(p) { return setModelOffset(p); },
@@ -10257,6 +12433,7 @@ const SHADOW_UNIFORM_KEYS = [
       lilCfgByMaterial = (obj && typeof obj === 'object') ? JSON.parse(JSON.stringify(obj)) : {};
       lilMaterialVersion++;
       celProgramVersion++;
+      try { applyFaceNoShadow(); } catch (e) { /* 忽略 */ }
       applyLilOutline();
     },
 
@@ -10266,6 +12443,7 @@ const SHADOW_UNIFORM_KEYS = [
         delete lilCfgByMaterial[matName];
         lilMaterialVersion++;
         celProgramVersion++;
+        try { applyFaceNoShadow(); } catch (e) { /* 忽略 */ }
         applyLilOutline();
       }
     },
@@ -10275,6 +12453,67 @@ const SHADOW_UNIFORM_KEYS = [
       const set = new Set();
       if (modelRoot) modelRoot.traverse((m) => { if (m.isMesh && m.material && m.material.name) set.add(m.material.name); });
       return [...set].sort();
+    },
+
+    /**
+     * ★★ **按材质套用 Unity 的 lilToon 配置（`.mat` / `.asset`，可一次多个）**
+     *
+     * 为什么必须支持多文件：**同一个模型的不同材质用不同配置**
+     *   （头发 / 皮肤 / 衣服各一份 `.mat`）⇒ 每份按自己的 `m_Name` 找到对应材质再套 ✓
+     *
+     * ⚠️ `setLilCfgByMaterial` 是**整表替换** ⇒ 必须先在本地把多份合并好、最后写回一次，
+     *    否则后一个文件会把前一个的覆盖抹掉 ✗
+     *
+     * ⚠️ 我们自己的 `.json`（`{config, byMaterial}` 形状）仍按**全局**套（与单文件时一致），
+     *    只有 `.mat` / `.asset` 才按材质名定向 ✓
+     *
+     * @param {Array<{name:string, text:string}>} files
+     * @returns {{applied:Array<{file,material,applied,skipped}>, unmatched:Array, failed:Array, global:number}}
+     */
+    importLilMatFiles(files) {
+      const applied = [], unmatched = [], failed = [];
+      let global = 0;
+      const table = this.getLilCfgByMaterial() || {};
+      const names = this.getLilMaterials() || [];
+      /** 材质名匹配：精确 → 忽略大小写 → 互相包含（与 setAnimation 的匹配风格一致）*/
+      const match = (want) => {
+        if (!want || !names.length) return null;
+        const w = String(want), lw = w.toLowerCase();
+        return names.find((n) => n === w)
+          || names.find((n) => n.toLowerCase() === lw)
+          || names.find((n) => n.toLowerCase().includes(lw))
+          || names.find((n) => lw.includes(n.toLowerCase()))
+          || null;
+      };
+      for (const f of (files || [])) {
+        const label = (f && f.name) || '（未命名）';
+        if (!f || typeof f.text !== 'string') { failed.push({ file: label, reason: '读不到内容' }); continue; }
+        /* 我们自己的 JSON ⇒ 全局（与单文件时的行为一致 ✓）*/
+        if (/\.json$/i.test(label) || /^\s*\{/.test(f.text)) {
+          try {
+            const o = JSON.parse(f.text);
+            if (o && typeof o === 'object' && (o.config || o.byMaterial)) { if (this.applyLilConfigJSON(o)) global++; }
+            else if (this.setLilConfig(o)) global++;
+            else failed.push({ file: label, reason: 'JSON 形状不认识（既没有 config/byMaterial，也不是 lilCfg）' });
+          } catch (e) { failed.push({ file: label, reason: 'JSON 解析失败：' + (e && e.message) }); }
+          continue;
+        }
+        let preset;
+        try { preset = parseLilPresetYaml(f.text); }
+        catch (e) { failed.push({ file: label, reason: '解析失败：' + (e && e.message) }); continue; }
+        const n = Object.keys(preset.colors).length + Object.keys(preset.vectors).length + Object.keys(preset.floats).length;
+        if (!n) { failed.push({ file: label, reason: '没解析出任何 lilToon 属性（不是 .mat / 预设 .asset ？）' }); continue; }
+        const want = preset.name || label.replace(/\.(asset|mat)$/i, '');
+        const mat = match(want);
+        if (!mat) { unmatched.push({ file: label, material: want }); continue; }
+        const r = lilPresetToPatch(preset);
+        table[mat] = mergeLilCfg(table[mat] || {}, r.patch);
+        applied.push({ file: label, material: mat, applied: r.applied, skipped: r.skipped.length });
+      }
+      if (applied.length) this.setLilCfgByMaterial(table);
+      console.info('[lilToon] 本地材质配置：套用 ' + applied.length + ' 个材质 · 未匹配 ' + unmatched.length +
+        ' · 失败 ' + failed.length + (global ? ' · 全局 JSON ' + global + ' 个' : ''));
+      return { applied, unmatched, failed, global };
     },
 
     /**

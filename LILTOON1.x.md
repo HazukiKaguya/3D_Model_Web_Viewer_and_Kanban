@@ -1,3 +1,7 @@
+# lilToon 1.3.7 → Web (three.js) 旧基线对照（已归档）
+
+中文 ｜ [English](LILTOON1.x.en.md) ｜ [日本語](LILTOON1.x.ja.md)
+
 > ⚠️ **本文档已归档** —— 它记录的是**旧基线 lilToon 1.3.7** 的对照与核对。
 > **当前生效的基线是 2.3.4**、见 [`LILTOON2.x.md`](LILTOON2.x.md)。
 >
@@ -29,96 +33,7 @@
 
 ---
 
-## 二、逐项对照表
-
-图例：✅ 能完整实现　🟡 能近似 / 需要额外工作　❌ 做不了
-
-### 1. 基本設定 / Basic Settings
-
-| lilToon 项 | 可行性 | 在 three.js 里怎么做 |
-|---|---|---|
-| 色（Base Color） | ✅ | 材质 `color` |
-| 影の色（1st Shadow Color） | ✅ | 注入 ramp 时用两个颜色插值（现在只有一个 `celDark` 亮度，需改成「颜色 × 亮度」） |
-| 影の境界（Shadow Border） | ✅ | ramp 的阈值，直接进 `celGradientGLSL` |
-| 影のぼかし（Shadow Blur） | ✅ | ramp 过渡带宽度。**注意：lilToon 用的是线性重映射，不是 smoothstep**（见第六节） |
-| 2nd 影 / 3rd 影 | ✅ | ramp 做 3~4 段，每段各自的颜色与阈值 |
-| バックライト | ✅ | 半个 lambert（`dotNL * 0.5 + 0.5`）× 颜色，叠加在最终色上 |
-| 逆光ライト（Transparent 用） | ✅ | 同バックライト，主要用于半透明 |
-| ライト制限（VRC Light Volumes） | ❌ | 依赖 Unity 的 Light Volume 系统，Web 侧没有对应概念 |
-
-### 2. メインカラー / Main Color
-
-| lilToon 项 | 可行性 | 在 three.js 里怎么做 |
-|---|---|---|
-| テクスチャ | ✅ | `material.map`（已经在用） |
-| 色 | ✅ | 与贴图相乘 |
-| ブレンドモード（Normal / Add / Screen / Multiply …） | 🟡 | three.js 标准材质没有这个开关，需要在 `onBeforeCompile` 里手写混合公式（能做，约 20 行） |
-| アルファマスク | ✅ | `material.alphaMap` |
-| カットオフ | ✅ | `material.alphaTest` |
-| デカール / 2nd メインカラー | 🟡 | 需要再注入一次采样 + UV 变换，代码量中等 |
-
-### 3. ノーマルマップ / Normal Map
-
-| lilToon 项 | 可行性 | 在 three.js 里怎么做 |
-|---|---|---|
-| 1st ノーマルマップ | ✅ | `material.normalMap`（已经在用） |
-| 2nd / 3rd ノーマルマップ | 🟡 | three.js 只支持一张。要自己注入第二/三次采样并按 lilToon 的方式混合（代码量中等，2~3 张法线的混合顺序容易出错） |
-| スケール / マスク | ✅ | 作为 uniform 传进去 |
-
-### 4. リムライト / Rim Light　★ 我们现在完全没有
-
-| lilToon 项 | 可行性 | 在 three.js 里怎么做 |
-|---|---|---|
-| 色 | ✅ | uniform |
-| 境界 / ぼかし | ✅ | `fresnel = 1 - dot(N, V)`，再 `smoothstep` 卡边界 |
-| 方向（ライト方向 or 視点方向） | ✅ | 用 `V` 或 `L`，切换 uniform |
-| マスク | ✅ | 采样一张遮罩贴图（或复用主贴图的某通道） |
-| ブレンドモード | 🟡 | 同 Main Color 的混合模式处理 |
-
-> 注意：**我们现在配置里的 `rimLight` 是「场景里的一盏灯」，和 lilToon 的「材质级视角边缘光」是两回事**。lilToon 的 Rim 必须写在着色器里。
-
-### 5. マットキャップ / MatCap　★ 我们现在完全没有
-
-| lilToon 项 | 可行性 | 在 three.js 里怎么做 |
-|---|---|---|
-| 1st マットキャップ | ✅ | 取视角空间法线的 `xy` 作为 UV 去采样一张球面贴图，约 5 行 GLSL |
-| 2nd / 3rd マットキャップ | 🟡 | 多张叠加，注意各自独立的混合模式与遮罩 |
-| ブレンドモード | 🟡 | 同 Main Color |
-| 法線補正 / マスク | ✅ | uniform 开关 |
-
-### 6. エミッション / Emission
-
-| lilToon 项 | 可行性 | 在 three.js 里怎么做 |
-|---|---|---|
-| 1st / 2nd エミッション | ✅ | `material.emissive` + `emissiveMap`（已在用）；第二张要自己注入 |
-| 強度 / マスク | ✅ | uniform |
-| アニメーション（点滅・流れ） | ✅ | 加时间 uniform，在 `onBeforeCompile` 里做 UV 滚动/闪烁 |
-
-### 7. アウトライン / Outline
-
-| lilToon 项 | 可行性 | 在 three.js 里怎么做 |
-|---|---|---|
-| 色 / 太さ | ✅ | 现在用的 `OutlineEffect` 就支持（`outlineParameters`） |
-| 基準（法線 / 位置） | 🟡 | `OutlineEffect` 是法线外扩；「位置基准」要自己写描边 pass |
-| テクスチャ / マスク | 🟡 | `OutlineEffect` **不支持描边贴图**，要换成自己写的反壳 pass（一次额外 draw call） |
-| 頂点カラーで太さ制御 | 🟡 | 同上，自己写 pass 才能读顶点色 |
-| Z オフセット / カリング | ✅ | 现有参数可调 |
-
-### 8. その他の拡張
-
-| lilToon 项 | 可行性 | 说明 |
-|---|---|---|
-| Glitter（ラメ） | ❌ | 需要程序化噪声 + 粒子闪烁，浏览器端性价比很低，视觉收益有限 |
-| Dissolve（溶解） | 🟡 | 噪声贴图 + `discard`，能做，但不是"看着像 lilToon"的关键 |
-| Audio Link | ❌ | 依赖 Unity 的 AudioLink 生态，查看器里没有意义 |
-| Fur / Gem / Tessellation | ❌ | WebGL **没有曲面细分**；Gem 需要折射/立方体贴图，建议放弃 |
-| Lightmap / Light Probe | ❌ | 模型里没有烘焙数据，无从谈起 |
-| スクリーンスペース影 | ❌ | 需要深度 prepass，与当前单 pass 架构冲突 |
-| ステンシル | 🟡 | three.js 支持 stencil，但用途很窄（描边遮罩等） |
-
----
-
-## 三、需要你从 Unity 抄给我的参数
+## 二、需要你从 Unity 抄给我的参数
 
 > 面板项名字按 lilToon 1.7.x 整理，对不上就以你看到的为准，照抄即可。
 > 拿不准的项**留空**，我按默认值补。
@@ -199,7 +114,7 @@ Unity 里参考效果：        （截图更好）
 
 ---
 
-## 四、建议的实施顺序
+## 三、建议的实施顺序
 
 按「视觉收益 ÷ 工作量」排的，**分三阶段**，每阶段做完你都能直接看效果：
 
@@ -220,7 +135,7 @@ Unity 里参考效果：        （截图更好）
 8. **Dissolve**
 
 
-### 阶段 3 —— 已完成（2026-10-05、见 CONFIG.md 的「阶段 3 参数对照」）
+### 阶段 3 —— 已完成
 
 原计划两条、实际执行时**你要求先跳过法线贴图通路**（成本最高）、改为做「其他的」：
 
@@ -247,45 +162,6 @@ Unity 里参考效果：        （截图更好）
 
 **建议的后续顺序**：① 自发光第二层（低）② 层溶解（低）③ 距离淡出（中）④ Decal（中）⑤ 法线贴图通路（高、一次解锁 9+3 个参数）
 
-### 后续项（阶段 3 之后）
-
-用户在阶段 3 结项后指定了四项、按顺序做。
-
-| # | 项 | 状态 |
-|---|---|---|
-| **A** | 自发光第二层 Emission 2nd | ✅ 完成（两层完全同构、抽出共用生成器）|
-| **B** | 主色层 2nd/3rd 的层溶解 | ✅ 完成（11 个字段 × 2 层）|
-| **C** | 主色层的距离淡出 | ✅ 完成（3 个标量 × 2 层）|
-| **D** | 法线贴图通路 | ✅ 完成（2 张法线贴图 + 4 个 NormalStrength + MatCap 的 Lod/自定法线）|
-
-**关键发现（都写进 CONFIG.md 了）**：
-
-  · 层溶解和顶层 Dissolve **不是一回事**。
-    顶层丢弃像素（alphaTest）、层溶解只把这一层的 alpha 乘 0/1。
-    边缘颜色是**加算到 emissionColor**、不是画在颜色缓冲上。
-  · `fd.depth` 的名字有误导。
-    `lilHeadDirection` 的定义就是 `lilViewDirection`、是 VR 头显时代的命名。
-    ⇒ `fd.depth` = **到相机的距离**、不是「到头部骨骼」。
-  · 层内处理顺序：遮罩 → 层溶解 → 距离淡出 → 剔除
-    （lil_common_frag.hlsl:697 → :706 → :742 → :743）
-
-**⚠️ 纠正**：之前说「9 个参数有开关没通路」、**其中 2 个（_Main2nd/3rdNormalStrength）根本不存在**。
-逐个 grep 之后确认是 **7 个**、D 已完成其中的 4 个（Rim / 背光 / MatCap 1st / 2nd）。
-剩下 3 个是**三层阴影**的（`_Shadow{,2nd,3rd}NormalStrength`）、面板有滑杆但着色器未接。
-原因：它们要喂给**明暗分档的计算**、而分档是 three 在做、要接就得替换 three 的分档、单独立项。
-
-**D 的收尾（本轮）**：
-
-  ✅ `_MatCapLod` —— 贴图 LOD bias（GLSL 的 texture2D 第 3 个参数）
-  ✅ `_MatCapCustomNormal` + `_MatCapBumpMap` + `_MatCapBumpScale` —— MatCap 专用第三张法线图（2 层各一套）
-  ⚠️ `_MatCapVRParallaxStrength` —— **参数存在、但非 VR 下是空操作**：
-     `lil_common_macro.hlsl:689` 的 `lilBlendVRParallax` 在非 stereo 下直接 `return b;`
-     ⇒ 浏览器里调它不会有任何变化、这是 lilToon 的设计、不是缺陷。
-     面板保留了滑杆、标签写明「（非VR无效）」、只为和 lilToon 参数表对应。
-
-**⇒ 至此 A / B / C / D **全部完成**、没有例外了。
-
-**⇒ 面板规模：124 条目 / 14 分组**。
 
 ### 明确不做
 
@@ -293,7 +169,7 @@ Glitter、Audio Link、Fur / Gem / Tessellation、Lightmap / Light Probe、屏�
 
 ---
 
-## 五、两个必须提前知道的事
+## 四、两个必须提前知道的事
 
 1. **不会和你 Unity 里一模一样**
    three.js 的光照模型、色调映射、阴影处理都和 Unity 不同。参数抄得再准，最终也会有可见差异（尤其是**阴影的软硬**和**高光**）。目标是「一眼看过去是同一个角色的同一个画风」，而不是像素级一致。
@@ -304,199 +180,7 @@ Glitter、Audio Link、Fur / Gem / Tessellation、Lightmap / Light Probe、屏�
 
 ---
 
-## 六、源码核对结果（v1.3.7 实测）
-
-### 6.1 源码地图（后续实现直接查这些位置）
-
-| 文件 | 大小 | 作用 |
-|---|---|---|
-| `Shader/Includes/lil_common_frag.hlsl` | 84 KB | **着色核心**：背光 / MatCap / Rim / 自发光 / Glitter 都在这里 |
-| `Shader/Includes/lil_common_functions.hlsl` | 43 KB | 工具函数：**分档 / 混合 / MatCap UV / 描边宽度** |
-| `Shader/Includes/lil_common_macro.hlsl` | 94 KB | 宏与关键字开关（`LIL_FEATURE_*`） |
-| `Shader/Includes/lil_common_input.hlsl` | 27 KB | 属性 → uniform 的映射 |
-| `Shader/Includes/lil_vert_outline.hlsl` | 1.8 KB | 描边顶点位移 |
-| `Shader/lts.shader` | 46 KB | **Properties 段：182 个属性**（第 3~578 行） |
-| `Editor/lilInspector.cs` | 452 KB | 面板结构定义 |
-| `Editor/Resources/lang.txt` | 60 KB | 面板项名称（多语言） |
-
-**关键函数行号**（`lil_common_frag.hlsl`）：
-
-```
-lilGetMain2nd      671      lilGetMain3rd      757
-lilBacklight      1107      lilGetMatCap      1391 / 1440
-lilGetMatCap2nd   1459      lilGetRim         1517 / 1607
-lilGlitter        1632      lilEmission       1689 / 1744
-lilEmission2nd    1774
-```
-
-**关键函数行号**（`lil_common_functions.hlsl`）：
-
-```
-lilTooningNoSaturateScale   21 / 33   ★ 分档的数学本体
-lilBlendColor              306        ★ 混合模式
-lilGetOutlineWidth      254 / 265     lilCalcMatCapUV   526  ★
-lilGetOutlineVector        272        lilCalcOutlinePosition 279
-lilCalcDissolve         602 / 642     lilCalcGlitter   1074
-```
-
-### 6.2 分档（阴影 / Rim 共用）—— **比想象中简单得多**
-
-```hlsl
-// 无模糊：就是硬台阶
-float lilTooningNoSaturateScale(float aascale, float value, float border) {
-    return step(border, value);
-}
-
-// 有模糊：把 value 在 [border-blur/2, border+blur/2] 上线性重映射到 [0,1]
-float lilTooningNoSaturateScale(float aascale, float value, float border, float blur) {
-    float borderMin = saturate(border - blur * 0.5);
-    float borderMax = saturate(border + blur * 0.5);
-    return (value - borderMin) / saturate(borderMax - borderMin);
-}
-```
-
-**是线性重映射，不是 smoothstep。** 外层 `lilTooningScale()` 再 `saturate()` 一次。
-我们的 `celGradientGLSL` 现在用的是「`floor(t*STEPS)/(STEPS-1)` 量化」——**换成这个重映射就能直接对齐 lilToon 的观感**。
-
-### 6.3 混合模式 `lilBlendColor` —— 全部只有 8 行
-
-```hlsl
-float3 lilBlendColor(float3 dstCol, float3 srcCol, float3 srcA, uint blendMode) {
-    float3 ad = dstCol + srcCol;
-    float3 mu = dstCol * srcCol;
-    float3 outCol;
-    if(blendMode == 0) outCol = srcCol;               // Normal
-    if(blendMode == 1) outCol = ad;                   // Add
-    if(blendMode == 2) outCol = max(ad - mu, dstCol); // Screen
-    if(blendMode == 3) outCol = mu;                   // Multiply
-    return lerp(dstCol, outCol, srcA);
-}
-```
-
-→ 任何特性（Rim / MatCap / 自发光）的「ブレンドモード」都用这一个函数，移植成本极低。
-
-### 6.4 MatCap —— 简化式就写在源码注释里
-
-```hlsl
-// lil_common_functions.hlsl:526 lilCalcMatCapUV()
-// Simple  ← 源码自己的注释
-//return mul((float3x3)LIL_MATRIX_V, normalWS).xy * 0.5 + 0.5;
-
-// 完整版（多了 VR 视差 / Z 轴旋转取消 / UV 混合）
-float2 uvMat = mul(tbnVD, normalWS).xy;
-uvMat = lerp(uvMat, uv1*2-1, matcapBlendUV1);
-uvMat = uvMat * matcap_ST.xy + matcap_ST.zw;
-uvMat = uvMat * 0.5 + 0.5;
-```
-
-采样与混合（`frag.hlsl:1440`）：
-
-```hlsl
-matcap = SAMPLE(_MatCapTex, uvMat).rgb;
-fd.col.rgb = lerp(fd.col.rgb, _MatCapMul ? fd.col.rgb * matcap : fd.col.rgb + matcap, fd.triMask.r);
-```
-
-→ **约 5 行 GLSL。这是性价比最高的一项。**
-
-### 6.5 Rim Light —— 精确公式
-
-```hlsl
-float nvabs = abs(dot(N, V));
-float rim    = pow(saturate(1.0 - nvabs), _RimFresnelPower);
-float lnRaw  = dot(L, N) * 0.5 + 0.5;                                  // 半 lambert
-float lnDir  = saturate((lnRaw + _RimDirRange) / (1.0 + _RimDirRange));      // 受光侧
-float lnIndir= saturate((1.0 - lnRaw + _RimIndirRange) / (1.0 + _RimIndirRange)); // 背光侧
-
-float rimDir   = lerp(rim, rim * lnDir,   _RimDirStrength);
-float rimIndir = rim * lnIndir * _RimDirStrength;
-
-rimDir   = lilTooningScale(_AAStrength, rimDir,   _RimBorder,   _RimBlur);   // 同一套分档
-rimIndir = lilTooningScale(_AAStrength, rimIndir, _RimIndirBorder, _RimIndirBlur);
-rimDir   = lerp(rimDir,   rimDir   * fd.shadowmix, _RimShadowMask);          // 可被阴影压暗
-rimIndir = lerp(rimIndir, rimIndir * fd.shadowmix, _RimShadowMask);
-
-// 混合
-fd.col.rgb = lilBlendColor(fd.col.rgb, rimColor.rgb * rimLightMul, rimDir * rimColor.a, _RimBlendMode);
-fd.col.rgb = lilBlendColor(fd.col.rgb, rimIndirColor.rgb * rimLightMul, rimIndir * rimIndirColor.a, _RimBlendMode);
-```
-
-**Rim 是双色的**：`_RimColor`（受光侧）+ `_RimIndirColor`（背光侧），各带独立的 Border / Blur。
-
-### 6.6 阴影的层次
-
-从 `frag.hlsl:872` 起可以看到 lilToon 的阴影是**三层**，每层独立控制：
-
-```
-lns.x / lns.y / lns.z        ← 1st / 2nd / 3rd 阴影
-_ShadowReceive / _Shadow2ndReceive / _Shadow3rdReceive    ← 每层是否接收投射阴影
-_ShadowBlur / _Shadow2ndBlur / _Shadow3rdBlur             ← 每层的过渡宽度
-_ShadowBlurMask (r/g/b)      ← 用贴图逐像素调过渡宽度
-_ShadowBorderMask + _ShadowAOShift                        ← 用贴图逐像素调边界（AO）
-```
-
-→ 我们的 `celSteps / celDark` 相当于**只有 1st 层**。要做到 lilToon 的观感，**至少要 3 层 + 每层独立颜色与边界**。
-
-### 6.7 核对之后的结论修正
-
-| 项 | 原判断 | 核对后 |
-|---|---|---|
-| 分档数学 | smoothstep | **线性重映射**（更简单，也更好对齐） |
-| MatCap | 低难度 | **极低难度**（源码注释直接给了简化式） |
-| 混合模式 | 🟡 中等 | **✅ 极低**（8 行，一个函数通吃） |
-| Rim | 低难度 | **低难度**，但要留意**双色 + 受光/背光分离** |
-| 阴影 | 未细看 | **三层结构**，工作量比预想大，但公式本身简单 |
-
----
-
-## 七、阶段 1 完成度与缺口清单（源码逐项核对）
-
-### 7.1 一个关键机制：遮罩默认来自**顶点色**
-
-lilToon 里 Rim / MatCap / 自发光的"遮罩"**默认不是贴图**，而是**网格顶点色的三个通道**：
-
-```hlsl
-fd.triMask.r   →  MatCap 的混合权重
-fd.triMask.g   →  Rim 的混合权重
-fd.triMask.b   →  自发光的混合权重（闪烁序列也乘它）
-```
-
-（`lil_common_frag.hlsl:1446` MatCap，`:1614` Rim，`:1756` 自发光，）
-
-所以预设里 `_UseRim` 之类默认都是 0 —— 效果**由顶点色逐部位控制**。这也意味着：**支持顶点色遮罩 = 支持 lilToon 最常用的工作流**。
-
-### 7.2 逐项缺口
-
-| # | 项 | 已实现 | 还缺（含源码依据）|
-|---|---|---|---|
-| **①** | 分档 | 线性重映射。三层独立颜色/边界/过渡。| `_ShadowBorderRange`（第 5 参：额外收窄过渡带）· `_ShadowMainStrength`（对比度）· `_ShadowNormalStrength` · **`_ShadowReceive / 2ndReceive / 3rdReceive`**（每层是否接收投射阴影）|
-| **②** | Rim | 双色。Border/Blur。FresnelPower。DirStrength/Range。BlendMode。| **顶点色 G 通道遮罩**。· `_RimColorTex`（贴图遮罩，）· `_RimMainStrength`（与 albedo 混合，）· `_RimNormalStrength` · `_RimShadowMask`（在投影里压暗）|
-| **③** | MatCap | 视角空间 UV。贴图。加色/乘色。BlendMode。| **顶点色 R 通道遮罩**。· `_MatCapColor` · `_MatCapMainStrength` · `_MatCapNormalStrength` · `_MatCapShadowMask` · 2nd/3rd 槽位 |
-| **④** | 自发光 | 材质级颜色。强度。BlendMode。| **`_EmissionMap` 贴图**。· **顶点色 B 通道遮罩**。· `_EmissionBlendMask` · `_EmissionMainStrength` · `_Emission2nd` · 闪烁/荧光（`_EmissionFluorescence`，）|
-| ⑤ | 背光 | 双色。Border/Blur。Directivity。ViewStrength。| `_BacklightColorTex` · `_BacklightMainStrength` · `_BacklightReceiveShadow` |
-
-### 7.3 建议的实现顺序（按"像不像 lilToon"排）
-
-1. **顶点色遮罩（triMask）** —— 一次改动同时让 Rim / MatCap / 自发光三者的遮罩都成立。需要：材质开 `vertexColors`。+ 在注入的 GLSL 里读 `vColor`。⚠️ 但注意：BA 那批 GLB **没有顶点色**，（VRChat 模型才有）—— 需回退成"没有顶点色时遮罩恒为 1"。
-2. **三个 MainStrength**（与 albedo 混合，）—— 各 1 行。3. **`_RimShadowMask` / `_MatCapShadowMask`** —— 需要拿到 shadowmix，要接 lights_fragment_begin，4. **`_ShadowReceive / 2nd / 3rd`** —— 影响投射阴影与分档的叠加方式。5. **`_EmissionMap` / `_RimColorTex` / `_EmissionBlendMask`** —— 需要多张贴图 uniform，配置项要扩。6. **`_ShadowBorderRange` / `_ShadowMainStrength` / `_ShadowNormalStrength`**
-
-### 7.4 一个待拍板的问题
-
-我的默认值和 lilToon 预设**差得比较远**，：
-
-| 参数 | 我的默认 | lilToon 常见值 |
-|---|---|---|
-| `shadowBorder` | 0.5 | **0.1** |
-| `shadowBlur` | 0.1 | **0.005 ~ 0.15** |
-| `rim.fresnelPower` | 1.0 | **1 ~ 3.5** |
-| `shadowColor` | [0.82, 0.76, 0.85] | 皮肤 [0.925, 0.70, 0.74] · 头发 [0.60, 0.65, 0.75] |
-
-`shadowBorder` **0.5 → 0.1 是质变**，0.5 意味着"一半受光才算亮"（阴影面积很大，）
-0.1 才是动漫渲染那种"大面积受光 + 边缘一圈影"。→ 待定：**是否把默认值改成 lilToon 的实际值**，（会改变现在的观感，）
-
-
----
-
-## 8. 描边（Outline）完整规格 —— 源码级
+## 五、描边（Outline）完整规格 —— 源码级
 
 > 与 `Hidden/lilToonOutline` 的关系：那是编辑器从主着色器**生成**的变体（源码里没有独立文件）。
 > 描边的全部属性都在 `lts.shader` 里（474~556 行），渲染时走独立的一趟 pass。
@@ -637,7 +321,7 @@ fd.col.a  *= _OutlineColor.a;
 
 ---
 
-## 9. 预设是**按材质**的 —— 架构改造方案
+## 六、预设是**按材质**的 —— 架构改造方案
 
 > 观察（用户 2026-10-05）：lilToon 的预设支持**按材质分别选择**，所以才有
 > 皮肤 / 头发 / 衣服 / 无机 / 自然 这几个大类。用法是：

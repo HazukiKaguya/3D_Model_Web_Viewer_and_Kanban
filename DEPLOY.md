@@ -1,15 +1,17 @@
-﻿# 3D 角色模型网页内嵌看板娘 部署说明
+# 3D 角色模型网页内嵌看板娘 部署说明
+
+中文 ｜ [English](DEPLOY.en.md) ｜ [日本語](DEPLOY.ja.md)
 
 纯静态站点，**无构建步骤、无 CDN 依赖、无需 Node**，全部使用相对路径（根路径/子路径部署都不用改配置）。
 `dist/` 已预打包好，直接把本目录里的**全部文件按原样上传到网站根目录**（或任意子目录）即可，静态托管即可运行（Nginx / Apache / Netlify / Cloudflare Pages / OSS / COS 都行）。
 
 > 想本地先看一眼：在**开发仓库**里执行 `node scripts/serve.mjs 5199`，然后打开 <http://127.0.0.1:5199/>。
-> （部署包里不含 `scripts/`，也不需要 Node —— 直接用浏览器打开或随便一个静态服务器都行。）
+> （纯静态站点，无需 Node —— 直接用浏览器打开，或放到任意静态服务器上即可。）
 
 | 平台 | 处理 |
 |---|---|
-| Netlify / Cloudflare Pages | 仓库内 `_headers` 已配好 |
-| Apache | 仓库内 `.htaccess` 已配好 |
+| Netlify / Cloudflare Pages | `_headers`（部署包根目录已含） |
+| Apache | `.htaccess`（部署包根目录已含） |
 | GitHub Pages | 已附 `.nojekyll` |
 | Nginx | `mime.types` 最好加上 `model/gltf-binary glb;` |
 
@@ -19,6 +21,7 @@
 |---|---|
 | `index.html` | 3D 模型查看器（全屏、控制台 UI） |
 | `viewer.js` | 查看器核心（`createViewer` / `autoMount`，ES module，被 index.html 直接引用） |
+| `unity-anim.js` | **Unity `.anim` 转换**（AnimationClip → three AnimationClip）：表情（blendShape）/ 换装显隐（`m_IsActive`）/ 通用变换曲线 |
 | `vendor/three/three.module.js` | three.js r185.1 本体（importmap 里 `"three"` 指向它） |
 | `vendor/three/three.core.js` | ↑ r185 起拆出的核心，`three.module.js` 用相对 import 引用它，**不能漏** |
 | `vendor/three/controls/OrbitControls.js` | 相机交互（旋转 / 缩放） |
@@ -31,6 +34,13 @@
 | `vendor/three/effects/OutlineEffect.js` | 描边 |
 | `vendor/three/utils/BufferGeometryUtils.js` | ↑ GLTFLoader 的传递依赖，**不能漏** |
 | `vendor/three/utils/SkeletonUtils.js` | ↑ 同上（依赖链的一环）|
+| `liltoon-bridge.js` | **第 4 着色后端**的适配层（把我们的 lilCfg / Unity 材质喂给 three-liltoon） |
+| `vendor/three-liltoon/index.js` | ↑ three-liltoon 运行时（MIT） |
+| `vendor/three-liltoon/chunk-A4BIABDA.js` | ↑ 编译好的 lilToon GLSL（1.9 MB，**不可省**） |
+| `vendor/three-liltoon/chunk-F6TSGO5L.js` | ↑ 运行时的小 chunk |
+| `vendor/three-liltoon/gltf.js` · `vrm.js` | ↑ 可选扩展（glTF 的 `MOCHIYA_materials_liltoon` / VRM） |
+| `vendor/three-liltoon/schema/*.json` | ↑ 材质扩展的 JSON schema |
+| `vendor/three-liltoon/THIRD_PARTY_NOTICES.md` | ↑ 第三方声明（MIT 要求随包分发） |
 | `assets/sample.glb` | 模型文件（演示用，换自己的模型直接替换即可） |
 | `assets/sample.json` | 该模型的配置：模型 / 嘴部贴图 / 缩放 / 取景 / 渲染 / 打光 / 背景 |
 | `assets/fallback.json` | 同上，指向同一个模型；留作"复制一份改三处"的模板 |
@@ -41,14 +51,35 @@
 | `nginx-3d-viewer.conf` | nginx 用：配置模板，照抄到 `server { }` 里（见第三节） |
 | `DEPLOY.md` | 本文件 |
 
-> `viewer.js` 只依赖上表里的 5 个 vendor 文件。整个 `vendor/` 目录一共 1.4 MB。
+> `viewer.js` 只依赖上表里的 5 个 vendor 文件。整个 `vendor/three/` 目录一共 1.4 MB。
+>
+> **第 4 着色后端必须随包分发**（`liltoon-bridge.js` + `vendor/three-liltoon/`，原始 2.2 MB，
+> 压缩后约 0.35 MB）—— 漏了它们，切到「lilToon 源码」会 404。
+>
+> ⚠️ 注意区分两件事：
+> - **打包**：这几个文件**必须在部署包里**（不是可选项）。
+> - **运行时**：浏览器**按需下载** —— viewer.js 用 `new URL(...)` 动态 import，
+>   用户不切到那个模式就一个字节都不会请求。这也是为什么**构建产物里看不出来**
+>   （否则 esbuild 会把 1.9 MB 的 GLSL chunk 打进 dist 单文件）。
+>
+> ⚠️ **单文件嵌入版（`dist/3d-viewer.min.js`）用不了这个后端**（实测）：
+> 他们的 `index.js` 对 `three` 是**裸模块引用**（`import ... from "three"`），
+> 而单文件版是把 three 打进包里的、没有 importmap ⇒ 会报
+> `Failed to resolve module specifier "three"`。
+> 桥接层与 `vendor/three-liltoon/` 放在 dist 同目录也没用（我们实测过）。
+> 失败是**优雅的**：控制台记一条错误、自动退回 `lilToon 风格` 模式，其他功能完全不受影响。
+> ⇒ 要用这个后端，必须走**标准部署**（`index.html` + `vendor/three/` + importmap）。
+>
+> 验收：`node scripts/check-lilsrc.mjs`（真的去切那个模式，断言库文件全部 200、
+> 无残留材质、网格/三角形数还原）。
 
 ## 一·五、这个部署目录是怎么来的（给维护者）
 
-  ⚠️ `_deploy/ba3d-viewer/` **不是手工攒的**、由脚本按**显式清单**生成：
+  ⚠️ `_deploy/3D_Model_Web_Viewer/` **不是手工攒的**、由脚本按**显式清单**生成：
 
       node scripts/make-deploy.mjs            # 重建（会先清空目标目录）
       node scripts/make-deploy.mjs --check    # 只比对 · 不一致 exit=1（CI 用）
+      node scripts/check-release-safety.mjs   # 发布物断言：模型只有 sample.glb · 无内部文档/路径 · 文档无死链
 
   ⇒ 清单里**每一项**都必须能从仓库里找到源（见下表）
   ⇒ 想往部署包里加东西、**必须改脚本里的 `MANIFEST`**、并同步本文档的两张表。
@@ -59,7 +90,7 @@
 
       · 留了一份**旧的 + 编码损坏**的 `check-glsl.mjs`（6.6 KB、无人引用）
       · 又把整个 `scripts/` 拷了进去 ⇒ 部署包里多了 5 个**开发工具**
-        （而本文档第 7 行**明写着**「部署包里不含 `scripts/`」）
+        （部署目录只保留站点运行需要的文件，避免把开发工具一起拷进去）
 
   ### `deploy-src/` 是什么
 
@@ -73,20 +104,20 @@
 
   ⇒ 集中放到 `deploy-src/`、这样整个部署目录就是**完全可重现**的。
 
-  ### 现在一共 **38 个文件（10.50 MB）**、（`kanban-demo.html` 已删、功能被 `embed-demo.html` 完全覆盖）
+  ### 现在一共 **61 个文件（约 15.2 MB）**
 
-      必需  index.html · viewer.js · vendor/three 的 12 个 ·
+      必需  index.html · viewer.js · liltoon-bridge.js · vendor/three 的 12 个 ·
             assets（sample.glb / 2 个 json / 3 张嘴部贴图）·
-            .htaccess / _headers / .nojekyll / nginx-3d-viewer.conf / DEPLOY.md
-      可选  dist 两个 · 2 个演示页 · 4 份文档 · _lilpresets.json ·
-            2 张嘴部索引图 · 4 张测试贴图
+            .htaccess / _headers / .nojekyll / nginx-3d-viewer.conf
+      可选  dist 两个 · 2 个演示页 · vendor/three-liltoon 的 7 个 · _lilpresets.json ·
+            2 张嘴部索引图 · 测试贴图 ·
+            README / CONFIG / DEPLOY / LILTOON1.x / LILTOON2.x（各含 `.en` / `.ja`）·
+            LICENSE · THIRD-PARTY-NOTICES.md
 
-  ⚠️ **不含 `scripts/`**（开发工具、Node 脚本、静态站点用不到）
-  ⚠️ **不含** `models/` · `archive/` · `liltoon-2.3.4/` · `assets/test/` 之外的东西。
-
-> ⚠️ 开发期的 6 个检查器（`scripts/check-*.mjs` · `make-deploy.mjs`）**不在部署包里**。
-> 其中 `check-layout.mjs` 会用**无头浏览器**验证浮窗布局（拖动/缩放/持久化）
-> ⇒ 部署时不需要 Node、也不需要浏览器自动化。
+> ℹ️ 开发期的检查器（`scripts/check-*.mjs` · `make-deploy.mjs`）服务于构建与验证流程，
+> 静态站点运行不需要它们 —— `check-layout.mjs` 用无头浏览器验证浮窗布局
+> （拖动 / 缩放 / 持久化），因此部署时既不需要 Node、也不需要浏览器自动化。
+> 这些检查器只在开发仓库里运行，随包的 `.md` 文档已完整描述部署流程。
 
 > ⚠️ **`index.html` 现在是浮窗布局**（Unity 风格）、场景 / 工具栏 / 状态 /
 > 参数面板都是可拖动可缩放的独立窗口、位置尺寸存在浏览器的 localStorage 里。
@@ -97,10 +128,16 @@
 | 路径 | 说明 |
 |---|---|
 | `embed-demo.html` | 3D 模型网页内嵌看板娘演示页（浮层 + 动作选单 + 百分比缩放） |
-| `dist/ba3d-viewer.js` | **自包含单文件版**（约 1.07 MB），给别的页面用 `<script type="module">` 引入，**不需要 importmap、不需要 vendor/** |
-| `dist/ba3d-viewer.min.js` | 上者的压缩版（约 0.59 MB），`embed-demo.html` 用的就是它 |
+| `dist/3d-viewer.js` | **自包含单文件版**（约 1.94 MB），给别的页面用 `<script type="module">` 引入，**不需要 importmap、不需要 vendor/** |
+| `dist/3d-viewer.min.js` | 上者的压缩版（约 0.92 MB），`embed-demo.html` 用的就是它 |
 | `CONFIG.md` | 配置字段完整参考（含 `data-*` 属性、事件、全局钩子） |
+| `CONFIG.en.md` · `CONFIG.ja.md` | 配置参考的英文 / 日文版 |
 | `README.md` | 项目说明 |
+| `README.en.md` · `README.ja.md` | 项目说明的英文 / 日文版 |
+| `DEPLOY.en.md` · `DEPLOY.ja.md` | 本文件的英文 / 日文版 |
+| `LICENSE` | 项目许可证（MIT © 2026 Hazuki Kaguya）——**分发时必须保留** |
+| `THIRD-PARTY-NOTICES.md` | 第三方声明（three.js / lilToon / three-liltoon 的 MIT 全文）——**分发时必须保留** |
+| `LILTOON1.x.md` · `LILTOON2.x.md` | lilToon 基线对照（1.3.7 归档 / 2.3.4 现行）；另有 `.en.md` · `.ja.md` 英日版 |
 | `assets/mouth/_cells-preview-*.png` | 嘴部图集 8×8 索引图，挑 `mouthCell` 时照着看用 |
 
 跑主页面真正必需的就是：**`index.html` + `viewer.js` + `vendor/three/` 的 12 个文件 + `assets/` 里的模型与配置**。

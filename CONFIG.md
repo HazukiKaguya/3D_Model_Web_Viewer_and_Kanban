@@ -1,7 +1,10 @@
 # BA3D 配置 JSON 字段说明
 
+中文 ｜ [English](CONFIG.en.md) ｜ [日本語](CONFIG.ja.md)
+
 > **lilToon 基线：2.3.4**
->   · 源码地图（2.3.4 行号）、版本差异清单、重新评估的实施顺序 ⇒ [`LILTOON2.x.md`](LILTOON2.x.md)
+> 本文档里的**界面标签保留中文原文**（查看器界面本身就是中文），首次出现时附译名。
+>   · 源码地图（2.3.4 行号）、版本差异清单 ⇒ [`LILTOON2.x.md`](LILTOON2.x.md)
 >   · 旧基线（1.3.7）的对照与核对记录 ⇒ [`LILTOON1.x.md`](LILTOON1.x.md)（已归档、行号是 1.3.7 的）
 >
 > 本文档里的 `lil_*.hlsl:NNN` 行号引用**已全部对齐 2.3.4**。
@@ -11,7 +14,7 @@
 **相对路径一律按本 JSON 所在目录解析** —— 所以把 json 和 glb 放在同一个文件夹里，
 无论站点部署在哪、被谁内嵌，路径都成立。绝对 URL（`http(s):` / `data:` / `blob:`）原样使用。
 
-完整示例见 `assets/sample.json`。
+完整示例见 `assets/sample.json`（示例模型 CH0155）与 `assets/fallback.json`（同一模型的另一份配置模板）。
 
 ---
 
@@ -25,7 +28,8 @@
   "renderer":   { ... },   // 缩放 / 取景 / 渲染 / 描边
   "lighting":   { ... },   // 打光
   "background": { ... },   // 背景
-  "animation":  { ... }    // 默认动作
+  "animation":  { ... },   // 默认动作与外部 Unity .anim
+  "camera":     { ... }    // 声明式相机（按 Unity 的单位填，复现 Unity 取景）
 }
 ```
 
@@ -35,21 +39,21 @@
 
 | 字段 | 类型 | 默认 | 说明 |
 |---|---|---|---|
-| `url` | string | `./assets/model.glb` | 模型文件。**推荐 `.glb`（自包含）**；`.gltf` 若贴图/`.bin` 是外部文件会加载失败 |
-| `mouthAtlas` | string \| `null` | `null` | 嘴部修复用的图集。**不配 = 不做嘴部修复** —— 适合口型本来就是独立网格 / morph target 驱动的模型 |
+| `url` | string | `./assets/sample.glb` | 模型文件。**推荐 `.glb`（自包含）**；`.gltf` 若贴图/`.bin` 是外部文件会加载失败 |
+| `mouthAtlas` | string \| `null` | `null` | 嘴部修复用的图集（kivo 那套）。**不配 = 不做嘴部修复** —— 适合口型本来就是独立网格 / morph target 驱动的模型 |
 
 **关于嘴部修复**：原始模型的嘴部 UV 落在贴图的纯黑占位区，所以嘴是黑的。
 查看器会按「材质名含 `EyeMouth`」找到那张脸图网格，再按 **UV 岛中 z 最低的那个**切出嘴部，
-换成图集里对应的口型。BA小人模型嘴部 UV 一般来说都是一致的（`u[0.0086,0.2413] v[0.7926,0.9574]`），
+换成图集里对应的口型。CH0155 与 CH0273 实测嘴部 UV 完全一致（`u[0.0086,0.2413] v[0.7926,0.9574]`），
 所以单元格布局通用。
 
-> 共用同一材质的网格可能有多个，
+> 共用同一材质的网格可能有多个（CH0155 有 Body+Star、CH0167 有 嘴+脸描边+眼睛），
 > 判定"哪个才是嘴"用的是**选中岛的 UV 是否落在嘴部区域**（这几代 BA 模型一致：
 > u≈[0.009,0.241] v≈[0.793,0.957]），可用 `renderer.mouthUv` 覆盖。
-> 单看"谁 z 最低"不行 —— 部分模型的 Star（眼睛高光）z 比嘴更低。
+> 单看"谁 z 最低"不行 —— CH0155 的 Star（眼睛高光）z 比嘴更低。
 
 > **不配 `model.mouthAtlas` 就不做嘴部修复**（默认行为）。修复是给「嘴混在 EyeMouth 网格里、
-> 渲染成黑块」的那批模型用的；而像 `models/BlueArchiveModels` 那批，每种口型本来就是**独立网格 + morph target**
+> 渲染成黑块」的那批模型用的；而像 BA 系列那批，每种口型本来就是**独立网格 + morph target**
 > 驱动（实测 morph 权重 1 时把口型甩到自身尺寸的 17 倍之外＝隐藏，动画设成 0 才显形），
 > 强行套修复反而会把眼睛当嘴拆掉。所以：
 >
@@ -184,6 +188,9 @@ createViewer(el, { autoConfig: false })
 **换模型时怎么调**：先用同一套配置。如果该模型的动作幅度大（比如有跪姿、倒地），
 角色会超出面板 —— 这时**只调小 `modelHeightPx`** 即可（滚动滚轮缩放只是临时的，不会保存）。
 
+> 实测参考（面板 420×430，含全部常用动作不裁切）：
+> - CH0155：`modelHeightPx: 360` → 需要 308×405。
+> - CH0273：`modelHeightPx: 275` → 需要 309×394。
 
 **`framing` 两种模式**：
 
@@ -448,6 +455,8 @@ Natsu.glb    288 个面部顶点 → 148 个被挡住 (51.4%)
 浓度本身就表达了「有无」：**拖到最右（≥0.95）= 没有面部阴影**，所以不再需要额外的开关。
 
 | `celFaceShadowMin` | number \| `null` | **`0.7`** | **面部阴影的唯一参数**：`0` = 最深，`>= 0.95` = 没有面部阴影，`null` = 跟随 `celShadowMin` |
+
+| 取值 | 含义 |
 |---|---|
 | **`0.7`（默认）** | 面部比身体（0.3）**更淡**的投影 |
 | `null` | 跟随全局 `celShadowMin` |
@@ -658,7 +667,7 @@ GLTFLoader 遇到缺失法线会填一整个**零向量**缓冲；零法线在�
 | `attachProps` | array \| `null` | `null` | 把脱落的道具骨骼挂到角色骨骼上 —— **实测不可靠**，优先用 hideParts |
 | `noCastPattern` | string \| `null` | `null` | **不投影的材质名**（正则片段），如 `"Hair"`。配合 `faceNoShadow: false` 可做到「脸保留自阴影、但刘海不在脸上投影」|
 | `outline` | boolean | `true` | 反壳描边开关 |
-| `outlineThickness` | number | `0.004` | 描边粗细 |
+| `outlineThickness` | number | `0.002` | 描边粗细 |
 | `outlineColor` | `[r,g,b]` | `[0.10,0.07,0.11]` | 描边颜色（线性 0~1，官方是偏暖的深色，不是纯黑） |
 | `outlineAlpha` | number | `1.0` | 描边透明度 |
 | `shadows` | boolean | `true` | 阴影（含地面接触阴影） |
@@ -691,14 +700,92 @@ GLTFLoader 遇到缺失法线会填一整个**零向量**缓冲；零法线在�
 
 ---
 
-## 七、`animation` —— 默认动作
+## 七、`animation` —— 默认动作与外部动画
 
 | 字段 | 类型 | 默认 | 说明 |
 |---|---|---|---|
 | `name` | string | 不配 → **在名字含 `idle` 的动作里随机** | 初始动作 |
+| `clips` | array | `[]` | **外部 Unity `.anim` 列表**（FBX 通常不自带动画）。每项 `{ url, name?, group? }`，相对路径同样按配置文件所在目录解析 |
+| `axisFix` | boolean | `true` | 外部 `.anim` 的坐标转换（Unity 左手 → three 右手）。模型轴向不一致时设 `false` |
+| `humanoid` | string \| object | `null` | **Humanoid 肌肉换算表**（URL 或内联对象）：Unity 侧脚本一次性量出「每条肌肉 → 哪根骨骼 · 什么轴 · 每单位多少度」✓ 有它 ⇒ 只含肌肉曲线的 `.anim` 也能播 |
+| `rootMotion` | bool | `true` | **根运动**（Humanoid 片段里的 `RootT` / `RootQ`）：把片段的位移与转身叠到角色身上 ✓ 关掉则只播骨骼动作、角色原地不动 |
 
 匹配规则（依次尝试）：**精确名字 → 忽略大小写精确 → 名字包含（忽略大小写）**。
 所以 `"CH0273_Cafe_Idle"` 和简写 `"Cafe_Idle"` 都能命中。
+
+**Humanoid 动作需要换算表**：肌肉值的解算依赖 Avatar，而 Avatar **不落盘**（实测 melano.fbx.meta 里没有任何映射字段）
+⇒ 用 Unity 侧脚本一次性量出来：选中角色 → `Tools ▸ BA3D ▸ 导出 Humanoid 肌肉换算表（JSON）`，
+把生成的 JSON 放到模型目录，并在这里填 `"humanoid": "./humanoid-muscles.json"`。解算公式是「零姿势 × ∏ 单轴旋转」，
+与脚本的自检公式**逐字相同** —— 脚本会报告最大角度误差（≈0 即精确）。
+表是**按角色**的，换角色要重导。
+
+**两种让舞蹈动起来的方式**：
+· **烘焙**（最精确）：Unity 里 `Tools ▸ BA3D ▸ 把选中的 Humanoid .anim 烘成变换曲线` ⇒ 生成 `*_transform.anim`，
+  由 Unity 用 Avatar 精确解算（含脚部 IK），导入后逐帧一致；脚本已自动瘦身，一个舞通常几 MB 而不是几百 MB；
+· **直读 `.anim`**（方便）：配上 `humanoid` 换算表即可直接播，
+  片段的位移与转身（`RootT` / `RootQ`）也会自动叠上 ✓。
+
+### 7.1 外部 Unity `.anim`
+
+Unity 工程里的 FBX 通常**不带动画** —— 动作与表情都是独立的 `.anim`（AnimationClip，YAML 文本）。
+查看器直接读它们，并按曲线类型分流：
+
+| `.anim` 里的内容 | 支持 | 落到 three 的 |
+|---|---|---|
+| `blendShape.<名字>` | 是 | `morphTargetInfluences[i]`（表情） |
+| `m_IsActive` / `m_Enabled` | 是 | `visible`（换装与部件显隐，按阶跃插值） |
+| `m_LocalPosition` / `m_LocalRotation` / `m_LocalScale` / `localEulerAnglesRaw` | 是 | `position` / `quaternion` / `scale`（骨骼动画） |
+| **Humanoid 肌肉曲线**（`Chest Twist Left-Right` 这类） | 否 | 无 —— 肌肉值是相对 Avatar T-pose 的，而 Avatar 映射不在 `.anim` 里 |
+| `RootT` / `RootQ`（Humanoid 根运动） | 否 | 无 |
+| `m_PPtrCurves`（贴图与材质切换） | 否 | 无 |
+
+**含不支持曲线的片段会被整体跳过**（不做「半套用」—— 否则身体停在绑定姿势、只有表情在动，
+观感是错的）。跳过时控制台会写明是哪一类、各多少条。
+
+两个前提，缺一不可：
+
+- **表情要求模型自带 blendShape**：GLB 可以；**FBX 不行** —— three 的 FBXLoader 不解析 FBX 的
+  BlendShape 段 ⇒ FBX 模型上只有「显隐」与「变换」两类 `.anim` 能生效。
+- **Humanoid 动作要求 Avatar**：`.anim` 里只存归一化的肌肉值，骨骼映射在 Avatar（工程设置）里，
+  浏览器端拿不到 ⇒ 这类片段无法解算。
+
+**Humanoid 动作的正解**：在 Unity 里把片段**烘成变换曲线**（逐帧采样每根骨骼的 `local*`，另存为
+`<原名>_transform.anim`）⇒ 那种片段查看器**能直接播**（含 `m_LocalRotation.x/y/z/w` 分量写法 ✓）；
+也可以改用 FBX Exporter 让动画随 FBX 一起导出（零转换）。
+肌肉值本身在浏览器端无解 —— 解算要 Avatar。
+
+```jsonc
+"animation": {
+  "name": "Melano_DefaultFace",                              // 初始动作（可选）
+  "clips": [
+    { "url": "./anim/Facial/Melano_smile.anim", "group": "face" },
+    { "url": "./anim/Gimmick/shoes_ON.anim",    "group": "parts" }
+  ]
+}
+```
+
+`group` 只是给调用方（选单、内嵌页）分类用的标签，查看器不依赖它。
+`getAnimations()` 会额外返回每段的 `overlay` / `kind`（`body` / `face` / `parts`）/ `source`：
+**表情与换装属于 overlay** —— 播放它们**不会**打断当前身体动作（Unity 里同样是叠加的）。
+
+### 7.2 声明式相机（顶层键 `camera`）
+
+想让 `?config=` 直接复现 Unity 场景的取景（而不是由查看器自动取景）时用它。
+**各项按 Unity 的单位填**，换算交给查看器：
+
+```jsonc
+"camera": {
+  "position": [0, 1.1, 1],      // Unity 相机位置
+  "target":   [0, 1.1, 0],      // 对准点
+  "fov":      26.9914,          // 相机 FOV（度）
+  "unityModelHeight": 1.2477    // 该模型在 Unity 里的真实高度
+}
+```
+
+`unityModelHeight` 是换算的关键：查看器载入时把模型归一化到 `targetHeight`（默认 2），
+所以相机各项会整体乘 `K = targetHeight / unityModelHeight`。
+**等比缩放不改变 FOV 下的画面构成** ⇒ 这样得到的就是 Unity 的取景。
+不填它则 `K = 1`，相机值按查看器当前空间解释。
 
 ---
 
@@ -713,7 +800,7 @@ GLTFLoader 遇到缺失法线会填一整个**零向量**缓冲；零法线在�
      style="width:420px;height:430px"></div>
 
 <script type="module">
-  import { autoMount } from './dist/ba3d-viewer.min.js';
+  import { autoMount } from './dist/3d-viewer.min.js';
   autoMount();           // 自动扫描 [data-ba3d]、创建查看器并开始加载
 </script>
 ```
@@ -746,7 +833,7 @@ GLTFLoader 遇到缺失法线会填一整个**零向量**缓冲；零法线在�
 
 ```
 index.html?config=./assets/sample.json
-index.html?config=./assets/oumali.json
+index.html?config=./assets/fallback.json
 index.html?model=./assets/sample.glb&mouth=./assets/mouth/Character_Mouth_2.png
 ```
 
@@ -1008,7 +1095,7 @@ viewer.applyLilPreset('Skin-Anime')   // 或 'Hair-OutlineRimLight' / 'Inorganic
 lilToon 官方预设的 `_UseOutline` 全是 0、即"是否描边"由美术按材质手动勾、预设只提供数值。
 
 ⚠️ **官方预设是按材质使用的**（皮肤材质套 Skin-*、头发套 Hair-*）。
-当前的实现是全局的、按材质覆盖的方案见 `LILTOON1.x.md `9`。
+当前的实现是全局的、按材质覆盖的方案见 `LILTOON1.x.md` 第 9 节。
 
 ---
 
@@ -1196,73 +1283,6 @@ vDirectionalShadowCoord 算出来全 0，getShadowMask() 恒返回 1。
 
 ---
 
-## 开发过程中的一个坑（保留备查）
-
-viewer.js 里有两处 `if (false) { ... }` 包着旧的 three-chunk 方案：
-
-    #include <shadowmap_pars_vertex> / <shadowmap_vertex>
-    #include <shadowmap_pars_fragment> / <shadowmask_pars_fragment>
-    #define receiveShadow true
-
-这条路走不通（原因见上一节），代码留着备查，不执行。
-如果以后 three 改了 materialNeedsLights 的白名单，可以再评估。
-
----
-
-## 描边色的相乘位置（一个容易踩的坑）
-
-lilToon 的做法是描边色只乘一次：
-
-    col.rgb = mix( col.rgb * _OutlineColor.rgb, litCol, outlineLitFactor );
-
-在 three 里要注意 MeshBasicMaterial 的行为：
-
-    片元最后会做 gl_FragColor = vec4( diffuseColor.rgb * material.color.rgb, ... )
-
-所以描边色的相乘只能出现一次，二选一：
-
-    A. mat.color = 描边色，着色器里不再乘 uOutlineColor
-    B. mat.color = 白色，着色器里无条件乘 uOutlineColor
-
-当前实现用的是 A。
-
-### 踩过的两个坑
-
-1. 如果同时用 A 和 B（mat.color 是描边色、着色器里又乘 uOutlineColor）。
-   受光色会被描边色染一次、看起来像「受光色被描边色盖住」。
-
-2. 如果改成 B、但那个乘 uOutlineColor 的着色器块被门控在
-   if (o.litEnable !== false) 里、那么关掉「受光生效」时描边色根本没被乘。
-   结果描边会变成**纯白**。
-   → 要用 B 的话、描边色的相乘必须是**无条件**的、只把 mix 到受光色那一步做成开关。
-
-### 推论：改这块代码时的注意事项
-
-makeLilOutlineMaterial 里是一长串 .replace() 链式调用。
-**不要删除链中间的行**，否则会留下悬空的 .replace 造成语法错误。
-要去掉某个注入片段，把它替换成空串 '' + 或注释，保持链完整。
-
----
-
-## 阶段 1 完成度
-
-| # | 内容 | 状态 |
-|---|---|---|
-| 1 | 多段 ramp + 每层边界色（照 lilTooningNoSaturateScale 线性重映射，3 层）| 完成 |
-| 2 | Rim Light（双色 + Border/Blur + 菲涅尔 + 遮罩）| 完成 |
-| 3 | MatCap（1st 槽位，视角空间球面采样）| 完成 |
-| 4 | Emission（材质级 + 强度）| 完成 |
-| 5 | 预设下拉（lilToon 1.3.7 官方 Presets 19 个）| 完成 |
-
-附加：描边模块 20 个参数全部实现（见本文档各节）。
-
-⚠️ **范围澄清**：阶段 1 / 2 的计划里**从来没有**下面这些参数 ——
-   `_ShadowBlurMask` `_ShadowBorderMask` `_ShadowAOShift` `_ShadowColorTex`
-   `_MatCapBlendMask` `_RimBlendMask` `_EmissionBlendMask` …
-   它们属于 lilToon 的「遮罩类贴图」、不在任何阶段计划内（见 LILTOON1.x.md 的分阶段清单）。
-   阶段 1 里说的「遮罩」指的是**顶点色三通道 triMask**（见本文档第 961 行起）、那个已实现。
-   完整的「已实现 / 未实现」对照见本文档末的《lilToon 1.3.7 参数对照》。
-
 ## 描边色的相乘开关
 
 lilCfg.outline.shaderColorMult（默认 false）：
@@ -1415,22 +1435,6 @@ resolveMatCapTexture 按 URL 缓存 + 按材质取 uniform。
 
 ---
 
-## 本阶段修过的几个坑（备忘）
-
-1. **全局替换 API 名会改到封装函数自己** → 自递归 → 面板构建爆栈。
-   出现两次（lilG/lilS/lilOG/lilOS，以及 lilApplyPreset）。
-
-2. **函数定义位置**：ensurePanelTitle 曾定义在 986 行而 buildPartsPanel
-   在 392 行调用 → "not defined"。已挪到模块前部（元素查找之后）。
-
-3. **插入顺序**：buildLilMatSelector 用 insertBefore(wrap, lilPanel.firstChild)，
-   而标题栏就是 firstChild → 选择器跑到标题栏上面。改为插到标题栏之后。
-
-4. **groupifyLilPanel** 原来假设「第一个 h4 是面板标题」，
-   去掉标题 h4 后改成「每个 h4 都是分组」。
-
----
-
 ## lilToon 阴影系统（阶段 1 超纲项 + 观感调优）
 
 ### 参数总表
@@ -1527,32 +1531,6 @@ mix 的 t 超过 1 时是**外推**：
 
     选「全部（默认）」→ 把整份 lilCfg 恢复成 LIL_DEFAULTS
     选了某个材质      → 删掉该材质的覆盖（回到全局默认）
-
----
-
-## 本阶段修过的坑（第二批）
-
-1. **applyLilConfig 的数字白名单漏字段**
-   shadowReceive / shadow2ndReceive / shadow3rdReceive / shadowBorderRange /
-   shadowMainStrength / shadowAmbient 都不在名单里、滑杆写不进去、永远默认值。
-   表现是「调了没反应」、且**没有任何报错**。
-   白名单是必需的（要校验键名）、但新增顶层数字字段时必须同步补上。
-
-2. **阴影颜色 alpha 被 slice(0,3) 丢掉**
-   → 11 个官方预设变成「第二层纯黑满强度」、比 cel 还暗。
-
-3. **TDZ：用了文件下方定义的 const**
-   "can't access lexical declaration 'hex' before initialization"
-   在面板构建路径里要自己算 hex、不能依赖别处的 const。
-
-4. **新增控件掉进「背光」组**
-   它们在 LIL_CTRL 循环之后追加、天然落在最后一组。
-   groupify 已改为**显式标记**（data-lil="shadow"/"matcap"/"emission"）+ 全分组搜索。
-   不再靠文本正则（正则已出过两次归位错误）
-
-5. **cel 的投射阴影软化必须对 lilToon 跳过**
-   index.html 的「阴影浓淡 / 脸部」是 cel 专属。
-   lilToon 模式下 viewer 侧跳过注入、界面上滑杆置灰。
 
 ---
 
@@ -1709,6 +1687,10 @@ lilToon 里 _DissolveColor 会发光：
 >    （之前有过一次口头说错：「阶段 1 遗留了遮罩类参数」—— 实际上
 >      阶段 1/2 的计划里从来没有这些参数、见 LILTOON1.x.md）
 
+> ⚠️ 本表的数据源是 **1.3.7** 的 `lts.shader`；切到 2.3.4 基线后又补做了一批
+>    （2nd/3rd 主色层、层溶解、距离淡出、法线贴图通路、MatCap Lod 与自定法线），
+>    因此个别行的状态列可能滞后 —— 以界面实际可调为准。
+
 ### 阴影 Shadow（15/22 已实现）
 
 | lilToon 参数 | 状态 | 我们的键 |
@@ -1773,7 +1755,7 @@ lilToon 里 _DissolveColor 会发光：
 | `_MatCap2ndEnableLighting` | — |  |
 | `_MatCap2ndShadowMask` | — |  |
 | `_MatCap2ndLod` | — |  |
-| `_MatCap2ndNormalStrength` | — |  |
+| `_MatCap2ndNormalStrength` | ✅ | `matcap2nd.normalStrength` |
 | `_MatCap2ndBumpScale` | — |  |
 
 ### 自发光 Emission（3/14 已实现）
@@ -1800,7 +1782,7 @@ lilToon 里 _DissolveColor 会发光：
 | lilToon 参数 | 状态 | 我们的键 |
 |---|---|---|
 | `_BacklightMainStrength` | — |  |
-| `_BacklightNormalStrength` | — |  |
+| `_BacklightNormalStrength` | ✅ | `backlight.normalStrength` |
 | `_BacklightBorder` | ✅ | `backlight.border` |
 | `_BacklightBlur` | ✅ | `backlight.blur` |
 | `_BacklightDirectivity` | ✅ | `backlight.directivity` |
@@ -1825,8 +1807,8 @@ lilToon 里 _DissolveColor 会发光：
 | **遮罩类贴图** | `_ShadowBlurMask` `_ShadowBorderMask` `_RimBlendMask` `_MatCapBlendMask` `_EmissionBlendMask` `_BacklightBlendMask` | 需要额外的 UV 变换与采样、收益低于工作量、**不在任何阶段计划里** |
 | **阴影色贴图** | `_ShadowColorTex` `_Shadow2ndColorTex` | 同上的贴图类 |
 | **AO 偏移** | `_ShadowAOShift` `_ShadowAOShift2` | 需要 AO Map 支持、three 的 toon 通路不接 AO |
-| **法线强度** | `_ShadowNormalStrength` `_Shadow2ndNormalStrength` 等 | 需要 2nd/3rd 法线贴图、属阶段 3 |
-| **2nd / 3rd 全套** | `_Main2nd*` `_Main3rd*` `_MatCap2nd*` `_Rim2nd*` `_Emission2nd*` | 阶段 3 |
+| **阴影法线强度** | `_ShadowNormalStrength` `_Shadow2ndNormalStrength` `_Shadow3rdNormalStrength` | 面板有滑杆、但需替换 three 的明暗分档计算才生效（其余 `*NormalStrength` 已实现）|
+| **2nd / 3rd 全套** | `_Main2nd*` `_Main3rd*` `_MatCap2nd*` `_Rim2nd*` `_Emission2nd*` | ✅ 已实现（含层溶解 / 距离淡出 / 法线通路）；仅 `_Emission2ndBlink` 闪烁不做 |
 | **顶点色/UV 高级变换** | `*_ScrollRotate` `*_UVMode` `*_Parallax*` | 查看器用不上 |
 | **明确不做** | Glitter、AudioLink、Fur/Gem/Tessellation、Lightmap、屏幕空间阴影、VRC Light Volumes | 见 LILTOON1.x.md |
 
@@ -1851,7 +1833,7 @@ lilToon 里 _DissolveColor 会发光：
 | 9 | 2nd / 3rd 主色层 | ✅ 完成（含各自的 blendMask）|
 | 9 | MatCap 2nd | ✅ 完成 |
 | 9 | 2nd / 3rd ノーマルマップ | ⏸ **主动搁置**（要先建法线贴图通路、成本最高）|
-| 10 | Stencil | ✅ 完成（本体 + 描边、各 8 个参数）|
+| 10 | Stencil | ✅ 完成（本体 + 描边、各 7 个参数）|
 | — | 遮罩类贴图（BlendMask）| ✅ 完成（3 个）|
 | — | 描边贴图 UV 变换 / 滚动 / HSV | ✅ 完成 |
 
@@ -2057,904 +2039,6 @@ lil_pass_forward_normal.hlsl:352 / 360 / 411 / 445 / 450 / 457 / 472 / 478：
 **Backlight → MatCap → MatCap2nd → Rim → Emission**。
 
 顺序错了在「同区域多个效果叠加」时观感会不同、尤其 Backlight 是加色。
-
----
-
-## scripts/check-glsl.mjs（构建期 GLSL 结构检查）
-
-### 为什么需要
-
-注入着色器代码时有两类错误**反复出现**、而报错信息都极难定位。
-
-**① 函数嵌套定义** —— 锚点落在某个函数的 `return` 之后、但它的收尾 `}` 还在**下一行**。
-   于是新函数被插进了旧函数体内、GLSL 不允许嵌套。
-   报错只有 `ERROR: 0:NNN: '{' : syntax error`、看不出是哪个函数位置错了。
-
-   已经犯过**三次**：
-     · Dissolve 的 ba3dLilToonRange
-     · 描边贴图的 ba3dToneCorrection
-     · MatCap 遮罩的 ba3dBlend3
-
-**② HLSL-ism** —— lilToon 是 HLSL、抄进 GLSL 时函数名不同：
-     lerp → mix          frac → fract        atan2 → atan(y, x)
-     tex2D → texture2D    mul(m, v) → m * v
-     pow(genType, float) —— GLSL ES 1.00 **没有**这个重载、要写 pow(x, vecN(f))
-
-   实测踩过：lilToneCorrection 抄过来后 frac 和 pow 两处都炸。
-
-### 用法
-
-    node scripts/check-glsl.mjs            # 检查 viewer.js
-    node scripts/check-glsl.mjs <文件>     # 检查指定文件（负例测试用）
-
-### scripts/check-docs.mjs（配置键 ↔ 文档 的一致性）
-
-  这条链原本是：
-
-      面板（index.html 的 LIL_CTRL）
-        → applyLilConfig 的白名单（viewer.js）
-        → 实现
-        → ❌ **文档**          ← 缺的就是这一段
-
-  `check-panel.mjs` 管前两段、本脚本管最后一段。
-
-      node scripts/check-docs.mjs          # 报告
-      node scripts/check-docs.mjs --list   # 顺便打出每个键的判定方法
-
-  ### 判定方法
-
-  从 viewer.js 里抽出 `lilCfg` 的**所有叶子键**（242 个）。
-  按**组**生成「文档里可能怎么写」的候选名、任一个出现即算命中：
-
-      transparentMode      → _TransparentMode
-      main2nd.alphaMode    → _Main2ndTexAlphaMode / _Main2ndAlphaMode
-      main2nd.isDecal      → _Main2ndTexIsDecal
-      outline.widthMask    → _OutlineWidthMask
-      dither.use           → _UseDither
-      matcap.vrParallax    → _MatCapVRParallaxStrength   （⚠️ VR 全大写、要枚举）
-
-  ⇒ **宽松命中**（候选名任一个出现就过）⇒ 不报**不等于**文档写对了内容。
-
-  ### 当前状态
-
-      242 个叶子键 · 230 个（95.0%）能在三份文档里找到
-      剩下 12 个都不是面板控件（内部字段 ⇒ 可忽略）
-      面板控件覆盖率：**100%**。
-
-  ⚠️ 这个检查器是**后补的**、补之前手工对账漏了 6 组新功能。
-     （见 `archive/stage-20261006-1720-docs-vs-impl-reconcile`）
-
-### scripts/check-layout.mjs（浮窗布局 · **真·无头浏览器**）
-
-  ⚠️ 前面几个检查器都只看**源码结构**、查不出**布局行为**。
-     而浮窗改造的核心承诺是行为性的：
-
-        「浏览器窗口变形 ⇒ **模型大小不变**」
-        「拖动 / 缩放 / 刷新后位置尺寸还在」
-
-  ⇒ 这个检查器**真的把页面跑起来**、用 CDP 量 DOM、逐条断言。
-
-      node scripts/serve.mjs 5199        # 先起服务（另开终端）
-      node scripts/check-layout.mjs
-
-  ### 它断言什么
-
-      1. 三个浮窗存在（#sceneWin / #hudWin / #infoWin）+ 标题正确
-      2. canvas 填满场景窗口的 body（差 ≤4px、正好是 2px 边框）
-      3. ★ 视口 1600×900 → 900×1400 ⇒ **场景窗口与 canvas 尺寸都不得变化**
-      4. 拖标题栏 ⇒ 位移精确（±6px）
-      5. 拖右下角手柄 ⇒ 尺寸变化精确（±8px）
-      6. 刷新 ⇒ 位置尺寸恢复（±4px）
-      7. localStorage 可清 · window.ba3dResetLayout 存在
-      8. 窄屏 700×900 ⇒ 场景铺满 · 标题栏隐藏
-      9. 没有 console.error / pageerror（忽略 favicon 404）
-
-  ### ⚠️⚠️ 沙箱下必须**连接**已在运行的浏览器
-
-  DSH 的沙箱禁止打开**命名管道**、而 Chromium 的 mojo IPC 正是用命名管道 ⇒
-  `puppeteer.launch()` 会以 `spawn EPERM` / `platform_channel.cc Check failed` 失败。
-
-  ⇒ 用 PowerShell 的 `Start-Process` 起 Edge（不捕获 stdio）、再让脚本 CDP 连上去：
-
-      Start-Process 'C:\Program Files (x86)\Microsoft\Edge\Application\msedge.exe' -ArgumentList @(
-        '--headless=new','--remote-debugging-port=9222',
-        '--user-data-dir=D:\Works\AI\BA3D\_edgeprofile',
-        '--no-first-run','--no-default-browser-check',
-        '--use-gl=angle','--use-angle=swiftshader','--enable-unsafe-swiftshader') -WindowStyle Hidden
-
-      $env:BA3D_CDP='http://127.0.0.1:9222'; node scripts/check-layout.mjs
-
-  ⇒ 也可以直接跑（脚本自己 launch）、但那需要一个能开命名管道的环境。
-  ⇒ 没有浏览器 / 连不上服务时脚本打印「跳过」并 exit=0（不阻塞构建）
-
-### scripts/make-deploy.mjs（部署目录 ↔ 清单 的一致性）
-
-  ⚠️ `_deploy/ba3d-viewer/` **不是手工攒的**、由这个脚本按**显式清单**生成。
-
-      node scripts/make-deploy.mjs            # 重建（先清空目标目录）
-      node scripts/make-deploy.mjs --check    # 只比对 · 不一致 exit=1
-
-  ⇒ 清单里每一项都必须能从仓库找到源、想加东西必须改脚本。
-  ⇒ `deploy-src/` 放「只属于部署包」的文件（.htaccess / _headers /
-     .nojekyll / nginx-3d-viewer.conf / _lilpresets.json）
-
-  ### 为什么要有它
-
-  手工攒会飘、实际飘过两次：
-
-      · 留了一份旧的 + 编码损坏的 `check-glsl.mjs`（6.6 KB · 无人引用）
-      · 又把整个 `scripts/` 拷进了部署包 ⇒ 多了 5 个开发工具
-        （而 `DEPLOY.md` 明写着「部署包里不含 `scripts/`」）
-
-  ⇒ 现在部署目录是 **39 个文件 / 10.49 MB**、与清单逐项一致。
-
-输出会列出检测到的**所有顶层函数**、一眼能看出谁被嵌进去了：
-
-、<common> 注入  1440 字符、顶层函数 ba3dLilToonRange, ba3dLilToon, ba3dBlend, ba3dBlend3
-、描边：ba3dRotateUV  181 字符
-、描边：ba3dToneCorrection  649 字符
-、GLSL 注入结构检查通过
-
-### 双向验证过
-
-    负例（故意删一个 } 并把 fract 改回 frac）：
-、<common> 注入：花括号不配平、末尾深度 1
-、<common> 注入：函数嵌套定义 ba3dBlend3(深度 1)、GLSL 不允许
-、描边：ba3dToneCorrection：HLSL 写法 frac(
-      exit 1
-
----
-
-## 本阶段修过的坑（第三批）
-
-1. **部分替换（splice 范围算错）** —— 这类错误出现了很多次、每次都是「内容锚点 + 局部替换」
-   时没有把**整块**换掉、留下了引用已删变量的残码。
-     · viewer.js：ba3dBlend3 插进 ba3dBlend 体内（收尾 } 在下一行）
-     · index.html：groupify 里留下引用 capRe / emiRe 的旧循环。
-       现象是 `ReferenceError: capRe is not defined`、面板整个空白。
-       （buildLilPanel 有 try/catch、所以错误可见、这正说明那个 try/catch 有价值）
-   ⇒ 对策：scripts/check-glsl.mjs 覆盖 GLSL 侧、index.html 侧由 scripts/check-panel.mjs 覆盖。
-
-2. **跨作用域引用** —— 在 lilShaderGLSL 里用了 patchToonMaterial 的局部 `__cfgM`。
-   报 `__cfgM is not defined`、应该用函数自己的 `cfg`。
-   （和之前 TDZ 是同一类：「以为在另一个上下文里」）
-
-3. **不存在的字段** —— syncStencil 里用了 `o.userData.__srcMesh`、我从没定义过它。
-   静默失效（配置取不到、描边模板没效果）
-   ⇒ 描边网格其实是源网格的**子节点**（applyLilOutline 里 m.add(om)）、应该用 `o.parent`。
-
-4. **heredoc 转义多一倍** —— `'\\t\\t...'` 在 JS 里是「字面反斜杠 + t」、不是制表符。
-   GLSL 里出现裸反斜杠、会编译失败。
-   ⇒ PowerShell here-string 里写 JS 时、`\\n` 与 `\\n` 要分清。
-
-5. **遮罩块被套进 if 里** —— _EmissionBlendMask 的采样被插在 `if (E.tex) {` **里面**。
-   没设自发光贴图时采样行压根不生成、但权重引用了 ba3dEmiMask。
-   报 `'ba3dEmiMask' : undeclared identifier`。
-   ⇒ 采样必须在 if 之外、权重才能引用。
-
-6. **renderer 没开模板缓冲** —— 见上面 Stencil 一节。
-   如果没先查这一项、Stencil 做完了也会「调了没反应」。
-
-### 一个反复出现的模式
-
-上面 1 / 2 / 3 三个坑本质相同：**「我以为在某个上下文里、其实不是」**
-  · 以为锚点在函数外、其实在函数体内
-  · 以为能用 __cfgM、其实是另一个函数的局部
-  · 以为有 __srcMesh、其实从没定义过
-
-⇒ 现在有了 scripts/check-glsl.mjs 覆盖第一类。
-  后两类靠「改完看一眼生成的 GLSL / 日志」、以及本节这份清单。
-
----
-
-## 面板分组机制（阶段 3 收尾）
-
-### 为什么重写
-
-lilToon 面板有 12 个分组、分组头写在 `LIL_CTRL` 里（组头是 `['组名', null]`）。
-但**特殊控件**（颜色行 / 贴图行 / 下拉 / 复选框）是另外用 IIFE 建的。
-
-**旧设计**（出过 **4 次归位错误**、全部是静默的）：
-
-    ① 遍历 LIL_CTRL、往 lilPanel 里塞 h4 + 滑杆
-    ② groupifyLilPanel()  → 按 h4 把平铺内容收进 .lpgroup-body 容器
-    ③ 建特殊控件、也塞进 lilPanel。
-       ⇒ 但此时 lilPanel 里已经是**分组容器**了、于是它们落在**最后一组**（背光）
-    ④ groupifyLilPanel() 再来一次、靠**正则 / data-lil 标记**把它们搬回去
-       ⇒ 正则一失配就归错组。
-
-实测归错过的：
-
-| 控件 | 错误地进了 |
-|---|---|
-| 自发光贴图 / MatCap 贴图 | 描边组 |
-| 阴影颜色 / 模板模式 | 背光组 |
-| MatCap 2nd 贴图 | Dissolve 组 |
-
-### 新设计：建控件时就指定组
-
-    var __lilGroupsByName = {};      // groupifyLilPanel 按**名字**存好每组
-    var __lgTarget = null;
-    function lg(name) { ... }        // 按名字取那一组的 body
-    function LP() { return __lgTarget || document.getElementById('lilPanel'); }
-
-    buildLilPanel():
-      ① __lgTarget = null
-      ② 材质选择器 + 预设下拉 + 提示   → LP() 落到面板本身（预期）
-      ③ for LIL_CTRL → LP()            → 建 h4 + 滑杆
-      ④ groupifyLilPanel()             → ★ 建容器 + 存名字表（**必须在③之后**）
-      ⑤ 特殊控件：__lgTarget = lg('组名') → LP().appendChild(...)
-         ⇒ 建的时候就进对组、没有任何「搬」的动作。
-
-**⚠️ 两个关键约束**（都踩过）：
-
-1. `lg` / `LP` / 两个变量必须在**顶层**。
-   因为 `groupifyLilPanel` 也是顶层函数、它拿不到 afterLoad 里的 `lilPanel`。
-   所以 `lg`/`LP` 里用 `document.getElementById('lilPanel')` **现查**。
-   （一开始用 `let` 声明在 afterLoad 里、groupifyLilPanel 一跑就 ReferenceError。
-     整个面板抛异常、表现是「面板空白 + 折叠失效」）
-
-2. `groupifyLilPanel()` 的调用位置必须**在 LIL_CTRL 循环之后**。
-   在它之前跑的话还没有 h4、`groups.length === 0` 直接 return。
-   ⇒ 一个容器都不建、`__lilGroupsByName` 是空的、`lg()` 全部回退到面板本身。
-     表现是「所有控件都平铺在面板底部」。
-
-### 12 个分组（顺序由 LIL_CTRL 唯一决定）
-
-    阴影分档 · Rim 边缘光 · MatCap · MatCap 2nd · 自发光 · 描边 Outline
-    主色层 2nd · 主色层 3rd · Stencil 模型 · Stencil 描边 · Dissolve · 背光 Backlight
-
-**组名刻意去掉了「（lilToon 风格）」** —— 整个面板就是 lilToon 参数、不需要每处都标注。
-
-### 模板模式下拉（从 lilToon 编辑器源码导出）
-
-lilToon 的 `_Stencil*` 有 5 个预设模式、定义在 `lilInspector.cs:4389-4396`。
-**判定只看 Comp 与 Pass**、不看 Ref：
-
-| 模式 | Comp | Pass | 语义 |
-|---|---|---|---|
-| 0 Normal | Always(8) | Keep(0) | 不参与模板 |
-| 1 Writer | Always(8) | **Replace(2)** | 写标记（把这里标记为 Ref 值）|
-| 2 Reader | **NotEqual(6)** | Keep(0) | 「**不**等于标记处显示」= **避开**标记区域 |
-| 3 Reader (Invert) | **Equal(3)** | Keep(0) | 「等于标记处显示」= **只显示在**标记区域 |
-| 4 Reader (Fade) | 需要 TwoPass 透明 | — | **不做**（我们没有两趟渲染）|
-
-**⚠️ 2 和 3 的名字与直觉相反**。
-lilToon 的 `Reader` 其实是「避开」、`Reader(Invert)` 才是「只显示在」。
-⇒ 所以我们下拉里写**中文语义**、不直译。
-
-**实现要点**：
-
-    · 模式**不存配置**、从 comp/pass 推导（和 lilToon 编辑器一样）
-      ⇒ 手动改了滑杆后、下拉自动显示「（自定义：Comp=X、Pass=Y）」、两者永远一致。
-    · 切换模式只改 Comp/Pass/Fail/ZFail、**保留用户设的 Ref 与两个 Mask**。
-      （Ref 值是用户自己定的、lilToon 的「Set Writer」按钮用 51、模式判定不看它）
-    · 描边的字段是**平铺**的（`outline.stencilComp`、不是 `outline.stencil.comp`）
-      ⇒ `mkMode` 的 `K()` 负责拼字段名。
-    · **下拉要能响应滑杆**、一开始不响应。
-      因为下拉只在建面板时读一次、而滑杆的 `sync()` 不重建面板。
-      ⇒ 加了 `__ba3dModeSelects` 注册表：mkMode 注册刷新闭包、sync() 里统一调一遍。
-        （比重建面板轻得多、也不丢焦点）
-      ⇒ 匹配上标准模式时要把「（自定义…）」那一项 **remove** 掉、只加不减会留下垃圾项。
-
-### scripts/check-panel.mjs（构建期面板结构检查）
-
-**⚠️ 为什么必须有：`node --check` 有个致命盲区**。
-
-    LIL_CTRL = ['Stencil 描边', null]              // ← 漏了逗号
-               ['outline.stencilEnable', ...],
-
-    JS 把 `[..][..]` 解析成**下标访问**（`x[y, z]` 是合法的逗号表达式）
-    ⇒ 语法**完全合法**、node --check 通过。
-    ⇒ 但 LIL_CTRL 整个变成垃圾、面板直接崩。
-
-**⇒ 真正的验证必须**求值**、不是只看语法**。
-
-检查的四类（全部是这一轮真实踩过的）：
-
-    ① 数组元素缺逗号     —— 用真的 JS 解析器求值 LIL_CTRL
-    ② lg('组名') 拼错    —— 控件静默掉回面板本身
-    ③ 孤立块注释         —— 单独一行的 `/**`、下一行不是注释体、后面整段被吞
-    ④ groupify 调用位置  —— 必须在 LIL_CTRL 循环之后
-    ⑤ 字段名映射         —— `K()` 拼出的名字要在 viewer.js 里真实存在
-                           而且**拼写正确**（光「存在」不够。
-                           把 zfail 错映射成 Fail、stencilFail 也存在、就漏过了）
-
-**⇒ 用法**：
-
-    node scripts/check-panel.mjs            # 检查 index.html
-    node scripts/check-panel.mjs <文件>     # 检查指定文件（负例测试用）
-
-**⇒ 双向验证过**、正例 exit 0 、五个负例全部精准报错、exit 1
-
-### panel 侧的坑（第三批补充）
-
-7. **作用域搞错** —— `lg`/`LP` 声明在 afterLoad 里、顶层函数引用 → ReferenceError
-   ⇒ 表现是「面板空白 + 折叠失效」（异常被 buildLilPanel 的 try/catch 吞了、但控制台有）
-   ⇒ 和之前那次 `__cfgM` 是同一类：**以为在另一个上下文里**。
-
-8. **局部替换切多了** —— 移除一段声明时、往上多切了一行 `/**`
-   ⇒ 它把 `function buildLilPanel() {` 到后面某个 `*/` 之间的 **180 行全注释掉**。
-     语法错误报在很后面、极难定位。
-   ⇒ check-panel.mjs 现在会抓「孤立 /**」。
-
-9. **删错调用点** —— 「删掉第二次 groupify 调用」时删掉的是**建容器**那次。
-   留着的是回调里的、⇒ 一个容器都不建、面板变平。
-   ⇒ 教训：删之前先确认**每一处调用的缩进与所属位置**（回调 vs 顶层）
-
-10. **嵌套 IIFE 继承目标** —— MatCap 2nd 的贴图 IIFE **嵌在** Dissolve 的 IIFE 里。
-    ⇒ 它继承了 `__lgTarget = lg('Dissolve')`、控件进了 Dissolve 组。
-    ⇒ 修法：内层进去时切组、出来时还原。
-
-11. **驼峰拼接不通用** —— `'stencil' + 'comp'` = `stencilcomp`。
-    改成通用首字母大写后、`zfail → stencilZfail`、但字段是 `stencilZFail`（F 也大写）
-    ⇒ 只有**显式映射表**才对、而且 checker 要核对「拼写正确」、不只是「存在」。
-
-12. **下拉不响应滑杆** —— 见上面「模板模式下拉」一节。
-
----
-
-## 阶段 3 参数对照（源码逐组核对、结项用）
-
-**lts.shader 的 Properties 共 177 个**、以下是阶段 3 相关组的实际情况。
-
-### 已完成
-
-| 组 | 参数数 | 说明 |
-|---|---|---|
-| 2nd 主色层 | 8 | use / color(含 alpha) / tex / uvMode / blendMode / **enableLighting** / blendMask / cull |
-| 3rd 主色层 | 8 | 同上 |
-| MatCap 1st | 11 | + color / backfaceMask / mainStrength（完整版才有的）|
-| MatCap 2nd | 11 | 同上 |
-| Rim 边缘光 | 16 | 含 dirStrength / dirRange / indirColor / indirBorder / indirBlur / indirRange |
-| 背光 Backlight | 8 | **8/8 全齐** |
-| Stencil 本体 | 8 | use / ref / readMask / writeMask / comp / pass / fail / zfail |
-| Stencil 描边 | 8 | 同上（_OutlineStencil*）|
-| 描边 Outline | 34 | 含 texST / texScrollRotate / texHSVG / 模板 8 项 / cull / 受光系列 |
-| Dissolve | 9 | mode / linear / threshold / softness / pos / color / maskTex / noiseTex / noiseStrength |
-| 遮罩类贴图 | 3 | _MatCapBlendMask(.rgb) / _MatCap2ndBlendMask(.rgb) / _EmissionBlendMask(RGBA) |
-
-### ❌ 未完成（明确空白、见 LILTOON1.x.md 的「不做」清单）
-
-| # | 项 | 参数 |
-|---|---|---|
-| 1 | 主色层的 **Decal 贴花** | _Main2ndTexIsDecal / IsLeftOnly / IsRightOnly / ShouldCopy / ShouldFlipMirror / ShouldCopyLeft / ShouldCopyRight（2nd/3rd 各 7）|
-| 2 | 主色层的 **距离淡出** | _Main2ndDistanceFade / _Main3rdDistanceFade |
-| 3 | 主色层的**层溶解** | _Main2ndDissolveMask / NoiseMask / NoiseStrength（2nd/3rd 各 3）|
-| 4 | **自发光第二层** | _Emission2ndMap / MainStrength / Blend / BlendMask / GradSpeed / ParallaxDepth / Fluorescence（7 个、等于自发光只有 1 层）|
-| 5 | 自发光高级项 | _EmissionMainStrength / GradSpeed / ParallaxDepth / Fluorescence |
-| 6 | MatCap 的视差/Lod | _MatCapVRParallaxStrength / _MatCapLod / _MatCapBumpScale / _MatCapTex_UVMode（2nd 同）|
-| 7 | **2nd/3rd 法线贴图** | ⏸ **主动搁置**（要先建法线贴图通路、成本最高）|
-
-### ⚠️ 法线贴图搁置的连带代价
-
-下面这些参数**面板上已经存在**、但因为没有法线贴图通路、**调了不会有任何效果**。
-
-    _Main2ndNormalStrength / _Main3rdNormalStrength
-    _MatCapNormalStrength / _MatCap2ndNormalStrength
-    _RimNormalStrength / _BacklightNormalStrength
-    _ShadowNormalStrength / _Shadow2ndNormalStrength / _Shadow3rdNormalStrength
-
-⇒ 一共 **9 个参数是「有开关没通路」**、这是搁置法线贴图的已知代价。
-⇒ 一旦做了法线贴图通路、这 9 个立刻生效、而且顺带解锁第 6 项里的 MatCap 3 个。
-
-### 建议的后续顺序（按性价比）
-
-| 优先 | 项 | 成本 | 理由 |
-|---|---|---|---|
-| 1 | 自发光第二层 | 低 | 和 1st 同构、直接复用现有生成器 |
-| 2 | 主色层的层溶解 | 低 | 复用 Dissolve 的现成逻辑 |
-| 3 | 距离淡出 | 中 | 按相机距离淡出、头发渐隐很有用 |
-| 4 | Decal 贴花 | 中 | 7 个参数、「纹身/贴纸」类效果 |
-| 5 | **法线贴图通路** | **高** | 一次投入解锁 9 + 3 个参数 |
-| 6 | MatCap 视差/Lod | 中 | 依赖 5 |
-
----
-
-## 后续项 A / B / C（goal-35b7743c）
-
-阶段 3 结项后用户指定的三个后续项，按顺序 A → B → C 完成（D 法线贴图通路待做）。
-
-### A. 自发光第二层（Emission 2nd）
-
-源码：`lil_common_frag.hlsl:1771-1827` `lilEmission2nd`（1st 在 `:1689` `lilEmission`）
-
-**★ 两层完全同构** —— 参数只差 `2nd` 后缀、各有一份独立的贴图/遮罩。
-
-    _UseEmission2nd / _Emission2ndColor / _Emission2ndBlend / _Emission2ndBlendMode
-    _Emission2ndMap（+ _Emission2ndMap_UVMode）/ _Emission2ndBlendMask（RGBA 整体乘）
-    ⇒ 两者都**加算到 emissionColor** ⇒ 是**叠加发光** · 不是替换
-    ⇒ 顺序：Emission1st → Emission2nd（lil_pass_forward_normal.hlsl:472 / 478）
-
-**实现**：抽出共用生成器 `lilEmissionGLSL(E, texUni, maskUni, varName, tag)`、调用两次。
-⇒ 顺手把 1st 的贴图/遮罩判断也统一进生成器（原来那份内联代码删掉了）
-
-**已知未做**（都需要光照中间量或额外通路）：
-
-| 参数 | 缺什么 |
-|---|---|
-| `_Emission2ndGradTex` / `_Emission2ndGradSpeed` | 1D 渐变贴图（`LIL_SAMPLE_1D_LOD`）|
-| `_Emission2ndParallaxDepth` | 视差通路 |
-| `_Emission2ndFluorescence` | 需要 `fd.invLighting = saturate((1-lightColor)*sqrt(lightColor))` |
-| `_Emission2ndMainStrength` | 需要 `fd.albedo`（光照前的基础色）|
-| `_Emission2ndBlink` | 闪烁 · 我们不做 |
-
-### B. 主色层 2nd / 3rd 的层溶解（Layer Dissolve）
-
-源码：`lil_common_functions.hlsl:602` `lilCalcDissolve` / `:642` `lilCalcDissolveWithNoise`
-调用点：`lil_common_frag.hlsl:700-738`（2nd）/ `:786-820`（3rd）
-边缘去处：`lil_pass_forward_normal.hlsl:489` / `:492`
-
-**★ 和顶层 Dissolve 的区别**（这条最容易搞错）：
-
-| | 顶层 Dissolve | **层溶解** |
-|---|---|---|
-| 丢像素 | ✅ `alphaTest` | ❌ 只把**这一层的 alpha 乘 0/1** |
-| 边缘去向 | 末端加色 | **加算到 `emissionColor`** |
-
-⇒ 我们在 `dithering_fragment` 阶段直接 `gl_FragColor.rgb += dissolveColor * edge`、等价。
-
-**公式**（`dissolveParams = (mode, dirMode, threshold, softness)`）：
-
-    mode 0 = 关闭 · 1 = 贴图阈值 · 2 = UV 2D · 3 = 3D 坐标
-    dirMode 1 → dot(方向) · 否则 distance
-    edge  = 1 - saturate( |值 - threshold| / softness )
-    alpha *= (值 > threshold ? 1 : 0)
-    噪声版：值 = 值 + (noise.r - 0.5) * strength
-
-**实现**：
-
-    · 每层 11 个配置字段
-      dissolveMode / Dir / Threshold / Softness / Pos / Color
-      Mask / MaskST / NoiseMask / NoiseMaskST / NoiseScrollRotate / NoiseStrength
-    · <common> 加两个全局 ba3dDisEdge2nd / ba3dDisEdge3rd（before 写 · after 读）
-    · before 块（lights_fragment_begin 之前）：溶解计算 + 这一层的 alpha 乘遮罩
-    · after 块（dithering_fragment）：gl_FragColor.rgb += dissolveColor * edge
-    · ⚠️ 模式 3 复用顶层 Dissolve 的**世界空间归一化**（dissolvePosScale）
-      因为模型可能 150 单位、而 lilToon 用 fd.positionOS（角色 1~2 单位 · 阈值填 75 没法调）
-
-### C. 主色层的距离淡出（Distance Fade）
-
-源码：`lil_common_frag.hlsl:742`（2nd）/ `:828`（3rd）· 就一行：
-
-    color2nd.a = lerp( color2nd.a,
-                       color2nd.a * saturate( (fd.depth - _Main2ndDistanceFade.x)
-                                              / (_Main2ndDistanceFade.y - _Main2ndDistanceFade.x) ),
-                       _Main2ndDistanceFade.z );
-
-**★ `fd.depth` 是什么（查源码确认过 · 我一开始读错了）**：
-
-    lil_common_macro.hlsl:614   float3 lilHeadDirection(float3 positionWS) { return lilViewDirection(positionWS); }
-    lil_common_macro.hlsl:2161  fd.depth = length( lilHeadDirection( fd.positionWS ) );
-
-⇒ `lilHeadDirection` **就是 `lilViewDirection`**、名字是 VR 头显时代留下的。
-⇒ 所以 `fd.depth` = **到相机的距离**、不是「到头部骨骼」。
-
-⇒ three 侧直接 `distance( cameraPosition, vBa3dPositionWS )`（`cameraPosition` 是内置 uniform）
-
-**实现**：配置拆成 3 个标量（面板比一个 vec4 好调）
-
-    distFadeNear      ← _Main2ndDistanceFade.x
-    distFadeFar       ← .y
-    distFadeStrength  ← .z
-
-    GLSL：ba3dLc.a *= mix( 1.0, saturate( (距离 - near) / (far - near) ), strength );
-    （lerp(a, a*k, z) 等价于 a * mix(1, k, z)、直接写乘更省）
-    ⚠️ near == far 会除零、代码里 max(1e-6, far - near) 兜底。
-
-### ★ 层内注入顺序（对齐 lilToon）
-
-`lil_common_frag.hlsl` 里每层的处理顺序：
-
-    :697  _Main2ndBlendMask（color2nd.a *= SAMPLE(...).r）
-    :706  LIL_FEATURE_LAYER_DISSOLVE（层溶解）
-    :742  _Main2ndDistanceFade（距离淡出）
-    :743  _Main2ndTex_Cull（剔除）
-
-⇒ 我们最初把层溶解插到了 cull **之后**、已改成：**遮罩 → 层溶解 → 距离淡出 → 剔除**。
-
-顺序错了在「溶解 + 距离淡出同时开」时观感会不同、尤其边缘会不会被剔除掉。
-
-### 本轮修过的坑（第三批续）
-
-**13. heredoc 转义多一层 → GLSL 里出现字面反斜杠**
-
-    往 <common> 里加 float ba3dDisEdge2nd 声明时多打了一层反斜杠。
-    运行时得到「字面反斜杠 + n」而不是换行。
-    着色器报：ERROR: 0:236: '\' : invalid character + 'nfloat' : syntax error
-    ⇒ scripts/check-glsl.mjs 现在检查「拼接出的 GLSL 里不允许出现反斜杠」、负例验证过。
-
-**14. PowerShell here-string 里写 JS 补丁脚本太容易出错**
-
-    这一轮连续两次因为转义失败（一次是正则锚点、一次是模板字符串里的反引号）
-    ⇒ 改用 **write 工具直接写补丁脚本**、完全绕开 shell 转义。
-    ⇒ 而且 GLSL 里**不用制表符**（用空格）、又少一层转义。
-
-**15. LIL_CTRL 插入位置差一行 → 整组滑杆被吸走**
-
-    给「自发光」组加 use 后用 i + 2 插新组头、结果落在「描边 Outline」组头**之后**。
-    ⇒ 描边 8 个滑杆全被算进「自发光 2nd」、该组显示 11 个滑杆。
-    ⇒ check-panel.mjs 的**分组计数**立刻暴露了它（描边 Outline 0 个）
-    ⇒ 这类错误靠肉眼几乎看不出来、靠检查器一眼就抓到。
-
-**16. 归档脚本炸了还生成了 331 MB 的坏包**
-
-    stage 脚本因反引号报错、目录没建成、但 zip 那步的 Get-ChildItem 收到空路径。
-    ⇒ 把整个工作区（7250 文件 / 2.4 GB）打进了 zip。
-    ⇒ 已删除、教训：打 zip 之前必须**先确认源目录存在**且 Resolve-Path 成功。
-
-### 当前参数对照（A/B/C 之后）
-
-| 组 | 参数数 | 说明 |
-|---|---|---|
-| 2nd / 3rd 主色层 | 13 + 10 | 核心 8 + 层溶解 5 滑杆（含 11 个字段）+ 距离淡出 3 |
-| 自发光 1st / 2nd | 2 + 3 | 两层独立、各有一份贴图与遮罩 |
-| **「有开关没通路」的参数** | **9** | 全部等 D（法线贴图通路）|
-
-### 待办
-
-    ⏳ D：法线贴图通路 → 一次解锁 9 个 NormalStrength + MatCap 的 VRParallax/Lod/BumpScale
-    ⏳ 顺带可做（成本低）：_EmissionMainStrength / _EmissionFluorescence（需要 fd.albedo / fd.invLighting）
-    ⏳ _Main2ndTexIsDecal 等 7 个 Decal 参数
-
----
-
-## 后续项 D：法线贴图通路（goal-35b7743c）
-
-### ★ 先纠正我之前的错误清单
-
-我在阶段 3 结项时列过「9 个参数有开关没通路」、**其中 2 个根本不存在**。
-逐个核对（`lts.shader` 的 Properties + 全 hlsl 搜索）之后：
-
-| 我声称的 | 实际 |
-|---|---|
-| `_Main2ndNormalStrength` | ❌ **不存在**（Properties 和 hlsl 里都搜不到）|
-| `_Main3rdNormalStrength` | ❌ **不存在** |
-| `_MatCapNormalStrength` | ✅ lts.shader:238 |
-| `_MatCap2ndNormalStrength` | ✅ lts.shader:261 |
-| `_RimNormalStrength` | ✅ lts.shader:272 |
-| `_BacklightNormalStrength` | ✅ lts.shader:142 |
-| `_ShadowNormalStrength` | ✅ lts.shader:166 |
-| `_Shadow2ndNormalStrength` | ✅ lts.shader:172 |
-| `_Shadow3rdNormalStrength` | ✅ lts.shader:178 |
-
-⇒ **主语是「主色层」的那两个是我编的**、剩下的 7 个是真的。
-（教训重复了第三次：**不要凭记忆列参数名**、每个都要 grep 源码）
-
-### lilToon 的法线贴图机制
-
-```hlsl
-// lil_common_frag.hlsl:523 / :542
-normalmap = lilUnpackNormalScale( SAMPLE(_BumpMap), _BumpScale );
-normalmap = lilBlendNormal( normalmap,
-              lilUnpackNormalScale( SAMPLE(_Bump2ndMap),
-                _Bump2ndScale * SAMPLE(_Bump2ndScaleMask).r ) );
-// lil_pass_forward_normal.hlsl:309-326
-fd.N     = normalize( mul( normalmap, fd.TBN ) );
-fd.origN = normalize( input.normalWS );        // ← 几何法线
-```
-
-**`lilBlendNormal` 就是 Whiteout blend**（`lil_common_functions.hlsl:135`）：
-
-```hlsl
-float3 lilBlendNormal(float3 dst, float3 src) {
-    return float3(dst.xy + src.xy, dst.z * src.z);
-}
-```
-
-**每个效果再各自取用一部分**：
-
-```hlsl
-Backlight :1114   N = lerp( fd.origN, fd.N, _BacklightNormalStrength );
-MatCap    :1398   N = lerp( fd.origN, fd.matcapN, _MatCapNormalStrength );
-Rim       :1538   N = lerp( fd.origN, fd.N, _RimNormalStrength );
-Shadow    :854    N1 = lerp( fd.origN, fd.N, _ShadowNormalStrength );
-          :855    N2 = lerp( fd.origN, fd.N, _Shadow2ndNormalStrength );
-          :857    N3 = lerp( fd.origN, fd.N, _Shadow3rdNormalStrength );
-```
-
-⇒ 0 = 这个效果完全按**几何法线**算、1 = 完全受法线贴图影响。
-⇒ 用法贴图很夸张时、把某个效果的强度调小、它的形状就更干净。
-
-### ★ three 侧一大半是现成的
-
-查 `vendor/three/three.module.js` 的 `normal_fragment_begin`：
-
-```glsl
-#ifdef USE_TANGENT
-  mat3 tbn = mat3( normalize( vTangent ), normalize( vBitangent ), normal );
-#else
-  mat3 tbn = getTangentFrame( - vViewPosition, normal, vUv );   // ★ 没切线时自动用导数兜底
-#endif
-vec3 nonPerturbedNormal = normal;    // ★ 这就是 fd.origN、无条件声明。
-```
-
-⇒ **不用管模型有没有切线**、three 两种都处理。
-⇒ `nonPerturbedNormal` 直接当 `fd.origN` 用。
-
-### 实现
-
-**1st 法线贴图 → 交给 three 原生**（`patchToonMaterial`）：
-
-```js
-mat.normalMap = resolveNormalTexture(url);   // NoColorSpace、法线是向量不是颜色。
-mat.normalScale.set(scale, scale);           // ⚠️ _BumpScale 是标量、three 的是 vec2。
-```
-
-**2nd 法线贴图 → 自己注入**（`#include <normal_fragment_maps>` 之后）：
-
-```glsl
-// ⚠️ three 已经把 1st 混进 view 空间了、要在切线空间混合就只能把 1st 重新解一遍。
-vec3 ba3dB1n = vec3( 0.0, 0.0, 1.0 );
-#ifdef USE_NORMALMAP_TANGENTSPACE
-  ba3dB1n = texture2D( normalMap, vNormalMapUv ).xyz * 2.0 - 1.0;
-  ba3dB1n.xy *= normalScale;
-#endif
-vec3 ba3dB2n = texture2D( ba3dBump2ndMap, vBa3dUv ).xyz * 2.0 - 1.0;
-ba3dB2n.xy *= <scale> * texture2D( ba3dBump2ndScaleMask, vBa3dUv ).r;
-vec3 ba3dBw = vec3( ba3dB1n.xy + ba3dB2n.xy, ba3dB1n.z * ba3dB2n.z );   // Whiteout
-normal = normalize( tbn * normalize( ba3dBw ) );
-```
-
-**★ 一张平坦法线占位图（`normalPlaceholder()`）**：
-
-⚠️ three 只在 `mat.normalMap` 有值时才声明 `tbn` 和跑 `normal_fragment_maps`。
-  如果用户**只设了 2nd**、`tbn` 不存在、上面的注入会编译失败。
-  ⇒ 这时挂一张 1×1 的平坦法线（rgb = 128,128,255 ⇒ (0,0,1)）、只为让 `tbn` 存在。
-
-**各效果的强度 → 在 `lilShaderGLSL` 前导里一次算好**：
-
-```glsl
-vec3 ba3dNrmOrig = normalize( nonPerturbedNormal );
-vec3 ba3dNBack = normalize( mix( ba3dNrmOrig, ba3dN, <backlightStrength> ) );
-vec3 ba3dNCap  = normalize( mix( ba3dNrmOrig, ba3dN, <matcapStrength> ) );
-vec3 ba3dNCap2 = normalize( mix( ba3dNrmOrig, ba3dN, <matcap2ndStrength> ) );
-vec3 ba3dNRim  = normalize( mix( ba3dNrmOrig, ba3dN, <rimStrength> ) );
-```
-
-⇒ 背光/Rim 把各自的 `vec3 N = normalize( normal )` 换成对应变量。
-⇒ MatCap 生成器加了第 5 个参数 `nrmVar`、1st 用 `ba3dNCap`、2nd 用 `ba3dNCap2`。
-
-### ⏸ 本轮**未做**：三层阴影的 NormalStrength
-
-`_ShadowNormalStrength` / `_Shadow2ndNormalStrength` / `_Shadow3rdNormalStrength`
-
-**⇒ 面板上有滑杆、但着色器里没接、标了「（未接）」字样、**
-
-原因：lilToon 里 `N1`/`N2`/`N3` 是喂给 `lilGetShade` 的、也就是**明暗分档的计算**。
-而我们这边分档是 three 的 `getGradientIrradiance` 在做、用的是 three 的 `normal`。
-要接就得**替换 three 的分档计算**、那是阶段 1 的核心改动、风险高。
-⇒ 等真要做的时候单独立项。
-
-### 顺带可做但没做（成本都低 · 都在同一个注入点）
-
-| 参数 | 缺什么 |
-|---|---|
-| `_EmissionMainStrength` | 需要 `fd.albedo`（光照前的基础色、注入点已知）|
-| `_EmissionFluorescence` | 需要 `fd.invLighting = saturate((1-lightColor)*sqrt(lightColor))`（`lil_common_macro.hlsl:2158`）|
-| `_Emission2ndMainStrength` / `_Emission2ndFluorescence` | 同上 |
-| `_MatCapCustomNormal` + `_MatCapBumpMap` + `_MatCapBumpScale` | MatCap 专用的第三张法线贴图（`lil_common_frag.hlsl:1400`）|
-| `_MatCapVRParallaxStrength` | 只影响 MatCap 的 UV 计算（`lilCalcMatCapUV` 的参数）|
-| `_MatCapLod` | `texture2D` 的 LOD bias |
-| `_Main2ndTexIsDecal` 等 7 个 | Decal 贴花的完整通路 |
-
-### 本轮修过的坑
-
-**17. 又一次「以为 helper 是全局的」**
-
-`mkLayerDis` 里用了 `rgb2h`、但它是**每个 IIFE 各自定义的局部函数**（本文件里定义了两份）
-⇒ `ReferenceError: rgb2h is not defined`、面板整个空白。
-   （`buildLilPanel` 有 try/catch、异常只出现在控制台）
-
-⇒ 这已经是**第三次**同一类：`hex`（TDZ）、`capRe`（被删了）、`rgb2h`（别的 IIFE 的）。
-⇒ 和「以为在某个上下文里、其实不是」是同一个模式。
-
-### 当前参数对照
-
-| 项 | 状态 |
-|---|---|
-| `_BumpMap` / `_BumpScale` | ✅ three 原生 |
-| `_Bump2ndMap` / `_Bump2ndScale` / `_Bump2ndScaleMask` | ✅ 自己注入（Whiteout blend）|
-| `_RimNormalStrength` | ✅ |
-| `_BacklightNormalStrength` | ✅ |
-| `_MatCapNormalStrength` / `_MatCap2ndNormalStrength` | ✅ |
-| `_Shadow{,2nd,3rd}NormalStrength` | ⏸ 面板有、着色器未接 |
-| 面板规模 | **116 条目 / 14 分组** |
-
----
-
-## D 的收尾：MatCap 的三个进阶参数（goal-35b7743c）
-
-### ★ `_MatCapVRParallaxStrength` 在非 VR 下是**空操作**
-
-查 `lil_common_macro.hlsl:689`：
-
-```hlsl
-float3 lilBlendVRParallax(float3 a, float3 b, float c)
-{
-    #if defined(USING_STEREO_MATRICES)
-        return lerp(a, b, c);
-    #else
-        return b;            // ← 直接返回视线方向、强度参数完全没用上
-    #endif
-}
-```
-
-而 `lilCalcMatCapUV`（`lil_common_functions.hlsl:526`）里：
-
-```hlsl
-float3 normalVD = lilBlendVRParallax(headDirection, viewDirection, matcapVRParallaxStrength);
-```
-
-⇒ **浏览器（非 VR）里调它不会有任何变化**、这是 lilToon 的设计、不是我们的缺陷。
-⇒ 面板上仍保留了滑杆、但标签写明「（非VR无效）」、只为和 lilToon 的参数表一一对应。
-
-### `_MatCapLod`：贴图 LOD bias
-
-```hlsl
-matCapColor *= LIL_SAMPLE_2D_LOD(_MatCapTex, lil_sampler_linear_repeat, matUV, _MatCapLod);
-```
-
-⇒ GLSL 侧就是 `texture2D` 的**第 3 个参数**（片元着色器里的 LOD bias）
-⇒ 我们只在 `lod != 0` 时才加这个参数、避免给默认路径增加分支。
-
-### `_MatCapBumpScale` + `_MatCapCustomNormal` + `_MatCapBumpMap`
-
-`lil_common_frag.hlsl:1400`（2nd 在 `:1470`）：
-
-```hlsl
-#if defined(LIL_FEATURE_MatCapBumpMap)
-    if(_MatCapCustomNormal)
-    {
-        float4 normalTex = LIL_SAMPLE_2D_ST(_MatCapBumpMap, samp, fd.uvMain);
-        float3 normalmap = lilUnpackNormalScale(normalTex, _MatCapBumpScale);
-        N = normalize(mul(normalmap, fd.TBN));       // ← **整个替换 N**
-        N = fd.facing < (_FlipNormal-1.0) ? -N : N;
-    }
-#endif
-```
-
-⇒ 这是 **MatCap 专用的第三张法线贴图**、只影响 MatCap 的 **UV 计算**、不影响主体光照。
-⇒ 实现：
-
-```glsl
-vec3 ba3dCapN = ba3dNCap;                      // 先用 per-feature 法线
-{
-  vec3 ba3dCapBn = texture2D( ba3dMatCapBumpMap, vBa3dUv ).xyz * 2.0 - 1.0;
-  ba3dCapBn.xy *= <bumpScale>;
-  ba3dCapN = normalize( tbn * normalize( ba3dCapBn ) );
-}
-vec2 uvMat = ( viewMatrix * vec4( normalize( ba3dCapN ), 0.0 ) ).xy * 0.5 + 0.5;
-```
-
-⚠️ 它也要 `tbn`、所以「平坦法线占位图」的判断里把它算成了**第 3 个来源**。
-（否则用户只设 MatCap 法线图时 `tbn` 不存在、编译失败）
-
-### 面板
-
-「法线 Normal」组从 12 项变成 **20 项**：
-
-    MatCap LOD bias / MatCap 自定法线 / MatCap 法线强度 / MatCap VR 视差（非VR无效）
-    MatCap2nd 的同样 4 项
-    + 两个贴图行（MatCap 法线图 / MatCap2nd 法线图）
-
-⇒ 全面板：**124 条目 / 14 分组**。
-
-### ⏸ 唯一还没做的：三层阴影的 NormalStrength
-
-`_ShadowNormalStrength` / `_Shadow2ndNormalStrength` / `_Shadow3rdNormalStrength`
-
-**⇒ 面板有滑杆、标着「（未接）」、着色器里确实没接、**
-
-为什么难：lilToon 里是
-
-```hlsl
-// lil_common_frag.hlsl:854-857
-N1 = lerp( fd.origN, fd.N, _ShadowNormalStrength );
-N2 = lerp( fd.origN, fd.N, _Shadow2ndNormalStrength );
-N3 = lerp( fd.origN, fd.N, _Shadow3rdNormalStrength );
-// 然后喂给 lilGetShade(fd, N1/N2/N3, ...) 算明暗分档
-```
-
-⇒ 它们影响的是**明暗分档本身**、而我们的分档是 three 的 `getGradientIrradiance` 在做。
-⇒ 要接就得：用三条不同的法线各算一次分档、再按阴影层权重混合。
-⇒ 但**阴影层权重又来自分档结果**、是个循环、等于要重写 lilToon 的 shade。
-
-⇒ 这会改动阶段 1 就定下来的核心分档逻辑、有破坏现有观感的风险、单独立项更合适。
-
-### ★ 参数清单的第三次纠正
-
-| 我声称的 | 实际 |
-|---|---|
-| 9 个 NormalStrength | ❌ 其中 `_Main2nd/3rdNormalStrength` **不存在** ⇒ 实际 **7 个** |
-| MatCap 的 VRParallax | ⚠️ 存在、但**非 VR 下是空操作** |
-| MatCap 的 Lod / BumpScale | ✅ 存在、本轮已实现 |
-
-⇒ 四次凭印象出错：`_OutlineColorTex` / `_OutlineBlendMode`、`_RimBlendMask` / `_BacklightBlendMask`。
-  `_Main2nd/3rdNormalStrength`、`_MatCapVRParallaxStrength` 的作用。
-⇒ **规矩**：任何参数名在写进文档或代码前、必须先 `grep lts.shader` 和 hlsl。
-
----
-
-## D 补完：三层阴影的 NormalStrength（goal-35b7743c）
-
-上一轮我把这三项判为「风险高、单独立项」、**这一轮找到安全切入口、做完了**。
-
-### ★ 为什么现在能做：我们的分档本来就是自己写的
-
-阶段 1 就替换掉了 three 的 `getGradientIrradiance`（`viewer.js` 的 `celGradientGLSL`）：
-
-```glsl
-vec3 getGradientIrradiance( vec3 normal, vec3 lightDirection ) {
-    float dotNL = dot( normal, lightDirection );
-    float t = clamp( dotNL * 0.5 + 0.5, 0.0, 1.0 );
-    float t1 = t * mix( 1.0, ba3dShadowMaskG, shadowReceive );
-    float s1 = 1.0 - ba3dLilToonRange( t1, shadowBorder, shadowBlur, ... );
-    outCol = mix( outCol, shadowColor, s1 * alpha1 );
-    // t2 / t3 同理
-}
-```
-
-⇒ 三层**本来就是同一个 `t`**、所以「每层用自己的法线」只是把 `t` 换成 `t1n`/`t2n`/`t3n`。
-⇒ 不需要重写 shade、只是换个输入、（上一轮我判断错了方向）
-
-### 实现
-
-**① `<common>` 声明三个全局**（因为 `getGradientIrradiance` 是独立函数、拿不到主作用域局部变量）：
-
-```glsl
-vec3 ba3dShadowN1 = vec3( 0.0, 0.0, 1.0 );
-vec3 ba3dShadowN2 = vec3( 0.0, 0.0, 1.0 );
-vec3 ba3dShadowN3 = vec3( 0.0, 0.0, 1.0 );
-```
-
-**② 在 `lights_fragment_begin` 之前赋值**（和 `ba3dShadowMaskG` 同一个注入点）：
-
-```glsl
-ba3dShadowN1 = normalize( mix( normalize( nonPerturbedNormal ), normal, s1 ) );
-ba3dShadowN2 = normalize( mix( normalize( nonPerturbedNormal ), normal, s2 ) );
-ba3dShadowN3 = normalize( mix( normalize( nonPerturbedNormal ), normal, s3 ) );
-```
-
-⚠️ 顺序正确、`normal_fragment_begin` 比 `lights_fragment_begin` 早。
-   所以赋值时 `normal` 和 `nonPerturbedNormal` 都已经可用。
-
-**③ `getGradientIrradiance` 里三层各算一个 t**：
-
-```glsl
-float t1n = clamp( dot( ba3dShadowN1, lightDirection ) * 0.5 + 0.5, 0.0, 1.0 );
-float t2n = clamp( dot( ba3dShadowN2, lightDirection ) * 0.5 + 0.5, 0.0, 1.0 );
-float t3n = clamp( dot( ba3dShadowN3, lightDirection ) * 0.5 + 0.5, 0.0, 1.0 );
-float t1 = t1n * mix( 1.0, ba3dShadowMaskG, shadowReceive );   // 原来是 t * mix(...)
-```
-
-### ★ 零风险的两个保证
-
-1. **默认值是 1** ⇒ `mix(origN, N, 1) = N` ⇒ 三条法线都等于 `normal`。
-   ⇒ `t1n === t2n === t3n === t` ⇒ 与加这个特性之前**逐位一致**。
-2. **JS 侧还有 early-return**、三个强度都是 1 时**一个字符都不发**。
-
-```js
-if (s1 === 1 && s2 === 1 && s3 === 1) return '';
-```
-
-⇒ 既不改行为、也不增加着色器代码。
-
-### 面板
-
-原来的「阴影用法线强度（未接）」等三项、去掉了「（未接）」、现在真的生效。
-
-### ★ check-glsl.mjs 又立了一功
-
-写这段时我**又**多打了一层转义（`\\n` ⇒ 字面反斜杠）。
-`check-glsl.mjs` 立刻报：
-
-```
-✗ <common> 注入：GLSL 里出现裸反斜杠。
-  多半是源码里多写了一层转义、附近：dowN1 = vec3( 0.0, 0.0, 1.0 );\ / vec3 ba3dShadowN2 ...
-```
-
-⇒ 这个规则是上一轮因为同一个错误加的、这次直接拦住了。
 
 ---
 
@@ -3278,7 +2362,7 @@ if (s1 === 1 && s2 === 1 && s3 === 1) return '';
 
   ⚠️ 只采一个时刻**看不出来** —— 0.7 秒那帧完全正常。
      必须每个动作采多个时刻（0.4 / 1.0 / 1.8 / 2.8 / 4.0 / 6.0 秒）取最差值。
-     （用 `scripts/probe-fit.mjs` 或 `viewer.frameFitReport()`）
+     （也可用 `viewer.frameFitReport()` 自查）
 
   ### 22 是怎么来的
 
@@ -3450,7 +2534,6 @@ if (s1 === 1 && s2 === 1 && s3 === 1) return '';
 ## ★ 2026-10-06 新增（对齐 lilToon 2.3.4）
 
 > 这一批都是为了把基线从 lilToon 1.3.7 换到 **2.3.4** 之后补齐的东西。
-> 每项的详细经过见 `archive/stage-20261006-*/MANIFEST.md`。
 > 版本对比与源码地图见 [`LILTOON2.x.md`](LILTOON2.x.md)。
 
 ### 1. 渲染状态（每材质）—— `_TransparentMode` / `_Cutoff` / `_Cull`
@@ -3556,7 +2639,7 @@ if (s1 === 1 && s2 === 1 && s3 === 1) return '';
 
   ⚠️ 贴图默认 white ⇒ 全 1 ⇒ 阈值 = 256/257 ≈ **0.996** ⇒ **几乎全丢**
      想要真正的点阵效果需要一张**有序抖动矩阵**贴图。
-     内置两张可直接用（`scripts/make-dither-matrix.py` 生成）：
+     内置两张可直接用：
 
          assets/test/dither-bayer4.png   4×4   16 个不同值
          assets/test/dither-bayer8.png   8×8   64 个不同值
@@ -3714,8 +2797,6 @@ if (s1 === 1 && s2 === 1 && s3 === 1) return '';
 
 ### 9.5 补齐：层溶解 / Decal 调试 / MatCap / 描边模板
 
-  这一小节是把 `scripts/check-docs.mjs` 报出来的缺口补齐的。
-  （该脚本检查「配置键 ↔ 文档」、用法 `node scripts/check-docs.mjs`）
 
   #### 主色层 2nd / 3rd 的层溶解（`main2nd.dissolve*` / `main3rd.dissolve*`）
 
