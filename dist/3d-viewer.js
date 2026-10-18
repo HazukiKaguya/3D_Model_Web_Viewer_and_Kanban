@@ -57123,8 +57123,9 @@ function createViewer(container, opts = {}) {
       const o = _mn0 ? resolveFor(_mn0) : oGlobal;
       const __srcMat0 = Array.isArray(m.material) ? m.material[0] : m.material;
       const __srcTransparent = !!(__srcMat0 && __srcMat0.transparent === true);
+      const __upstreamOutline = !!(__srcMat0 && __srcMat0.userData && __srcMat0.userData.__lilSrcUpstreamOutline);
       const __flagOff = !!(__srcMat0 && __srcMat0.userData && __srcMat0.userData.outlineParameters && __srcMat0.userData.outlineParameters.visible === false);
-      const __skip = __flagOff && (__srcTransparent ? !!o.skipTransparent : true);
+      const __skip = __upstreamOutline || __flagOff && (__srcTransparent ? !!o.skipTransparent : true);
       const on = !__skip && shaderActive() && shaderMode === "lilToon" && !!o.enable;
       const key = on ? lilOutlineKey(o) : "";
       if (on) anyOn = true;
@@ -57300,7 +57301,7 @@ function createViewer(container, opts = {}) {
               return m;
             }
             if (window.__ba3dDiag2) console.debug("[diag2] 源码材质 重建 src=" + (src && src.name) + " 旧材质=" + (m && m.name) + " ver=" + celProgramVersion);
-            const lm = toLilSrcMaterial(src);
+            const lm = toLilSrcMaterial(src, o);
             if (window.__ba3dDiag2) console.debug("[diag2] toLilSrcMaterial 返回 " + (lm ? lm.name : "null"));
             if (lm) return lm;
           }
@@ -57434,22 +57435,47 @@ function createViewer(container, opts = {}) {
   function lilSrcNeedsUVFlip() {
     return !!cfg.__isFbx;
   }
-  function toLilSrcMaterial(src) {
+  function toLilSrcMaterial(src, mesh) {
+    const HYBRID_UPSTREAM_OUTLINE = true;
     if (!lilSrcReady || !lilSrcBridge || !lilSrcLib) return null;
     const mCfg = lilCfgFor(src);
-    const props = lilSrcBridge.cfgToProps(mCfg);
-    const mat = lilSrcBridge.createSurfaceMaterial(lilSrcLib, props);
+    const mName = mesh && mesh.name || "";
+    const isSkinned = !!(mesh && mesh.isSkinnedMesh);
+    const isOutlineShellMesh = /(^|[_\-/\s])outline($|[_\-/\s])/i.test(mName) || /_outline$/i.test(mName);
+    const upOutline = HYBRID_UPSTREAM_OUTLINE && isSkinned && !isOutlineShellMesh && !!(lilCfg && lilCfg.outline && lilCfg.outline.enable);
+    const props = lilSrcBridge.cfgToProps(mCfg, upOutline ? { stripOutline: false } : void 0);
+    let variant;
+    if (upOutline) {
+      if (typeof props._OutlineWidth === "number") {
+        props._OutlineWidth = Math.max(5e-4, Math.min(0.02, props._OutlineWidth * 0.01));
+      }
+      props._OutlineFixWidth = 0;
+      variant = src.transparent ? "Hidden/lilToonTransparentOutline" : src.alphaTest > 0 ? "Hidden/lilToonCutoutOutline" : "Hidden/lilToonOutline";
+    }
     const texMap = {};
     if (src.map) texMap._MainTex = src.map;
     if (src.normalMap) texMap._BumpMap = src.normalMap;
     if (src.emissiveMap) texMap._EmissionMap = src.emissiveMap;
-    lilSrcBridge.applyTextures(mat, texMap);
+    const mat = lilSrcBridge.createSurfaceMaterial(lilSrcLib, props, {
+      ...variant ? { shaderVariant: variant } : {},
+      textures: texMap
+    });
     mat.name = (src.name || "material") + "__lilSrc";
     mat.side = src.side;
     mat.transparent = !!src.transparent;
     mat.alphaTest = src.alphaTest || 0;
     mat.depthWrite = src.depthWrite;
-    mat.userData = { __lilSrc: true, __src: src, __lilSrcVersion: celProgramVersion, __lilSrcOf: src.name };
+    try {
+      mat.toneMapped = false;
+    } catch (e) {
+    }
+    mat.userData = {
+      __lilSrc: true,
+      __src: src,
+      __lilSrcVersion: celProgramVersion,
+      __lilSrcOf: src.name,
+      __lilSrcUpstreamOutline: upOutline
+    };
     return mat;
   }
   function applyShader(mode) {

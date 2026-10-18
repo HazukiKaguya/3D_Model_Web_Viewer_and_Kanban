@@ -1,11 +1,13 @@
-import { LilToonMaterial, warnLilToon } from './chunk-A4BIABDA.js';
+import { LilToonMaterial, warnLilToon } from './chunk-KNGRDLOZ.js';
 import { Loader, FileLoader } from 'three';
 
 // src/material/LilToonMaterialFactory.ts
 var LilToonMaterialFactory = class {
   create(source, textures = {}) {
     return new LilToonMaterial({
+      shaderVariant: source.shaderVariant,
       renderMode: source.renderMode,
+      renderQueue: source.renderQueue,
       transparencyMode: source.transparencyMode,
       properties: source.properties,
       textures

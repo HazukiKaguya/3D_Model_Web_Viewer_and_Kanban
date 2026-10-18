@@ -469,3 +469,34 @@ lilToon 的预设本来就是每个材质一份、我们的架构是「全局默
 - 主色层第二/第三层启用分支未单独验证。
 - 脸部阴影只核了**亮度**口径，**形状 / 过渡**的独立核对未做。
 - 透明背景分支、其它模型、「指定材质」的预设目标未测。
+
+---
+
+## 十、2026-10-18 观感基准：Unity 侧条件（已核实）
+
+参考工程：Unity **2022.3.22f1** · 项目 `Melano-Migrated` · 场景 `Melano_scene`（本机只读核实）。
+
+| 项 | 值 | 依据 |
+|---|---|---|
+| 渲染管线 | **Built-in** | `ProjectSettings/GraphicsSettings.asset`：`m_CustomRenderPipeline: {fileID: 0}` · `m_SRPDefaultSettings: {}` |
+| 颜色空间 | **Linear** | `ProjectSettings/ProjectSettings.asset`：`m_ActiveColorSpace: 1` |
+| 后处理 / tone mapping | **无** | 全项目 grep：Assets/Scenes 里 0 个 `PostProcessVolume` / `Tonemapping`（postprocessing 包虽安装但未使用） |
+| lilToon | **2.3.4** | `Assets/lilToon/package.json` |
+
+**结论**：Unity 侧的 lilToon **不做材质级 tone mapping**；输出为「**线性着色 + 显示端 sRGB 变换**」。
+
+对应到本仓库：
+
+- 源码后端：`mat.toneMapped = false`（不跟随页面 tone mapping）+ **保留 sRGB 输出** ⇒ 与 Unity 语义一致。
+- 我们的风格后端：本来就剥掉 `#include <tonemapping_fragment>` ⇒ 两个后端口径一致。
+- 页面级 ACES 只作用于 **PBR / 原生材质**；不要让它影响卡通两条路径（上游 0.1.6+ 会跟随，必须显式关掉）。
+
+### 描边（混合方案）
+
+| 网格类型 | 由谁画 | 说明 |
+|---|---|---|
+| 蒙皮网格 | **上游**（`shaderVariant = Hidden/lilToonOutline` 等） | Unity 用的就是上游描边 ⇒ 更贴基准 |
+| 静态网格 | **自研反壳** | 上游对静态网格的观感未验 |
+| 名字带 `_Outline` 的壳网格 | **自研**（且不套上游） | 它本身就是外扩壳；再套上游会在 150× 缩放下膨胀成大片实体 |
+
+⚠️ 实测：`_OutlineCull`、强制 `side = FrontSide` 对该膨胀**均无效**（像素几乎不变）⇒ 只能靠"排除壳网格"这一条。

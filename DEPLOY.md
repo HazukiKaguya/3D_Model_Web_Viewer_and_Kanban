@@ -36,8 +36,8 @@
 | `vendor/three/utils/SkeletonUtils.js` | ↑ 同上（依赖链的一环）|
 | `liltoon-bridge.js` | **第 4 着色后端**的适配层（把我们的 lilCfg / Unity 材质喂给 three-liltoon） |
 | `vendor/three-liltoon/index.js` | ↑ three-liltoon 运行时（MIT） |
-| `vendor/three-liltoon/chunk-A4BIABDA.js` | ↑ 编译好的 lilToon GLSL（1.9 MB，**不可省**） |
-| `vendor/three-liltoon/chunk-F6TSGO5L.js` | ↑ 运行时的小 chunk |
+| `vendor/three-liltoon/chunk-KNGRDLOZ.js` | ↑ 编译好的 lilToon GLSL（1.9 MB，**不可省**） |
+| `vendor/three-liltoon/chunk-WFYRXLGW.js` | ↑ 运行时的小 chunk |
 | `vendor/three-liltoon/gltf.js` · `vrm.js` | ↑ 可选扩展（glTF 的 `MOCHIYA_materials_liltoon` / VRM） |
 | `vendor/three-liltoon/schema/*.json` | ↑ 材质扩展的 JSON schema |
 | `vendor/three-liltoon/THIRD_PARTY_NOTICES.md` | ↑ 第三方声明（MIT 要求随包分发） |

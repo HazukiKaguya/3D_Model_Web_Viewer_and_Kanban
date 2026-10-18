@@ -469,3 +469,34 @@ The shadow normal still keeps **unconditional assignment** (it must be written e
 - The enable branches of the second / third layer of the main color layer were not verified separately.
 - For the face shadow only the **brightness** measure was checked; the independent check of **shape / transition** was not done.
 - The transparent-background branch, other models, and the preset target of "specify material" were not tested.
+
+---
+
+## Ten, 2026-10-18 appearance baseline: the Unity-side conditions (verified)
+
+Reference project: Unity **2022.3.22f1** · project `Melano-Migrated` · scene `Melano_scene` (verified read-only on this machine).
+
+| Item | Value | Evidence |
+|---|---|---|
+| Pipeline | **Built-in** | `ProjectSettings/GraphicsSettings.asset`: `m_CustomRenderPipeline: {fileID: 0}` · `m_SRPDefaultSettings: {}` |
+| Color space | **Linear** | `ProjectSettings/ProjectSettings.asset`: `m_ActiveColorSpace: 1` |
+| Post-processing / tone mapping | **none** | project-wide grep: zero `PostProcessVolume` / `Tonemapping` under Assets/Scenes (the postprocessing package is installed but unused) |
+| lilToon | **2.3.4** | `Assets/lilToon/package.json` |
+
+**Conclusion**: on the Unity side lilToon does **no material-level tone mapping**; the pipeline is "linear shading + a display-side sRGB transform".
+
+In this repository:
+
+- Source backend: `mat.toneMapped = false` (does not follow the page tone mapping) **plus** the sRGB output ⇒ matches Unity semantics.
+- Our style backend already strips `#include <tonemapping_fragment>` ⇒ both backends now agree.
+- Page-level ACES applies only to **PBR / native materials**; keep it out of both toon paths (upstream 0.1.6+ follows it, so it must be switched off explicitly).
+
+### Outlines (hybrid scheme)
+
+| Mesh kind | Drawn by | Note |
+|---|---|---|
+| Skinned meshes | **upstream** (`shaderVariant = Hidden/lilToonOutline` etc.) | Unity itself uses the upstream outline ⇒ closer to the baseline |
+| Static meshes | **our own inverted hull** | upstream's look on static meshes is unverified |
+| Meshes named `*_Outline` (model-provided shells) | **ours**, and never upstream | they are already an expanded shell; adding the upstream outline inflates them into a large solid patch at a 150× world scale |
+
+⚠️ Measured: `_OutlineCull` and forcing `side = FrontSide` have **no effect** on that inflation (pixels barely change) ⇒ excluding the shell meshes is the only working rule.

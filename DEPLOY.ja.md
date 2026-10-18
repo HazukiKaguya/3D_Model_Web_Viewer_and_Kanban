@@ -36,8 +36,8 @@
 | `vendor/three/utils/SkeletonUtils.js` | ↑ 同上（依存チェーンの一环）|
 | `liltoon-bridge.js` | **第 4 シェーディングバックエンド**のアダプタ層（私たちの lilCfg / Unity マテリアルを three-liltoon に渡す） |
 | `vendor/three-liltoon/index.js` | ↑ three-liltoon ランタイム（MIT） |
-| `vendor/three-liltoon/chunk-A4BIABDA.js` | ↑ コンパイル済みの lilToon GLSL（1.9 MB、**省略不可**） |
-| `vendor/three-liltoon/chunk-F6TSGO5L.js` | ↑ ランタイムの小さな chunk |
+| `vendor/three-liltoon/chunk-KNGRDLOZ.js` | ↑ コンパイル済みの lilToon GLSL（1.9 MB、**省略不可**） |
+| `vendor/three-liltoon/chunk-WFYRXLGW.js` | ↑ ランタイムの小さな chunk |
 | `vendor/three-liltoon/gltf.js` · `vrm.js` | ↑ 任意の拡張（glTF の `MOCHIYA_materials_liltoon` / VRM） |
 | `vendor/three-liltoon/schema/*.json` | ↑ マテリアル拡張の JSON schema |
 | `vendor/three-liltoon/THIRD_PARTY_NOTICES.md` | ↑ サードパーティ通知（MIT がパッケージへの同梱を要求） |

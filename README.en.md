@@ -8,7 +8,7 @@ Shading backends (**available only for the toon material**):
 **Cel banding** (a simple shader specialised for BA models) · **lilToon style** (our own port of the source) · **three-liltoon** (uses upstream's transpiled output of the real lilToon source, loaded on demand) · **No injection (original)**.
 
 - Three material models: Original (PBR) / **toon material (Toon)** / Unlit. Shading backends attach to the **toon material** (PBR / Unlit use three.js's own materials, which have no injection point). Default: **toon material + Cel banding**.
-- **three-liltoon is a variant of "lilToon style"**: it only swaps the surface material for upstream's `LilToonMaterial`; **outlines still use our own implementation** (the outline in their published build measured unusable).
+- **three-liltoon is a variant of "lilToon style"**: it only swaps the surface material for upstream's `LilToonMaterial`; **outlines still use our own implementation** (since 0.1.9 upstream outlines require explicitly selecting `Hidden/lilToonOutline` via `shaderVariant`; measured: fine rims on skinned meshes, solid fill on static props).
 - lilToon is a toon (NPR) shader family — there is no such thing as "applying lilToon to a PBR material".
 
 【[Deploy this tool](DEPLOY.md)】  【[Model JSON configuration](CONFIG.md)】  【[Third-party license notices](THIRD-PARTY-NOTICES.md)】
@@ -214,7 +214,7 @@ The third-party components distributed with the package are likewise MIT; the fu
 |---|---|---|
 | three.js 0.185.1 | MIT © 2010-2026 three.js authors | `vendor/three/`, and inlined into `dist/` |
 | lilToon 2.3.4 | MIT © 2020-present lilxyzw | Its compiled output only: `assets/lilshaders.inline.js`, `vendor/three-liltoon/chunk-*.js` |
-| @mochiya/three-liltoon 0.1.4 | MIT © 2026 Mochiya | `vendor/three-liltoon/` (4th backend loaded on demand) |
+| @mochiya/three-liltoon 0.1.9 | MIT © 2026 Mochiya | `vendor/three-liltoon/` (4th backend loaded on demand) |
 
 > **When embedding / redistributing, please retain `LICENSE` and `THIRD-PARTY-NOTICES.md` along with it** — MIT requires retaining the copyright and license notices.
 > Both files are included in this directory.

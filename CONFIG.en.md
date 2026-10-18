@@ -370,6 +370,8 @@ Measured hits for `noCastPattern: "Hair"` (1 mesh each, very precise):
    **0.85 / 0.82, with the contrast dropping from 19% to 8.5%, and the shadow visibly muddying**.
    Proportional scaling → **the shadow contrast is preserved as-is**, and only then does the exposure knob actually work for adjusting brightness.
 
+   > ⚠️ **No material participates** in tone mapping (matching Unity): the style backend strips `#include <tonemapping_fragment>` and the source backend sets `mat.toneMapped = false`; the page tone mapping only affects PBR / native materials. See section ten of `LILTOON2.x.md`.
+
 #### Toon light compensation (`applyLightingPreset`)
 
 MeshToonMaterial **does not support envMap**, and RoomEnvironment's ambient lighting is lost entirely, so it must be compensated;

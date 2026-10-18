@@ -8,7 +8,7 @@ three.js キャラクタービューア：**設定可能**（モデル / 口元�
 **Cel バンディング**（BA モデル向けの簡易シェーダー）· **lilToon スタイル**（自前移植実装）· **three-liltoon**（上流による本家 lilToon ソースのトランスパイル成果物をそのまま利用、オンデマンド読み込み）· **注入なし（オリジナル）**。
 
 - マテリアルモデルは 3 種類：オリジナル（PBR）/ **トゥーンマテリアル（Toon）** / アンリット（Unlit）。シェーディングバックエンドは**トゥーンマテリアル**に接続します（PBR / Unlit は three.js 標準マテリアルを使うため注入点がありません）。既定は **トゥーンマテリアル + Cel バンディング**。
-- **three-liltoon は「lilToon スタイル」のバリアント**です：サーフェスマテリアルを上流の `LilToonMaterial` に差し替えるだけで、**アウトラインは自前実装のまま**です（上流の公開版のアウトラインは実測で使用不可）。
+- **three-liltoon は「lilToon スタイル」のバリアント**です：サーフェスマテリアルを上流の `LilToonMaterial` に差し替えるだけで、**アウトラインは自前実装のまま**です（0.1.9 以降、上流のアウトラインは `shaderVariant` で `Hidden/lilToonOutline` を明示選択する必要あり。実測：スキンメッシュは細い輪郭、静的プロップは塗り潰し）。
 - lilToon はトゥーン（NPR）シェーダーファミリーです —— 「lilToon を PBR マテリアルに使う」という発想はありません。
 
 【[本ツールのデプロイ](DEPLOY.md)】  【[モデル JSON 設定](CONFIG.md)】  【[サードパーティライセンス通知](THIRD-PARTY-NOTICES.md)】
@@ -214,7 +214,7 @@ GLB 内の `CH0155_Weapon`（銃）/ `CH0155_Milk`（牛乳パック）は `BLEN
 |---|---|---|
 | three.js 0.185.1 | MIT © 2010-2026 three.js authors | `vendor/three/`、および `dist/` にインライン化 |
 | lilToon 2.3.4 | MIT © 2020-present lilxyzw | そのコンパイル済み成果物のみ：`assets/lilshaders.inline.js`、`vendor/three-liltoon/chunk-*.js` |
-| @mochiya/three-liltoon 0.1.4 | MIT © 2026 Mochiya | `vendor/three-liltoon/`（第 4 バックエンドをオンデマンド読み込み） |
+| @mochiya/three-liltoon 0.1.9 | MIT © 2026 Mochiya | `vendor/three-liltoon/`（第 4 バックエンドをオンデマンド読み込み） |
 
 > **埋め込み / 配布の際は `LICENSE` と `THIRD-PARTY-NOTICES.md` も必ず一緒に保持してください** —— MIT は著作権表示とライセンス表示の保持を要求します。
 > この 2 つのファイルは本ディレクトリに含まれています。

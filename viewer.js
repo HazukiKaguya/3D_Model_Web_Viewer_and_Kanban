@@ -867,6 +867,13 @@ function dataAttrs(el) {
   renderer.outputColorSpace = THREE.SRGBColorSpace;
   renderer.toneMapping = THREE.ACESFilmicToneMapping;
   renderer.toneMappingExposure = 1.0;
+  /* ⚠️ 2026-10-18 实验记录：尝试把 tone mapping 从材质移到**帧级后处理 pass**（Unity Volume 语义 ✓），
+        实现后实测**失败** ✗：上游 0.1.9 的 `enableLilToon` 会包住 renderer.render 做辅助 pass /
+        framebuffer 捕获（SceneColorCapture ✓）⇒ 它会把 render target 改回 canvas ✗
+        ⇒ 我们的 RT 拿到的是空画面（纯红探针能画 ✓ 但采样全黑 ✓ 已定位 ✓）
+     正确做法：要么与他们的 wrapper 协作（在辅助渲染**之后**再上屏 ✓），要么只在**没有 4th 后端**时用帧级 pass ✓
+     ⇒ 目前维持「材质级开关」方案（源码后端 mat.toneMapped = false ✓ = Unity 语义 ✓）*/
+
   renderer.shadowMap.enabled = cfg.shadows;
   /**
    * 阴影类型：按 three 是否还提供 `SHADOWMAP_TYPE_PCF_SOFT` 路径来选。
@@ -8869,10 +8876,12 @@ const SHADOW_UNIFORM_KEYS = [
        *        ⇒ 但保留一个开关 `o.skipTransparent` 让人能退回老行为 ✓
        */
       const __srcTransparent = !!(__srcMat0 && __srcMat0.transparent === true);
+      /** ★ 混合描边：材质已交给上游描边（蒙皮网格）⇒ 我们这边**不加壳** ✓ 避免双描边 */
+      const __upstreamOutline = !!(__srcMat0 && __srcMat0.userData && __srcMat0.userData.__lilSrcUpstreamOutline);
       const __flagOff = !!(__srcMat0 && __srcMat0.userData
         && __srcMat0.userData.outlineParameters
         && __srcMat0.userData.outlineParameters.visible === false);
-      const __skip = __flagOff && (__srcTransparent ? !!o.skipTransparent : true);
+      const __skip = __upstreamOutline || (__flagOff && (__srcTransparent ? !!o.skipTransparent : true));
       const on = !__skip && shaderActive() && shaderMode === 'lilToon' && !!o.enable;
       const key = on ? lilOutlineKey(o) : '';
       if (on) anyOn = true;
@@ -9072,7 +9081,7 @@ const SHADOW_UNIFORM_KEYS = [
               return m;
             }
             if (window.__ba3dDiag2) console.debug('[diag2] 源码材质 重建 src=' + (src && src.name) + ' 旧材质=' + (m && m.name) + ' ver=' + celProgramVersion);
-            const lm = toLilSrcMaterial(src);
+            const lm = toLilSrcMaterial(src, o);
             if (window.__ba3dDiag2) console.debug('[diag2] toLilSrcMaterial 返回 ' + (lm ? lm.name : 'null'));
             if (lm) return lm;
           }
@@ -9164,7 +9173,7 @@ const SHADOW_UNIFORM_KEYS = [
    *
    * 分工：
    *   表面着色 → 他们的库（真 lilToon 编译产物，已与 Unity 对拍：简单路径 2.22%、阴影+边缘光 5.37%）
-   *   描边     → 我们自己的 applyLilOutline()（他们发布版的描边实测不可用：
+   *   描边     → 我们自己的 applyLilOutline()（0.1.9 起上游需 shaderVariant 选 Hidden/lilToonOutline，
    *              会创建代理并绘制，但选到的顶点程序里 _OutlineWidth 只声明不使用，
    *              外壳不外扩 ⇒ 被本体遮住，任何宽度都看不见）
    *
@@ -9310,27 +9319,89 @@ const SHADOW_UNIFORM_KEYS = [
     return n;
   }
 
-  /** 只有 FBX 源需要补翻；GLB/glTF 源不用 */
+  /**
+   * 只有 FBX 源需要补翻 ✓
+   *
+   * ★ 上游依据（0.1.9 文档 ✓）：材质自带的贴图视图**一律 `flipY = false`**（不受传入贴图的旗标影响 ✓）
+   *   ⇒ 贴图侧**无法**抵消 FBX 的 UV 约定 ✗ ⇒ 只能在**几何体**上把 V 翻过来 ✓
+   *   （本函数就是干这件事 ✓ 这也是它不能删的原因 ✓）
+   */
   function lilSrcNeedsUVFlip() { return !!cfg.__isFbx; }
 
-  /** 由原始材质构建他们的表面材质（贴图沿用模型自带的，与另外三个模式一致） */
-  function toLilSrcMaterial(src) {
+  /**
+   * 由原始材质构建他们的表面材质（贴图沿用模型自带的，与另外三个模式一致）
+   *
+   * ★ 混合描边（用户 2026-10-18 定的方案 ✓）：
+   *    · **蒙皮网格** ⇒ 用上游描边（0.1.9 的 shaderVariant = *Outline 变体 ✓ 实测细边正常 ✓）
+   *    · **静态网格** ⇒ 继续用我们自研的反壳（上游对静态网格会整片填充 ✗ 见 _exp 试验）
+   *    · 两者共存：交给上游的那些网格，我们**不再**加壳（见 applyLilOutline 的 __lilSrcUpstreamOutline ✓）
+   */
+  function toLilSrcMaterial(src, mesh) {
+    /**
+     * ★★ 混合描边总开关 —— **已开启**（用户 2026-10-18 决定 ✓）
+     *
+     *   规则：**蒙皮网格** ⇒ 上游描边（shaderVariant = *Outline 变体 ✓ 实测细边正常 ✓）
+     *         **静态网格** ⇒ 自研反壳 ✓
+     *         **模型自带的描边壳网格**（名字带 `_Outline`，如 `CH0155_Milk_Outline`）⇒ **不套上游** ✗
+     *           它本身就是一层外扩壳 ✓ 再外扩会在 150× 世界缩放下膨胀成一大片实体（实测 ✓）
+     *   两者共存：交给上游的网格，我们不再加壳（见 applyLilOutline 的 __lilSrcUpstreamOutline ✓）
+     *
+     *   ⚠️ 已知未验：VRC（FBX）侧的 Melano 在本仓库渲染异常（缺贴图 404 ✓ 0.1.4 同样黑 ✓）
+     *      ⇒ VRC 侧上游描边的观感尚未确认 ✓ 一旦确认有问题就把这里改回 false ✓
+     */
+    const HYBRID_UPSTREAM_OUTLINE = true;   /* 定性残差实测 2026-10-18：描边项贡献 ≈0.75（meanAbs）✓ 属**有意**偏离 ✓（Unity 用的就是上游描边 ✓）*/
     if (!lilSrcReady || !lilSrcBridge || !lilSrcLib) return null;
     const mCfg = lilCfgFor(src);
-    const props = lilSrcBridge.cfgToProps(mCfg);
-    const mat = lilSrcBridge.createSurfaceMaterial(lilSrcLib, props);
+    const mName = (mesh && mesh.name) || '';
+    const isSkinned = !!(mesh && mesh.isSkinnedMesh);
+    /** 模型自带的描边壳：名字带 _Outline（BA 系列的惯例 ✓）；也可能是以 Outline 结尾的部件名 ✓ */
+    const isOutlineShellMesh = /(^|[_\-/\s])outline($|[_\-/\s])/i.test(mName) || /_outline$/i.test(mName);
+    /* 用户把描边关了（outline.enable=false）⇒ 上游也不开 ✓ */
+    const upOutline = HYBRID_UPSTREAM_OUTLINE && isSkinned && !isOutlineShellMesh
+      && !!(lilCfg && lilCfg.outline && lilCfg.outline.enable);
+    /* 默认 stripOutline 开（描边归我们）✓；混合模式时保留 _Outline* 交给上游 ✓ */
+    const props = lilSrcBridge.cfgToProps(mCfg, upOutline ? { stripOutline: false } : undefined);
+    let variant;
+    if (upOutline) {
+      /* 单位换算：outline.width 是**我们**反壳的厚度口径 ⇒ ×0.01 约等于 lilToon 世界单位
+         （试验：0.002 细边 ✓ / 0.01 偏粗 ✓ 都在这个量级 ✓）*/
+      if (typeof props._OutlineWidth === 'number') {
+        props._OutlineWidth = Math.max(0.0005, Math.min(0.02, props._OutlineWidth * 0.01));
+      }
+      props._OutlineFixWidth = 0;
+      variant = src.transparent ? 'Hidden/lilToonTransparentOutline'
+        : ((src.alphaTest > 0) ? 'Hidden/lilToonCutoutOutline' : 'Hidden/lilToonOutline');
+    }
+    /* ★ 贴图**并入构造**（0.1.9 原生 `textures` 参数 ✓）
+       ⚠️ 2026-10-18 对照实测：改回 setTexture 旧路径 **画面零变化** ✓ ⇒ 不是残差来源 ✓ 用原生路径 ✓ */
     const texMap = {};
     if (src.map) texMap._MainTex = src.map;
     if (src.normalMap) texMap._BumpMap = src.normalMap;
     if (src.emissiveMap) texMap._EmissionMap = src.emissiveMap;
-    lilSrcBridge.applyTextures(mat, texMap);
+    const mat = lilSrcBridge.createSurfaceMaterial(lilSrcLib, props, {
+      ...(variant ? { shaderVariant: variant } : {}),
+      textures: texMap,
+    });
     mat.name = (src.name || 'material') + '__lilSrc';
     mat.side = src.side;                       // 双面/单面跟随原材质
     mat.transparent = !!src.transparent;
     mat.alphaTest = src.alphaTest || 0;
     mat.depthWrite = src.depthWrite;
-    /* __lilSrcOf 记下**原名**：lilCfgFor 查覆盖表时用它兜底 ✓ */
-    mat.userData = { __lilSrc: true, __src: src, __lilSrcVersion: celProgramVersion, __lilSrcOf: src.name };
+    /* ★★ 观感基准（用户 2026-10-18 强调 ✓）：源码后端当年是在 **Melano 预设下与 Unity 对齐**的 ✓
+         0.1.4 **已经**做 sRGB 输出编码（uLilToonOutputSrgb ✓ 见 0.1.4 的 LilToonMaterial.ts:100）✓
+         0.1.6+ 新增的是**开始遵循页面的 tone mapping**（renderer.toneMapping + material.toneMapped ✓）
+         ⇒ 我们 toon 模式下页面是 ACESFilmic ⇒ 上游开始套 ACES ⇒ 中间调抬高 + 高光压缩 ⇒ 观感变亮且更平 ✗
+         ⇒ 修正：**只关 tone mapping**（material.toneMapped = false ✓ = 0.1.4 行为），
+                  **保留 sRGB 编码** ✓（和 0.1.4 一致 ✓ 不要再关 ✗）*/
+    try {
+      mat.toneMapped = false;
+    } catch (e) { /* 上游若换实现，静默跳过 ✓ */ }
+    /* __lilSrcOf 记下**原名**：lilCfgFor 查覆盖表时用它兜底 ✓
+       __lilSrcUpstreamOutline：该材质的描边已交给上游 ⇒ applyLilOutline 不再加壳 ✓ */
+    mat.userData = {
+      __lilSrc: true, __src: src, __lilSrcVersion: celProgramVersion, __lilSrcOf: src.name,
+      __lilSrcUpstreamOutline: upOutline,
+    };
     return mat;
   }
 
@@ -9501,6 +9572,11 @@ const SHADOW_UNIFORM_KEYS = [
     fillLight.intensity = p.fill.intensity * (applyCelTuning ? 0.15 : 1);
     // 卡通用 LinearToneMapping（数学上就是 ×exposure，等比缩放 → 阴影对比原样保留），
     // 亮度则交给 toneMappingExposure 精确控制。NoToneMapping 会**忽略** exposure，没法调。
+    /* ⚠️ 2026-10-18 实测记：`applyCelTuning` 就是 `cel`（见上面 L9486）⇒ **toon 模式恒为 false** ✗
+       ⇒ `×1.15` 只对 cel 生效 ✓ ⇒「源码版本变亮」**不是**曝光造成的 ✗
+         真正原因是上游 0.1.6+ 开始遵循 three 的 tone mapping / outputColorSpace ✓
+         （sRGB 编码生效 ⇒ 中间调整体抬高 ⇒ 系统性变亮 ✓ 实测 13.5% 像素变亮 · 0% 变暗 ✓）
+       ⇒ 想回到旧观感请用**配置级**亮度（lightingScale / 预设 ✓），不要在这里改 ✗ */
     renderer.toneMappingExposure = p.exposure * (applyCelTuning ? 1.15 : 1);
     if (typeof updateLightHelper === 'function') updateLightHelper();   // ★ 主光方向指示器跟着走 ✓
     // 整体亮度倍率（lightingScale）：不想改预设数值就能微调明暗

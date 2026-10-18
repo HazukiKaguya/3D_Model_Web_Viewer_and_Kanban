@@ -36,8 +36,8 @@ Pure static site, **no build step, no CDN dependency, no Node required**, everyt
 | `vendor/three/utils/SkeletonUtils.js` | ↑ same as above (one link in the dependency chain)|
 | `liltoon-bridge.js` | Adapter layer for the **4th shading backend** (feeds our lilCfg / Unity materials to three-liltoon) |
 | `vendor/three-liltoon/index.js` | ↑ the three-liltoon runtime (MIT) |
-| `vendor/three-liltoon/chunk-A4BIABDA.js` | ↑ compiled lilToon GLSL (1.9 MB, **cannot be omitted**) |
-| `vendor/three-liltoon/chunk-F6TSGO5L.js` | ↑ small chunk of the runtime |
+| `vendor/three-liltoon/chunk-KNGRDLOZ.js` | ↑ compiled lilToon GLSL (1.9 MB, **cannot be omitted**) |
+| `vendor/three-liltoon/chunk-WFYRXLGW.js` | ↑ small chunk of the runtime |
 | `vendor/three-liltoon/gltf.js` · `vrm.js` | ↑ optional extensions (glTF's `MOCHIYA_materials_liltoon` / VRM) |
 | `vendor/three-liltoon/schema/*.json` | ↑ JSON schema for the material extensions |
 | `vendor/three-liltoon/THIRD_PARTY_NOTICES.md` | ↑ third-party notices (MIT requires distribution with the package) |

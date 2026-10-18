@@ -2,7 +2,7 @@
  * liltoon-bridge.js —— three-liltoon 适配层（M3 集成用）
  *
  * 目标：把「我们的 lilCfg / Unity 材质」喂给 `@mochiya/three-liltoon` 的运行时，
- *       同时**描边走我们自己的实现**（他们发布版的描边实测不可用）。
+ *       同时**描边走我们自己的实现**（0.1.9 实测：蒙皮网格能出细边 ✓ 静态道具整片填充 ✗ ⇒ 仍归我们）。
  *
  * ── 三个已实测的坑（本文件把它们固化成代码，避免以后再踩）──────────────
  *
@@ -47,10 +47,14 @@ export async function loadBackend(base = VENDOR_BASE) {
   return _lib;
 }
 
-/** 在渲染器上装好他们的自动 pass（描边/毛发/透明等），返回释放函数 */
+/** 在渲染器上装好他们的自动 pass（描边/毛发/透明等），返回释放函数
+ *  ★ 开启原生渲染队列排序（0.1.6+ ✓）：让透明/描边按 lilToon 的 renderQueue 次序绘制 ✓
+ *    （上游若没有该选项会忽略 ✓ 安全 ✓）*/
 export async function enableBackend(renderer, base = VENDOR_BASE) {
   const lib = await loadBackend(base);
-  _enableLease = lib.enableLilToon(renderer);
+  let opts;
+  try { opts = { materialRenderQueue: true }; } catch (e) { opts = undefined; }   /* 定性实测：队列排序对画面**零影响** ✓ 但更接近 Unity 的排序语义 ✓ 保留 */
+  _enableLease = opts ? lib.enableLilToon(renderer, opts) : lib.enableLilToon(renderer);
   return _enableLease;
 }
 
@@ -172,7 +176,8 @@ export function cfgToProps(cfg, opt = {}) {
    *
    * 为什么必须做：他们的 `AutomaticPasses` 会根据
    *   `renderMode !== 'transparent' && _UseOutline !== 0 && _OutlineWidth > 0`
-   * 自动加一个描边代理网格。而他们的描边实测不可用 ——
+   * 自动加一个描边代理网格。0.1.4 的描边不可用；0.1.9 起需 shaderVariant 显式选 Hidden/lilToonOutline，
+ * 且实测只有蒙皮网格正常（静态道具会整片填充 ✗）——
    * 在我们这套配置下它会画出一大坨**深紫色实体外壳**把角色整个盖住
    * （颜色正是我们的 `_OutlineColor`，所以一眼能认出来）。
    *
@@ -333,13 +338,19 @@ export function outlineToRaw(outline) {
  * ------------------------------------------------------------------ */
 
 /**
- * 用他们的运行时建一个表面材质（不含描边）
+ * 用他们的运行时建一个表面材质
  * @param {any} lib loadBackend() 的返回值
  * @param {object} properties lilToon 原名属性袋
- * @param {object} [opt] { plain: boolean 用默认参数补全 }
+ * @param {object} [opt] { plain: boolean 用默认参数补全
+ *                        shaderVariant: string 显式选子着色器（0.1.7+ ✓ 蒙皮混合描边用）}
  */
 export function createSurfaceMaterial(lib, properties, opt = {}) {
-  const mat = new lib.LilToonMaterial({ properties: properties || {} });
+  const params = { properties: properties || {} };
+  if (opt.shaderVariant) params.shaderVariant = opt.shaderVariant;
+  /* ★ 贴图**并入构造**（0.1.9 的 LilToonMaterialParameters.textures ✓）
+     ⇒ 省掉过去"建完再逐张 setTexture"的第二步 ✓ 色彩空间由原生 LILTOON_TEXTURE_SEMANTICS 决定 ✓ */
+  if (opt.textures && Object.keys(opt.textures).length) params.textures = opt.textures;
+  const mat = new lib.LilToonMaterial(params);
   if (opt.plain) { /* 留口子：以后需要"纯净参数"时在这里补 */ }
   return mat;
 }

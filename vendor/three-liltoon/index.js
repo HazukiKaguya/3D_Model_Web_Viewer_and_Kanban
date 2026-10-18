@@ -1,7 +1,80 @@
-export { LilToonMaterialFactory, LilToonMaterialLoader } from './chunk-F6TSGO5L.js';
-import { LilToonMaterial, setGlobalProperty, applyLilToonPassState } from './chunk-A4BIABDA.js';
-export { GLTFLilToonExtension, LILTOON_DEFAULTS, LILTOON_GLTF_EXTENSION, LILTOON_GLTF_SPEC_VERSION, LILTOON_TEXTURE_SEMANTICS, LILTOON_UPSTREAM_COMMIT, LILTOON_UPSTREAM_VERSION, LilToonEnvironmentAdapter, LilToonLightAdapter, LilToonMaterial, LilToonShadowAdapter, THREE_VERSION_RANGE, UnsupportedFeatureError, detectLilToonFeatures } from './chunk-A4BIABDA.js';
-import { MeshBasicMaterial, MeshDepthMaterial, RGBADepthPacking, MeshDistanceMaterial, SkinnedMesh, Mesh, OneFactor, ZeroFactor, CustomBlending, BufferGeometry, Scene, Vector4, SRGBColorSpace, HalfFloatType, FloatType, Vector2, NoColorSpace, UnsignedByteType, FramebufferTexture, DataTexture, RGBAFormat, Float32BufferAttribute, Uint32BufferAttribute, Vector3, Matrix4, WebGLRenderTarget, NearestFilter, RawShaderMaterial, GLSL3, PlaneGeometry } from 'three';
+export { LilToonMaterialFactory, LilToonMaterialLoader } from './chunk-WFYRXLGW.js';
+import { LilToonMaterial, setGlobalProperty, applyLilToonPassState, isRenderStateProperty } from './chunk-KNGRDLOZ.js';
+export { GLTFLilToonExtension, LILTOON_DEFAULTS, LILTOON_GLTF_EXTENSION, LILTOON_GLTF_SPEC_VERSION, LILTOON_TEXTURE_SEMANTICS, LILTOON_UPSTREAM_COMMIT, LILTOON_UPSTREAM_VERSION, LilToonEnvironmentAdapter, LilToonLightAdapter, LilToonMaterial, LilToonShadowAdapter, THREE_VERSION_RANGE, UnsupportedFeatureError, detectLilToonFeatures } from './chunk-KNGRDLOZ.js';
+import { MeshBasicMaterial, MeshDepthMaterial, RGBADepthPacking, MeshDistanceMaterial, SkinnedMesh, Mesh, OneFactor, ZeroFactor, CustomBlending, Scene, SRGBColorSpace, REVISION, Vector2, UnsignedByteType, NoColorSpace, WebGLRenderTarget, NearestFilter, FramebufferTexture, Vector4, DataTexture, RGBAFormat, FloatType, Float32BufferAttribute, Uint32BufferAttribute, BufferGeometry, Vector3, Matrix4, RawShaderMaterial, GLSL3, PlaneGeometry } from 'three';
+
+function queue(material, defaultQueue) {
+  return material.isLilToonMaterial ? material.renderQueue ?? defaultQueue : defaultQueue;
+}
+function compareLilToonRenderQueue(a, b, defaultQueue) {
+  return queue(a, defaultQueue) - queue(b, defaultQueue);
+}
+function installMaterialRenderQueue(renderer) {
+  let camera;
+  const reversed = () => Number(REVISION) >= 185 && camera?.reversedDepth === true;
+  const priority = (a, b, fallback) => a.groupOrder - b.groupOrder || a.renderOrder - b.renderOrder || (reversed() ? -1 : 1) * compareLilToonRenderQueue(a.material, b.material, fallback);
+  renderer.setOpaqueSort(
+    (a, b) => priority(a, b, 2e3) || a.material.id - b.material.id || (a.materialVariant ?? 0) - (b.materialVariant ?? 0) || a.z - b.z || a.id - b.id
+  );
+  renderer.setTransparentSort(
+    (a, b) => priority(a, b, 3e3) || b.z - a.z || a.id - b.id
+  );
+  return {
+    enter(next) {
+      const previous = camera;
+      camera = next;
+      return () => {
+        camera = previous;
+      };
+    },
+    dispose() {
+      renderer.setOpaqueSort(null);
+      renderer.setTransparentSort(null);
+    }
+  };
+}
+
+// src/renderer/syncPassMaterial.ts
+function sameValue(a, b) {
+  if (Array.isArray(a))
+    return Array.isArray(b) && a.length === b.length && a.every((v, i) => v === b[i]);
+  if (typeof a === "object")
+    return b !== void 0 && a.constructor === b.constructor && a.equals(b);
+  return a === b;
+}
+function syncPassMaterial(source, target) {
+  source.getProperty("_Color");
+  target.toneMapped = source.toneMapped;
+  target.renderQueue = source.renderQueue;
+  let changed = false, stateChanged = false;
+  for (const key in source.lilToonProperties) {
+    const value = source.lilToonProperties[key];
+    if (sameValue(value, target.lilToonProperties[key])) continue;
+    target.lilToonProperties[key] = Array.isArray(value) ? [...value] : typeof value === "object" ? value.clone() : value;
+    setGlobalProperty(target.globalUniforms, key, value);
+    changed = true;
+    stateChanged ||= isRenderStateProperty(key);
+  }
+  for (const key of /* @__PURE__ */ new Set([
+    ...Object.keys(source.lilToonTextures),
+    ...Object.keys(target.lilToonTextures)
+  ])) {
+    const texture = source.lilToonTextures[key] ?? null;
+    if (target.lilToonTextures[key] === texture) continue;
+    target.lilToonTextures[key] = texture;
+    changed = true;
+  }
+  const selectionChanged = target.shaderVariant !== source.shaderVariant;
+  target.shaderVariant = source.shaderVariant;
+  if (changed) target.setProperty("_Color", source.getProperty("_Color"));
+  if (stateChanged && !selectionChanged)
+    applyLilToonPassState(
+      target,
+      source.renderMode,
+      source.lilToonProperties,
+      target.pass
+    );
+}
 
 // src/renderer/passOwnership.ts
 function ownsPassSource(root, mesh, source) {
@@ -14,24 +87,6 @@ function ownsPassSource(root, mesh, source) {
 }
 
 // src/renderer/AuxiliaryPassDraw.ts
-function syncPassMaterial(source, target) {
-  source.getProperty("_Color");
-  target.renderMode = source.renderMode;
-  target.transparencyMode = source.transparencyMode;
-  for (const [key, value] of Object.entries(source.lilToonProperties)) {
-    target.lilToonProperties[key] = value;
-    setGlobalProperty(target.globalUniforms, key, value);
-  }
-  target.setProperty("_Color", source.getProperty("_Color"));
-  for (const [key, value] of Object.entries(source.lilToonTextures))
-    if (target.lilToonTextures[key] !== value) target.setTexture(key, value);
-  applyLilToonPassState(
-    target,
-    source.renderMode,
-    source.lilToonProperties,
-    target.pass
-  );
-}
 var AuxiliaryPassDraw = class {
   recipes = /* @__PURE__ */ new Map();
   depth = 0;
@@ -45,7 +100,7 @@ var AuxiliaryPassDraw = class {
           r.release();
     }
   }
-  draw(renderer, render, mesh, source, pass, scene, camera, group, configure) {
+  draw(renderer, mesh, source, pass, scene, camera, group, configure) {
     const key = `${mesh.uuid}:${mesh.geometry.uuid}:${source.uuid}:${pass}`;
     let r = this.recipes.get(key);
     if (r && (r.mode !== source.renderMode || r.transparencyMode !== source.transparencyMode)) {
@@ -55,7 +110,7 @@ var AuxiliaryPassDraw = class {
     if (!r) {
       const geometry2 = mesh.geometry, sourceGeometry = mesh.geometry;
       const material2 = new LilToonMaterial({
-        renderMode: source.renderMode,
+        shaderVariant: source.shaderVariant,
         pass,
         properties: source.lilToonProperties,
         textures: source.lilToonTextures
@@ -91,16 +146,7 @@ var AuxiliaryPassDraw = class {
     r.owner = scene;
     const { geometry, material, proxy } = r;
     syncPassMaterial(source, material);
-    const { start: originalStart, count: originalCount } = geometry.drawRange;
-    const start = Math.max(originalStart, group?.start ?? 0);
-    const count = Math.max(
-      0,
-      Math.min(
-        originalStart + originalCount,
-        group ? group.start + group.count : Infinity
-      ) - start
-    );
-    proxy.matrix.copy(mesh.matrixWorld);
+    proxy.matrixWorld.copy(mesh.matrixWorld);
     proxy.layers.mask = mesh.layers.mask;
     proxy.morphTargetInfluences = mesh.morphTargetInfluences;
     if (proxy.isSkinnedMesh) {
@@ -110,34 +156,146 @@ var AuxiliaryPassDraw = class {
       out.bindMatrix.copy(skin.bindMatrix);
       out.bindMatrixInverse.copy(skin.bindMatrixInverse);
     }
-    const before = material.onBeforeRender;
-    material.onBeforeRender = (renderer2, _scene, camera2, geometry2, object, group2) => {
-      before.call(material, renderer2, scene, camera2, geometry2, object, group2);
-      configure?.(material);
-    };
-    const auto = renderer.autoClear, info = renderer.info.autoReset, shadows = renderer.shadowMap.autoUpdate, needs = renderer.shadowMap.needsUpdate;
-    const viewport = renderer.getViewport(new Vector4()), scissor = renderer.getScissor(new Vector4()), scissorTest = renderer.getScissorTest();
-    try {
-      renderer.autoClear = false;
-      renderer.info.autoReset = false;
-      renderer.shadowMap.autoUpdate = false;
-      renderer.shadowMap.needsUpdate = false;
-      geometry.setDrawRange(start, count);
-      render.call(renderer, r.scene, camera);
-    } finally {
-      geometry.setDrawRange(originalStart, originalCount);
-      material.onBeforeRender = before;
-      renderer.autoClear = auto;
-      renderer.info.autoReset = info;
-      renderer.shadowMap.autoUpdate = shadows;
-      renderer.shadowMap.needsUpdate = needs;
-      renderer.setViewport(viewport);
-      renderer.setScissor(scissor);
-      renderer.setScissorTest(scissorTest);
-    }
+    proxy.modelViewMatrix.multiplyMatrices(
+      camera.matrixWorldInverse,
+      proxy.matrixWorld
+    );
+    proxy.normalMatrix.getNormalMatrix(proxy.modelViewMatrix);
+    material.onBeforeRender(
+      renderer,
+      scene,
+      camera,
+      geometry,
+      proxy,
+      group
+    );
+    configure?.(material);
+    renderer.renderBufferDirect(
+      camera,
+      r.scene,
+      geometry,
+      material,
+      proxy,
+      group
+    );
   }
   dispose() {
     for (const r of this.recipes.values()) r.release();
+  }
+};
+var SceneColorCapture = class {
+  target;
+  canvasTexture;
+  framebuffer;
+  canvas;
+  contextLost = () => {
+    this.target?.dispose();
+    this.canvasTexture?.dispose();
+    this.framebuffer = void 0;
+  };
+  capture(renderer) {
+    if (!this.canvas) {
+      this.canvas = renderer.domElement;
+      this.canvas.addEventListener("webglcontextlost", this.contextLost);
+    }
+    const source = renderer.getRenderTarget();
+    const size = source ? new Vector2(source.width, source.height) : renderer.getDrawingBufferSize(new Vector2());
+    const type = source?.texture.type ?? UnsignedByteType;
+    const colorSpace = source?.texture.colorSpace ?? NoColorSpace;
+    let texture = this.target?.texture ?? this.canvasTexture;
+    if (!texture || Boolean(source) !== Boolean(this.target) || texture.image.width !== size.x || texture.image.height !== size.y || texture.type !== type || texture.colorSpace !== colorSpace) {
+      this.target?.dispose();
+      this.canvasTexture?.dispose();
+      this.target = void 0;
+      this.canvasTexture = void 0;
+      this.framebuffer = void 0;
+      if (source) {
+        this.target = new WebGLRenderTarget(size.x, size.y, {
+          type,
+          colorSpace,
+          minFilter: NearestFilter,
+          magFilter: NearestFilter,
+          depthBuffer: false,
+          stencilBuffer: false,
+          generateMipmaps: false
+        });
+        texture = this.target.texture;
+      } else {
+        texture = this.canvasTexture = new FramebufferTexture(size.x, size.y);
+      }
+    }
+    const gl = renderer.getContext();
+    const read = gl.getParameter(gl.READ_FRAMEBUFFER_BINDING);
+    const draw = gl.getParameter(gl.DRAW_FRAMEBUFFER_BINDING);
+    const scissorEnabled = gl.isEnabled(gl.SCISSOR_TEST);
+    try {
+      if (!source) {
+        gl.bindFramebuffer(gl.READ_FRAMEBUFFER, draw);
+        renderer.copyFramebufferToTexture(this.canvasTexture);
+      } else {
+        if (!this.framebuffer) this.initialize(renderer, source);
+        gl.bindFramebuffer(gl.READ_FRAMEBUFFER, draw);
+        gl.bindFramebuffer(gl.DRAW_FRAMEBUFFER, this.framebuffer);
+        gl.disable(gl.SCISSOR_TEST);
+        gl.blitFramebuffer(
+          0,
+          0,
+          size.x,
+          size.y,
+          0,
+          0,
+          size.x,
+          size.y,
+          gl.COLOR_BUFFER_BIT,
+          gl.NEAREST
+        );
+      }
+    } finally {
+      gl.bindFramebuffer(gl.READ_FRAMEBUFFER, read);
+      gl.bindFramebuffer(gl.DRAW_FRAMEBUFFER, draw);
+      if (scissorEnabled) gl.enable(gl.SCISSOR_TEST);
+      else gl.disable(gl.SCISSOR_TEST);
+    }
+    return texture;
+  }
+  initialize(renderer, source) {
+    const gl = renderer.getContext();
+    const face = renderer.getActiveCubeFace(), level = renderer.getActiveMipmapLevel();
+    const viewport = renderer.getCurrentViewport(new Vector4());
+    const scissor = gl.getParameter(gl.SCISSOR_BOX);
+    const scissorTest = gl.isEnabled(gl.SCISSOR_TEST);
+    const renderbuffer = gl.getParameter(gl.RENDERBUFFER_BINDING);
+    const sourceViewport = source.viewport.clone(), sourceScissor = source.scissor.clone();
+    const sourceScissorTest = source.scissorTest;
+    try {
+      renderer.setRenderTarget(this.target);
+      if (gl.checkFramebufferStatus(gl.DRAW_FRAMEBUFFER) !== gl.FRAMEBUFFER_COMPLETE)
+        throw new Error(
+          "[three-liltoon] Scene-color capture format is unsupported"
+        );
+      this.framebuffer = gl.getParameter(gl.DRAW_FRAMEBUFFER_BINDING);
+    } finally {
+      source.viewport.copy(viewport);
+      source.scissor.fromArray(scissor);
+      source.scissorTest = scissorTest;
+      try {
+        renderer.setRenderTarget(source, face, level);
+      } finally {
+        source.viewport.copy(sourceViewport);
+        source.scissor.copy(sourceScissor);
+        source.scissorTest = sourceScissorTest;
+        gl.bindRenderbuffer(gl.RENDERBUFFER, renderbuffer);
+      }
+    }
+  }
+  dispose() {
+    this.canvas?.removeEventListener("webglcontextlost", this.contextLost);
+    this.canvas = void 0;
+    this.target?.dispose();
+    this.canvasTexture?.dispose();
+    this.target = void 0;
+    this.canvasTexture = void 0;
+    this.framebuffer = void 0;
   }
 };
 
@@ -146,10 +304,9 @@ var SceneColorPasses = class {
   captures = [];
   grabs = [];
   blur = new AuxiliaryPassDraw();
-  resolves = [];
   depth = 0;
   gems = /* @__PURE__ */ new Map();
-  prepare(renderer, scene, render) {
+  prepare(renderer, scene) {
     const slot = this.depth++;
     this.blur.begin();
     let captured;
@@ -171,19 +328,8 @@ var SceneColorPasses = class {
         ) || material.pass !== "forward")
           return;
         if (!captured) {
-          const target = renderer.getRenderTarget();
-          const size = target ? new Vector2(target.width, target.height) : renderer.getDrawingBufferSize(new Vector2());
-          const colorSpace = target?.texture.colorSpace ?? NoColorSpace;
-          let texture = this.captures[slot];
-          if (!texture || texture.image.width !== size.x || texture.image.height !== size.y || texture.colorSpace !== colorSpace || texture.type !== (target?.texture.type ?? UnsignedByteType)) {
-            texture?.dispose();
-            texture = new FramebufferTexture(size.x, size.y);
-            texture.colorSpace = colorSpace;
-            if (target) texture.type = target.texture.type;
-            this.captures[slot] = texture;
-          }
-          this.capture(renderer, texture, slot);
-          captured = texture;
+          const capture = this.captures[slot] ??= new SceneColorCapture();
+          captured = capture.capture(renderer);
         }
         material.setSystemTexture("__background", captured);
         material.globalUniforms.uBackgroundIsSRGB = !renderer.getRenderTarget() && renderer.outputColorSpace === SRGBColorSpace ? 1 : 0;
@@ -191,7 +337,6 @@ var SceneColorPasses = class {
           const background = captured;
           this.blur.draw(
             renderer,
-            render,
             mesh,
             material,
             "refraction-blur-pre",
@@ -204,24 +349,12 @@ var SceneColorPasses = class {
               pass.globalUniforms.uBackgroundIsSRGB = material.globalUniforms.uBackgroundIsSRGB;
             }
           );
-          let grab = this.grabs[slot];
-          if (!grab || grab.image.width !== background.image.width || grab.image.height !== background.image.height || grab.type !== background.type || grab.colorSpace !== background.colorSpace) {
-            grab?.dispose();
-            grab = new FramebufferTexture(
-              background.image.width,
-              background.image.height
-            );
-            grab.type = background.type;
-            grab.colorSpace = background.colorSpace;
-            this.grabs[slot] = grab;
-          }
-          this.capture(renderer, grab, slot);
-          material.setSystemTexture("__grab", grab);
+          const grab = this.grabs[slot] ??= new SceneColorCapture();
+          material.setSystemTexture("__grab", grab.capture(renderer));
         }
         if (material.renderMode === "gem")
           this.clearGem(
             renderer,
-            render,
             mesh,
             material,
             scene,
@@ -244,7 +377,7 @@ var SceneColorPasses = class {
       }
     };
   }
-  clearGem(renderer, render, mesh, source, owner, camera, group) {
+  clearGem(renderer, mesh, source, owner, camera, group) {
     const key = `${mesh.uuid}:${source.uuid}`;
     let recipe = this.gems.get(key);
     if (recipe && (recipe.sourceGeometry !== mesh.geometry || recipe.source !== source)) {
@@ -260,17 +393,14 @@ var SceneColorPasses = class {
         blendSrcAlpha: ZeroFactor,
         blendDstAlpha: OneFactor
       });
-      const geometry2 = new BufferGeometry(), sourceGeometry = mesh.geometry;
+      const geometry2 = mesh.geometry, sourceGeometry = mesh.geometry;
       const proxy2 = mesh.isSkinnedMesh ? new SkinnedMesh(geometry2, material2) : new Mesh(geometry2, material2);
+      proxy2.matrixAutoUpdate = false;
       const temporary2 = new Scene();
       temporary2.add(proxy2);
       const release = () => {
         sourceGeometry.removeEventListener("dispose", release);
         source.removeEventListener("dispose", release);
-        geometry2.attributes = {};
-        geometry2.index = null;
-        geometry2.morphAttributes = {};
-        geometry2.dispose();
         material2.dispose();
         this.gems.delete(key);
       };
@@ -310,24 +440,7 @@ var SceneColorPasses = class {
       "polygonOffsetUnits"
     ])
       material[key2] = source[key2];
-    geometry.index = mesh.geometry.index;
-    geometry.attributes = mesh.geometry.attributes;
-    geometry.morphAttributes = mesh.geometry.morphAttributes;
-    geometry.morphTargetsRelative = mesh.geometry.morphTargetsRelative;
-    const range = mesh.geometry.drawRange;
-    const start = Math.max(range.start, group?.start ?? 0);
-    geometry.setDrawRange(
-      start,
-      Math.max(
-        0,
-        Math.min(
-          range.start + range.count,
-          group ? group.start + group.count : Infinity
-        ) - start
-      )
-    );
-    proxy.matrixAutoUpdate = false;
-    proxy.matrix.copy(mesh.matrixWorld);
+    proxy.matrixWorld.copy(mesh.matrixWorld);
     proxy.layers.mask = mesh.layers.mask;
     proxy.frustumCulled = false;
     proxy.morphTargetInfluences = mesh.morphTargetInfluences;
@@ -338,86 +451,27 @@ var SceneColorPasses = class {
       out.bindMatrix.copy(skin.bindMatrix);
       out.bindMatrixInverse.copy(skin.bindMatrixInverse);
     }
-    const autoClear = renderer.autoClear, autoReset = renderer.info.autoReset;
-    const shadowUpdate = renderer.shadowMap.autoUpdate, shadowNeeds = renderer.shadowMap.needsUpdate;
-    const viewport = renderer.getViewport(new Vector4()), scissor = renderer.getScissor(new Vector4()), scissorTest = renderer.getScissorTest();
-    try {
-      renderer.autoClear = false;
-      renderer.info.autoReset = false;
-      renderer.shadowMap.autoUpdate = false;
-      renderer.shadowMap.needsUpdate = false;
-      render.call(renderer, temporary, camera);
-    } finally {
-      renderer.autoClear = autoClear;
-      renderer.info.autoReset = autoReset;
-      renderer.shadowMap.autoUpdate = shadowUpdate;
-      renderer.shadowMap.needsUpdate = shadowNeeds;
-      renderer.setViewport(viewport);
-      renderer.setScissor(scissor);
-      renderer.setScissorTest(scissorTest);
-    }
-  }
-  capture(renderer, texture, slot) {
-    const gl = renderer.getContext();
-    if (!renderer.getRenderTarget() || gl.getParameter(gl.SAMPLES) === 0) {
-      renderer.copyFramebufferToTexture(texture);
-      return;
-    }
-    const read = gl.getParameter(gl.READ_FRAMEBUFFER_BINDING), draw = gl.getParameter(gl.DRAW_FRAMEBUFFER_BINDING), rb = gl.getParameter(gl.RENDERBUFFER_BINDING);
-    const scissorEnabled = gl.isEnabled(gl.SCISSOR_TEST);
-    const { width, height } = texture.image;
-    const format = texture.colorSpace === SRGBColorSpace ? gl.SRGB8_ALPHA8 : texture.type === HalfFloatType ? gl.RGBA16F : texture.type === FloatType ? gl.RGBA32F : gl.RGBA8;
-    const key = `${width}:${height}:${format}`;
-    let resolve = this.resolves[slot];
-    try {
-      if (!resolve || resolve.key !== key) {
-        if (resolve) {
-          gl.deleteFramebuffer(resolve.framebuffer);
-          gl.deleteRenderbuffer(resolve.color);
-        }
-        const framebuffer = gl.createFramebuffer(), color = gl.createRenderbuffer();
-        if (!framebuffer || !color)
-          throw new Error(
-            "[three-liltoon] Cannot allocate scene-color resolve"
-          );
-        resolve = { gl, framebuffer, color, key };
-        this.resolves[slot] = resolve;
-        gl.bindRenderbuffer(gl.RENDERBUFFER, color);
-        gl.renderbufferStorage(gl.RENDERBUFFER, format, width, height);
-        gl.bindFramebuffer(gl.DRAW_FRAMEBUFFER, framebuffer);
-        gl.framebufferRenderbuffer(
-          gl.DRAW_FRAMEBUFFER,
-          gl.COLOR_ATTACHMENT0,
-          gl.RENDERBUFFER,
-          color
-        );
-        if (gl.checkFramebufferStatus(gl.DRAW_FRAMEBUFFER) !== gl.FRAMEBUFFER_COMPLETE)
-          throw new Error(
-            "[three-liltoon] Scene-color resolve format is unsupported"
-          );
-      }
-      gl.bindFramebuffer(gl.DRAW_FRAMEBUFFER, resolve.framebuffer);
-      gl.disable(gl.SCISSOR_TEST);
-      gl.blitFramebuffer(
-        0,
-        0,
-        width,
-        height,
-        0,
-        0,
-        width,
-        height,
-        gl.COLOR_BUFFER_BIT,
-        gl.NEAREST
-      );
-      gl.bindFramebuffer(gl.READ_FRAMEBUFFER, resolve.framebuffer);
-      renderer.copyFramebufferToTexture(texture);
-    } finally {
-      gl.bindFramebuffer(gl.READ_FRAMEBUFFER, read);
-      gl.bindFramebuffer(gl.DRAW_FRAMEBUFFER, draw);
-      gl.bindRenderbuffer(gl.RENDERBUFFER, rb);
-      if (scissorEnabled) gl.enable(gl.SCISSOR_TEST);
-    }
+    proxy.modelViewMatrix.multiplyMatrices(
+      camera.matrixWorldInverse,
+      proxy.matrixWorld
+    );
+    proxy.normalMatrix.getNormalMatrix(proxy.modelViewMatrix);
+    material.onBeforeRender(
+      renderer,
+      temporary,
+      camera,
+      geometry,
+      proxy,
+      group
+    );
+    renderer.renderBufferDirect(
+      camera,
+      temporary,
+      geometry,
+      material,
+      proxy,
+      group
+    );
   }
   dispose() {
     this.blur.dispose();
@@ -426,11 +480,6 @@ var SceneColorPasses = class {
     for (const recipe of this.gems.values()) recipe.release();
     for (const texture of this.captures) texture.dispose();
     this.captures = [];
-    for (const r of this.resolves) {
-      r.gl.deleteFramebuffer(r.framebuffer);
-      r.gl.deleteRenderbuffer(r.color);
-    }
-    this.resolves = [];
   }
 };
 var FurDeformation = class {
@@ -777,16 +826,15 @@ var FurGeometry = class {
 };
 
 // src/renderer/FurPasses.ts
-function sameProperty(value, previous) {
-  if (Array.isArray(value))
-    return Array.isArray(previous) && value.length === previous.length && value.every((v, i) => v === previous[i]);
-  if (typeof value === "object")
-    return previous !== void 0 && value.constructor === previous.constructor && value.equals(previous);
-  return value === previous;
-}
 var FurPasses = class {
   recipes = /* @__PURE__ */ new Map();
   depth = 0;
+  uploaded = /* @__PURE__ */ new WeakSet();
+  uploadMaterial = new MeshBasicMaterial({ visible: false });
+  contextCanvas;
+  contextRestored = () => {
+    this.uploaded = /* @__PURE__ */ new WeakSet();
+  };
   prepare(renderer, scene, render) {
     this.depth++;
     const undo = [];
@@ -804,6 +852,13 @@ var FurPasses = class {
         const source = args[4];
         if (!(source instanceof LilToonMaterial) || !source.renderMode.startsWith("fur") || source.pass !== "forward")
           return;
+        if (!this.contextCanvas) {
+          this.contextCanvas = renderer.domElement;
+          this.contextCanvas.addEventListener(
+            "webglcontextrestored",
+            this.contextRestored
+          );
+        }
         const layers = Number(source.lilToonProperties._FurLayerNum ?? 2);
         if ((mesh.geometry.index?.count ?? mesh.geometry.attributes.position.count) < 3)
           return;
@@ -825,7 +880,7 @@ var FurPasses = class {
           const deformation2 = gpuSkinning ? new FurDeformation(geometry2.texture) : void 0;
           const materials3 = (source.renderMode === "fur-two-pass" ? ["fur-pre", "fur"] : ["fur"]).map(
             (pass) => new LilToonMaterial({
-              renderMode: source.renderMode,
+              shaderVariant: source.shaderVariant,
               pass,
               properties: source.lilToonProperties,
               textures: source.lilToonTextures
@@ -881,34 +936,7 @@ var FurPasses = class {
           geometry.texture,
           args[2]
         );
-        source.getProperty("_Color");
-        for (const material of materials2) {
-          let changed = false;
-          for (const key2 in source.lilToonProperties) {
-            const value = source.lilToonProperties[key2];
-            const previous = material.lilToonProperties[key2];
-            if (!sameProperty(value, previous)) {
-              material.setProperty(
-                key2,
-                Array.isArray(value) ? [...value] : value
-              );
-              changed = true;
-            }
-          }
-          for (const key2 of /* @__PURE__ */ new Set([
-            ...Object.keys(source.lilToonTextures),
-            ...Object.keys(material.lilToonTextures)
-          ]))
-            if (material.lilToonTextures[key2] !== source.lilToonTextures[key2])
-              material.setTexture(key2, source.lilToonTextures[key2] ?? null);
-          if (changed)
-            applyLilToonPassState(
-              material,
-              source.renderMode,
-              source.lilToonProperties,
-              material.pass
-            );
-        }
+        for (const material of materials2) syncPassMaterial(source, material);
         const group = args[5] ?? mesh.geometry.drawRange;
         const previousRange = { ...geometry.geometry.drawRange };
         if (group) {
@@ -932,29 +960,39 @@ var FurPasses = class {
           renderer.info.autoReset = false;
           renderer.shadowMap.autoUpdate = false;
           renderer.shadowMap.needsUpdate = false;
+          if (!this.uploaded.has(geometry.geometry)) {
+            proxy.material = this.uploadMaterial;
+            render.call(renderer, temporary, args[2]);
+            this.uploaded.add(geometry.geometry);
+          }
+          proxy.matrixWorld.copy(mesh.matrixWorld);
+          proxy.modelViewMatrix.multiplyMatrices(
+            args[2].matrixWorldInverse,
+            proxy.matrixWorld
+          );
+          proxy.normalMatrix.getNormalMatrix(proxy.modelViewMatrix);
           for (const material of materials2) {
             proxy.material = material;
-            const before = material.onBeforeRender;
-            material.onBeforeRender = (...draw) => {
-              before.call(
-                material,
-                draw[0],
-                scene,
-                draw[2],
-                draw[3],
-                draw[4],
-                draw[5]
-              );
-              material.setSystemTexture(
-                "__furVertices",
-                deformation?.target.texture ?? geometry.texture
-              );
-            };
-            try {
-              render.call(renderer, temporary, args[2]);
-            } finally {
-              material.onBeforeRender = before;
-            }
+            material.onBeforeRender(
+              renderer,
+              scene,
+              args[2],
+              geometry.geometry,
+              proxy,
+              null
+            );
+            material.setSystemTexture(
+              "__furVertices",
+              deformation?.target.texture ?? geometry.texture
+            );
+            renderer.renderBufferDirect(
+              args[2],
+              temporary,
+              geometry.geometry,
+              material,
+              proxy,
+              null
+            );
           }
         } finally {
           renderer.autoClear = auto;
@@ -982,6 +1020,13 @@ var FurPasses = class {
     };
   }
   dispose() {
+    this.contextCanvas?.removeEventListener(
+      "webglcontextrestored",
+      this.contextRestored
+    );
+    this.contextCanvas = void 0;
+    this.uploaded = /* @__PURE__ */ new WeakSet();
+    this.uploadMaterial.dispose();
     for (const recipe of this.recipes.values()) recipe.release();
   }
 };
@@ -989,7 +1034,7 @@ var FurPasses = class {
 // src/renderer/TransparencyPasses.ts
 var TransparencyPasses = class {
   draws = new AuxiliaryPassDraw();
-  prepare(renderer, scene, render) {
+  prepare(renderer, scene) {
     this.draws.begin();
     const undo = [];
     scene.traverse((node) => {
@@ -1008,7 +1053,6 @@ var TransparencyPasses = class {
         if (isSurface(source) && source.transparencyMode === "two-pass")
           this.draws.draw(
             renderer,
-            render,
             mesh,
             source,
             "transparent-pre",
@@ -1023,10 +1067,9 @@ var TransparencyPasses = class {
         const manual = mesh.children.some(
           (c) => c.isMesh && c.material?.pass === "outline"
         );
-        if (isSurface(source) && !manual && Number(source.lilToonProperties._UseOutline ?? 1) !== 0 && Number(source.lilToonProperties._OutlineWidth ?? 0) > 0)
+        if (isSurface(source) && !manual && source.featureSet.outline)
           this.draws.draw(
             renderer,
-            render,
             mesh,
             source,
             "outline",
@@ -1053,6 +1096,16 @@ var TransparencyPasses = class {
 };
 
 // src/renderer/enableLilToon.ts
+function sameProperty(value, before) {
+  if (Array.isArray(value))
+    return Array.isArray(before) && value.length === before.length && value.every((v, i) => v === before[i]);
+  if (typeof value === "object")
+    return before !== void 0 && value.constructor === before.constructor && value.equals(before);
+  return value === before;
+}
+function copyProperty(value) {
+  return Array.isArray(value) ? [...value] : typeof value === "object" ? value.clone() : value;
+}
 var helpers = /* @__PURE__ */ new WeakSet();
 var originalHooks = /* @__PURE__ */ new WeakMap();
 var AutomaticPasses = class {
@@ -1074,25 +1127,19 @@ var AutomaticPasses = class {
   recipe(source, mesh, scene) {
     let recipe = this.recipes.get(source);
     if (!recipe) {
-      const outline = new LilToonMaterial({
-        pass: "outline",
-        renderMode: source.renderMode,
-        properties: source.lilToonProperties,
-        textures: source.lilToonTextures
-      });
       const depth = new MeshDepthMaterial({ depthPacking: RGBADepthPacking });
       const distance = new MeshDistanceMaterial();
       recipe = {
         owners: /* @__PURE__ */ new Map(),
         source,
-        outline,
+        outline: null,
         depth,
         distance,
         input: null,
         map: null,
         release: () => {
           source.removeEventListener("dispose", recipe.release);
-          outline.dispose();
+          recipe.outline?.dispose();
           depth.dispose();
           distance.dispose();
           recipe.map?.dispose();
@@ -1103,24 +1150,6 @@ var AutomaticPasses = class {
       source.addEventListener("dispose", recipe.release);
     }
     recipe.owners.set(mesh, scene);
-    source.getProperty("_Color");
-    for (const [name, value] of Object.entries(source.lilToonProperties)) {
-      recipe.outline.lilToonProperties[name] = value;
-      setGlobalProperty(recipe.outline.globalUniforms, name, value);
-    }
-    recipe.outline.setProperty("_Color", source.getProperty("_Color"));
-    for (const [name, texture] of Object.entries(source.lilToonTextures)) {
-      if (recipe.outline.lilToonTextures[name] !== texture)
-        recipe.outline.setTexture(name, texture);
-    }
-    recipe.outline.renderMode = source.renderMode;
-    applyLilToonPassState(
-      recipe.outline,
-      source.renderMode,
-      source.lilToonProperties,
-      "outline"
-    );
-    recipe.outline.visible = source.visible;
     if (recipe.input !== source.map) {
       recipe.map?.dispose();
       recipe.input = source.map;
@@ -1142,10 +1171,46 @@ var AutomaticPasses = class {
     }
     return recipe;
   }
+  prepareOutline(recipe) {
+    const source = recipe.source;
+    source.getProperty("_Color");
+    const outline = recipe.outline ??= new LilToonMaterial({
+      pass: "outline",
+      shaderVariant: source.shaderVariant,
+      properties: source.lilToonProperties,
+      textures: source.lilToonTextures
+    });
+    let changed = outline.shaderVariant !== source.shaderVariant;
+    for (const [name, value] of Object.entries(source.lilToonProperties)) {
+      if (sameProperty(value, outline.lilToonProperties[name])) continue;
+      outline.lilToonProperties[name] = copyProperty(value);
+      setGlobalProperty(outline.globalUniforms, name, value);
+      changed = true;
+    }
+    for (const [name, texture] of Object.entries(source.lilToonTextures)) {
+      if (outline.lilToonTextures[name] !== texture)
+        outline.setTexture(name, texture);
+    }
+    if (changed) {
+      outline.shaderVariant = source.shaderVariant;
+      outline.setProperty("_Color", source.getProperty("_Color"));
+      applyLilToonPassState(
+        outline,
+        source.renderMode,
+        source.lilToonProperties,
+        "outline"
+      );
+    }
+    outline.visible = source.visible;
+    outline.toneMapped = source.toneMapped;
+    outline.renderQueue = source.renderQueue;
+    return outline;
+  }
   prepare(scene) {
     const undo = [];
     const meshes = [];
-    scene.traverse((node) => {
+    const outlinesPrepared = /* @__PURE__ */ new Set();
+    scene.traverseVisible((node) => {
       if (node.isMesh && !helpers.has(node))
         meshes.push(node);
     });
@@ -1157,16 +1222,22 @@ var AutomaticPasses = class {
         );
         const first = recipes.find((recipe) => recipe !== void 0);
         if (!first) continue;
-        const outlines = recipes.map(
-          (recipe) => recipe && recipe.source.renderMode !== "transparent" && Number(recipe.source.lilToonProperties._UseOutline ?? 1) !== 0 && Number(recipe.source.lilToonProperties._OutlineWidth ?? 0) > 0 ? recipe.outline : this.hidden
-        );
         const manualOutline = mesh.children.some(
           (child) => !helpers.has(child) && child.isMesh && child.material?.pass === "outline"
         );
+        const outlines = recipes.map((recipe) => {
+          if (manualOutline || !recipe || recipe.source.renderMode === "transparent" || !recipe.source.featureSet.outline)
+            return this.hidden;
+          if (!outlinesPrepared.has(recipe)) {
+            this.prepareOutline(recipe);
+            outlinesPrepared.add(recipe);
+          }
+          return recipe.outline;
+        });
         if (!manualOutline && outlines.some((material) => material !== this.hidden)) {
           let proxy = this.proxies.get(mesh);
           if (!proxy) {
-            proxy = mesh.isSkinnedMesh ? new SkinnedMesh(mesh.geometry, first.outline) : new Mesh(mesh.geometry, first.outline);
+            proxy = mesh.isSkinnedMesh ? new SkinnedMesh(mesh.geometry, this.hidden) : new Mesh(mesh.geometry, this.hidden);
             proxy.name = `${mesh.name}:lilToon-outline`;
             proxy.matrixAutoUpdate = false;
             proxy.raycast = () => {
@@ -1238,9 +1309,14 @@ var AutomaticPasses = class {
   }
 };
 var installations = /* @__PURE__ */ new WeakMap();
-function enableLilToon(renderer) {
+function enableLilToon(renderer, options = {}) {
   const existing = installations.get(renderer);
-  if (existing) return existing.acquire();
+  if (existing) {
+    if (options.materialRenderQueue !== void 0 && options.materialRenderQueue !== existing.materialRenderQueue)
+      throw new Error("enableLilToon leases must agree on materialRenderQueue");
+    return existing.acquire();
+  }
+  const sorting = options.materialRenderQueue ? installMaterialRenderQueue(renderer) : void 0;
   const passes = new AutomaticPasses();
   const sceneColors = new SceneColorPasses();
   const fur = new FurPasses();
@@ -1248,6 +1324,7 @@ function enableLilToon(renderer) {
   const render = renderer.render, dispose = renderer.dispose;
   let users = 0, disposed = false;
   const wrapped = function(scene, camera) {
+    const restoreSortCamera = sorting?.enter(camera);
     passes.begin();
     const previous = scene.onBeforeRender;
     const original = originalHooks.get(previous) ?? previous;
@@ -1258,18 +1335,18 @@ function enableLilToon(renderer) {
     const hook = function(...args) {
       original.apply(this, args);
       restore ??= passes.prepare(scene);
-      restoreColors ??= sceneColors.prepare(renderer, scene, render);
+      restoreColors ??= sceneColors.prepare(renderer, scene);
       restoreFur ??= fur.prepare(renderer, scene, render);
-      restoreTransparency ??= transparency.prepare(renderer, scene, render);
+      restoreTransparency ??= transparency.prepare(renderer, scene);
     };
     originalHooks.set(hook, original);
     scene.onBeforeRender = hook;
     try {
       if (!scene.isScene) {
         restore = passes.prepare(scene);
-        restoreColors = sceneColors.prepare(renderer, scene, render);
+        restoreColors = sceneColors.prepare(renderer, scene);
         restoreFur = fur.prepare(renderer, scene, render);
-        restoreTransparency = transparency.prepare(renderer, scene, render);
+        restoreTransparency = transparency.prepare(renderer, scene);
       }
       render.call(renderer, scene, camera);
     } finally {
@@ -1279,6 +1356,7 @@ function enableLilToon(renderer) {
       restore?.();
       if (scene.onBeforeRender === hook) scene.onBeforeRender = previous;
       passes.end();
+      restoreSortCamera?.();
     }
   };
   const wrappedDispose = () => {
@@ -1286,11 +1364,13 @@ function enableLilToon(renderer) {
     dispose.call(renderer);
   };
   const installation = {
+    materialRenderQueue: options.materialRenderQueue ?? false,
     release: () => {
       if (disposed) return;
       disposed = true;
       if (renderer.render === wrapped) renderer.render = render;
       if (renderer.dispose === wrappedDispose) renderer.dispose = dispose;
+      sorting?.dispose();
       passes.dispose();
       sceneColors.dispose();
       fur.dispose();
@@ -11314,4 +11394,4 @@ var LILTOON_RENDER_RECIPES = {
   }
 };
 
-export { FurPass, GemPass, LILTOON_PROPERTIES, LILTOON_RENDER_RECIPES, RefractionPass, enableLilToon };
+export { FurPass, GemPass, LILTOON_PROPERTIES, LILTOON_RENDER_RECIPES, RefractionPass, compareLilToonRenderQueue, enableLilToon };

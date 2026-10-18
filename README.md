@@ -8,7 +8,7 @@ three.js 角色查看器：**可配置**（模型 / 嘴部贴图 / 基准 JSON�
 **Cel 分档**（简易的 BA 模型特化着色器）· **lilToon 风格**（自研移植实现）· **three-liltoon**（直接使用上游对真 lilToon 源码的转译产物，按需加载）· **不注入（原生）**。
 
 - 材质模型三档：原始（PBR）/ **卡通材质（Toon）** / 无光照（Unlit）；着色后端挂在**卡通材质**上（PBR / Unlit 用的是 three 自带材质，没有注入点）。默认 **卡通材质 + Cel 分档**。
-- **three-liltoon 是「lilToon 风格」的变体**：只把表面材质换成上游的 `LilToonMaterial`；**描边仍走自研实现**（上游发布版的描边实测不可用）。
+- **three-liltoon 是「lilToon 风格」的变体**：只把表面材质换成上游的 `LilToonMaterial`；**描边仍走自研实现**（0.1.9 起上游描边需用 `shaderVariant` 显式选 `Hidden/lilToonOutline`；实测蒙皮网格能出细边，静态道具会整片填充）。
 - lilToon 是卡通（NPR）着色器家族 —— 不存在「把 lilToon 用在 PBR 材质上」这种做法。
 
 【[部署本工具](DEPLOY.md)】  【[模型 JSON 配置](CONFIG.md)】  【[第三方库许可证声明](THIRD-PARTY-NOTICES.md)】
@@ -214,7 +214,7 @@ GLB 里 `CH0155_Weapon`（枪）/ `CH0155_Milk`（牛奶盒）被标成 `BLEND`�
 |---|---|---|
 | three.js 0.185.1 | MIT © 2010-2026 three.js authors | `vendor/three/`，并内联进 `dist/` |
 | lilToon 2.3.4 | MIT © 2020-present lilxyzw | 仅其编译产物：`assets/lilshaders.inline.js`、`vendor/three-liltoon/chunk-*.js` |
-| @mochiya/three-liltoon 0.1.4 | MIT © 2026 Mochiya | `vendor/three-liltoon/`（第 4 后端按需加载） |
+| @mochiya/three-liltoon 0.1.9 | MIT © 2026 Mochiya | `vendor/three-liltoon/`（第 4 后端按需加载） |
 
 > **内嵌 / 分发时请一并保留 `LICENSE` 与 `THIRD-PARTY-NOTICES.md`** —— MIT 要求保留版权与许可声明。
 > 本目录已包含这两份文件。

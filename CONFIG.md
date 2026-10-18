@@ -370,6 +370,8 @@ viewer.setFaceNoShadow(false);     // 恢复
    **0.85 / 0.82，对比从 19% 掉到 8.5%，阴影明显变糊**。
    等比缩放 → **阴影对比原样保留**，同时曝光旋钮才真正能用来调亮度。
 
+   > ⚠️ 材质端**一律不参与** tone mapping（与 Unity 一致）：风格后端剥 `#include <tonemapping_fragment>`、源码后端 `mat.toneMapped = false`；页面的 tone mapping 只对 PBR / 原生材质生效。详见 `LILTOON2.x.md` 第十节。
+
 #### 卡通灯光补偿（`applyLightingPreset`）
 
 MeshToonMaterial **不支持 envMap**，RoomEnvironment 的环境照明整个丢掉，所以要补；

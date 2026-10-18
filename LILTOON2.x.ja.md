@@ -469,3 +469,34 @@ lilToon のプリセットはもともとマテリアルごとに 1 つで、私
 - メインカラーレイヤー 2nd / 3rd の有効化分岐は個別に検証していない。
 - 顔の影は**明るさ**の基準でしか確認しておらず、**形状 / 遷移**の独立した確認は行っていない。
 - 透明背景の分岐、その他のモデル、「マテリアル指定」のプリセット対象は未テスト。
+
+---
+
+## 十、2026-10-18 見た目の基準：Unity 側の条件（実機で確認済み）
+
+参考プロジェクト：Unity **2022.3.22f1** · プロジェクト `Melano-Migrated` · シーン `Melano_scene`（本機で読み取り専用に確認）。
+
+| 項目 | 値 | 根拠 |
+|---|---|---|
+| レンダーパイプライン | **Built-in** | `ProjectSettings/GraphicsSettings.asset`: `m_CustomRenderPipeline: {fileID: 0}` · `m_SRPDefaultSettings: {}` |
+| カラースペース | **Linear** | `ProjectSettings/ProjectSettings.asset`: `m_ActiveColorSpace: 1` |
+| ポストプロセス / トーンマッピング | **なし** | プロジェクト全体を grep：Assets/Scenes に `PostProcessVolume` / `Tonemapping` は 0 件（postprocessing パッケージは導入済みだが未使用） |
+| lilToon | **2.3.4** | `Assets/lilToon/package.json` |
+
+**結論**：Unity 側の lilToon は**マテリアル単位のトーンマッピングを行わない**。出力は「**リニアでシェーディング + 表示時の sRGB 変換**」。
+
+本リポジトリ側：
+
+- ソース後端：`mat.toneMapped = false`（ページのトーンマッピングに追従しない）＋ **sRGB 出力は維持** ⇒ Unity のセマンティクスと一致。
+- 自前のスタイル後端：もともと `#include <tonemapping_fragment>` を削除している ⇒ 両後端の口径が一致。
+- ページ側の ACES は **PBR / ネイティブ材質のみ**に作用させる。カートゥーンの 2 経路には入れない（上流 0.1.6+ は追従するので明示的に切る必要がある）。
+
+### アウトライン（ハイブリッド方式）
+
+| メッシュ種別 | 描画元 | 備考 |
+|---|---|---|
+| スキンメッシュ | **上流**（`shaderVariant = Hidden/lilToonOutline` など） | Unity 自身も上流のアウトラインを使う ⇒ 基準に近い |
+| 静的メッシュ | **自前の反殻** | 静的メッシュでの上流の見え方は未検証 |
+| `*_Outline` 名の殻メッシュ（モデル同梱） | **自前**（上流には渡さない） | すでに外側へ拡張された殻。上流を重ねると 150× の世界スケールで大きな塊になる |
+
+⚠️ 実測：`_OutlineCull` も `side = FrontSide` 強制も、この膨張には**効かない**（ピクセルはほぼ不変）⇒ 殻メッシュを除外するのが唯一効く規則。
