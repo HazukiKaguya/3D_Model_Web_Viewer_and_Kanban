@@ -1,6 +1,6 @@
 # 3D キャラクターモデルビューア（Web ページ埋め込み看板娘）
 
-[中文](README.md) ｜ [English](README.en.md) ｜ **日本語**
+[中文](../README.md) ｜ [English](README.en.md) ｜ **日本語**
 
 three.js キャラクタービューア：**設定可能**（モデル / 口元テクスチャ / 基準 JSON）、**組み込み可能**（自己完結型シングルファイル版）、**デプロイ可能**（純粋な静的サイト）。
 
@@ -11,7 +11,7 @@ three.js キャラクタービューア：**設定可能**（モデル / 口元�
 - **three-liltoon は「lilToon スタイル」のバリアント**です：サーフェスマテリアルを上流の `LilToonMaterial` に差し替えるだけで、**アウトラインは自前実装のまま**です（0.1.9 以降、上流のアウトラインは `shaderVariant` で `Hidden/lilToonOutline` を明示選択する必要あり。実測：スキンメッシュは細い輪郭、静的プロップは塗り潰し）。
 - lilToon はトゥーン（NPR）シェーダーファミリーです —— 「lilToon を PBR マテリアルに使う」という発想はありません。
 
-【[本ツールのデプロイ](DEPLOY.md)】  【[モデル JSON 設定](CONFIG.md)】  【[サードパーティライセンス通知](THIRD-PARTY-NOTICES.md)】
+【[本ツールのデプロイ](DEPLOY.md)】  【[モデル JSON 設定](CONFIG.md)】  【[サードパーティライセンス通知](../THIRD-PARTY-NOTICES.md)】
 
 ## クイックスタート
 
@@ -26,22 +26,22 @@ three.js キャラクタービューア：**設定可能**（モデル / 口元�
 
 | ファイル | 役割 |
 |---|---|
-| [index.html](index.html) | 全画面ビューア（フローティングコンソール UI） |
-| [embed-demo.html](embed-demo.html) | 3D モデルの Web ページ埋め込み看板娘デモ |
-| [viewer.js](viewer.js) | ビューアコア（`createViewer` / `autoMount`） |
-| [assets/sample.json](assets/sample.json) | **CH0155 設定**（モデル + 口元テクスチャ + 基準 + レンダリング/ライティング/背景） |
-| [assets/sample.glb](assets/sample.glb) | モデル（= CH0155、24 段のアニメーション） |
-| [assets/mouth/](assets/mouth/) | 口元の修正用アトラス（kivo：`Character_Mouth_2` / `_Black` / `_High`） |
-| [dist/3d-viewer.js](dist/3d-viewer.js) | **自己完結型シングルファイル版**（1.94 MB、three をすべてインライン化、埋め込み用；裸の import なし） |
-| [dist/3d-viewer.min.js](dist/3d-viewer.min.js) | 同上、圧縮版（944 KB、デプロイ用） |
-| [liltoon-bridge.js](liltoon-bridge.js) | 第 4 シェーディングバックエンドの適応層（lilCfg / Unity マテリアルを three-liltoon に渡す） |
-| [vendor/three/](vendor/three/) | ローカルの three.js r185.1 + addons（`effects/OutlineEffect.js` を含む） |
-| [vendor/three-liltoon/](vendor/three-liltoon/) | three-liltoon ランタイム + コンパイル済み lilToon GLSL（2.2 MB、第 4 バックエンドはオンデマンド読み込み） |
+| [index.html](../index.html) | 全画面ビューア（フローティングコンソール UI） |
+| [embed-demo.html](../embed-demo.html) | 3D モデルの Web ページ埋め込み看板娘デモ |
+| [viewer.js](../viewer.js) | ビューアコア（`createViewer` / `autoMount`） |
+| [assets/sample.json](../assets/sample.json) | **CH0155 設定**（モデル + 口元テクスチャ + 基準 + レンダリング/ライティング/背景） |
+| [assets/sample.glb](../assets/sample.glb) | モデル（= CH0155、24 段のアニメーション） |
+| [assets/mouth/](../assets/mouth/) | 口元の修正用アトラス（kivo：`Character_Mouth_2` / `_Black` / `_High`） |
+| [dist/3d-viewer.js](../dist/3d-viewer.js) | **自己完結型シングルファイル版**（1.94 MB、three をすべてインライン化、埋め込み用；裸の import なし） |
+| [dist/3d-viewer.min.js](../dist/3d-viewer.min.js) | 同上、圧縮版（944 KB、デプロイ用） |
+| [liltoon-bridge.js](../liltoon-bridge.js) | 第 4 シェーディングバックエンドの適応層（lilCfg / Unity マテリアルを three-liltoon に渡す） |
+| [vendor/three/](../vendor/three/) | ローカルの three.js r185.1 + addons（`effects/OutlineEffect.js` を含む） |
+| [vendor/three-liltoon/](../vendor/three-liltoon/) | three-liltoon ランタイム + コンパイル済み lilToon GLSL（2.2 MB、第 4 バックエンドはオンデマンド読み込み） |
 | [CONFIG.md](CONFIG.md) | 設定フィールドの完全リファレンス |
 | [README.en.md](README.en.md) · [README.ja.md](README.ja.md) | 本 README の英語版 / 日本語版（`CONFIG` / `DEPLOY` / `LILTOON` にも `.en` / `.ja` があります） |
 | [DEPLOY.md](DEPLOY.md) | デプロイとパッケージングの手順 |
-| [LICENSE](LICENSE) | プロジェクトライセンス（MIT） |
-| [THIRD-PARTY-NOTICES.md](THIRD-PARTY-NOTICES.md) | サードパーティ通知（three.js / lilToon / three-liltoon） |
+| [LICENSE](../LICENSE) | プロジェクトライセンス（MIT） |
+| [THIRD-PARTY-NOTICES.md](../THIRD-PARTY-NOTICES.md) | サードパーティ通知（three.js / lilToon / three-liltoon） |
 
 ## 設定（JSON）
 
@@ -73,8 +73,8 @@ three.js キャラクタービューア：**設定可能**（モデル / 口元�
 > **相対パスは設定ファイルのあるディレクトリを基準に解決されます**。したがって設定をサイトのルートディレクトリに置けば、
 > その `"./assets/sample.glb"` は常に正しく解決されます —— 別のサイトに埋め込まれた場合でもモデルを特定できます。
 >
-> すぐ使える CH0155 の設定は [assets/sample.json](assets/sample.json) にあります（基準 X = +0.25、Z = +0.30）。
-> ほかに [assets/fallback.json](assets/fallback.json) があり、「1 つコピーして 3 か所を変える」テンプレートとして使えます。
+> すぐ使える CH0155 の設定は [assets/sample.json](../assets/sample.json) にあります（基準 X = +0.25、Z = +0.30）。
+> ほかに [assets/fallback.json](../assets/fallback.json) があり、「1 つコピーして 3 か所を変える」テンプレートとして使えます。
 
 完全なフィールド（`data-*` 属性、イベント、グローバルフックを含む）は [CONFIG.md](CONFIG.md) を参照してください。
 
@@ -206,9 +206,9 @@ GLB 内の `CH0155_Weapon`（銃）/ `CH0155_Milk`（牛乳パック）は `BLEN
 
 ## ライセンス
 
-本プロジェクトは **MIT ライセンス**を採用しています（© 2026 Hazuki Kaguya）—— [LICENSE](LICENSE) を参照。
+本プロジェクトは **MIT ライセンス**を採用しています（© 2026 Hazuki Kaguya）—— [LICENSE](../LICENSE) を参照。
 
-パッケージに同梱して配布するサードパーティコンポーネントも同様に MIT です。著作権とライセンス全文は [THIRD-PARTY-NOTICES.md](THIRD-PARTY-NOTICES.md) を参照：
+パッケージに同梱して配布するサードパーティコンポーネントも同様に MIT です。著作権とライセンス全文は [THIRD-PARTY-NOTICES.md](../THIRD-PARTY-NOTICES.md) を参照：
 
 | コンポーネント | ライセンス | 使用箇所 |
 |---|---|---|

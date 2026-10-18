@@ -13,7 +13,7 @@
 | Item | Value |
 |---|---|
 | **Baseline version** | **lilToon 2.3.4** |
-| **Source path** | `liltoon-2.3.4/` (the old baseline is in `lilToon/`, kept for comparison)|
+| **Source path** | `develop_res/liltoon-2.3.4/` (the old baseline is in `develop_res/lilToon/`, kept for comparison)|
 | **Reference file** | `Shader/lts.shader` —— the opaque full version |
 | **Total property count** | **517** (1.3.x was 483)|
 | **Line-number references in the code** | **93 places**, all migrated to 2.3.4 (see §5) |
@@ -426,8 +426,8 @@ See the method in §5.
 | [`LILTOON1.x.md`](LILTOON1.x.md) | comparison of the old baseline (1.3.7) with the current one, full outline specification, per-material preset architecture |
 | [`CONFIG.md`](CONFIG.md) | all configuration keys, implementation details, each round's pitfalls and lessons |
 | `viewer.js` | 93 line-number references, all aligned to 2.3.4 |
-| `liltoon-2.3.4/` | current baseline source |
-| `lilToon/` | old baseline source (kept for comparison)|
+| `develop_res/liltoon-2.3.4/` | current baseline source |
+| `develop_res/lilToon/` | old baseline source (kept for comparison)|
 
 ---
 

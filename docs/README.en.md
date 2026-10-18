@@ -1,6 +1,6 @@
 # 3D Character Model Viewer (mascot embedded in a web page)
 
-[中文](README.md) ｜ **English** ｜ [日本語](README.ja.md)
+[中文](../README.md) ｜ **English** ｜ [日本語](README.ja.md)
 
 three.js character viewer: **configurable** (model / mouth texture / baseline JSON), **embeddable** (self-contained single-file build), **deployable** (pure static).
 
@@ -11,7 +11,7 @@ Shading backends (**available only for the toon material**):
 - **three-liltoon is a variant of "lilToon style"**: it only swaps the surface material for upstream's `LilToonMaterial`; **outlines still use our own implementation** (since 0.1.9 upstream outlines require explicitly selecting `Hidden/lilToonOutline` via `shaderVariant`; measured: fine rims on skinned meshes, solid fill on static props).
 - lilToon is a toon (NPR) shader family — there is no such thing as "applying lilToon to a PBR material".
 
-【[Deploy this tool](DEPLOY.md)】  【[Model JSON configuration](CONFIG.md)】  【[Third-party license notices](THIRD-PARTY-NOTICES.md)】
+【[Deploy this tool](DEPLOY.md)】  【[Model JSON configuration](CONFIG.md)】  【[Third-party license notices](../THIRD-PARTY-NOTICES.md)】
 
 ## Quick start
 
@@ -26,22 +26,22 @@ This directory is a complete site: **just open `index.html`**, or drop the whole
 
 | File | Purpose |
 |---|---|
-| [index.html](index.html) | Full-screen viewer (floating-window console UI) |
-| [embed-demo.html](embed-demo.html) | 3D model web-embedded mascot demo |
-| [viewer.js](viewer.js) | Viewer core (`createViewer` / `autoMount`) |
-| [assets/sample.json](assets/sample.json) | **CH0155 configuration** (model + mouth texture + baseline + render/lighting/background) |
-| [assets/sample.glb](assets/sample.glb) | Model (= CH0155, 24 animation clips) |
-| [assets/mouth/](assets/mouth/) | Mouth fix atlases (kivo: `Character_Mouth_2` / `_Black` / `_High`) |
-| [dist/3d-viewer.js](dist/3d-viewer.js) | **Self-contained single-file build** (1.94 MB, three fully inlined, for embedding; no bare imports) |
-| [dist/3d-viewer.min.js](dist/3d-viewer.min.js) | Same as above, minified (944 KB, for deployment) |
-| [liltoon-bridge.js](liltoon-bridge.js) | 4th shading backend adapter layer (feeds lilCfg / Unity materials to three-liltoon) |
-| [vendor/three/](vendor/three/) | Local three.js r185.1 + addons (including `effects/OutlineEffect.js`) |
-| [vendor/three-liltoon/](vendor/three-liltoon/) | three-liltoon runtime + compiled lilToon GLSL (2.2 MB, 4th backend loaded on demand) |
+| [index.html](../index.html) | Full-screen viewer (floating-window console UI) |
+| [embed-demo.html](../embed-demo.html) | 3D model web-embedded mascot demo |
+| [viewer.js](../viewer.js) | Viewer core (`createViewer` / `autoMount`) |
+| [assets/sample.json](../assets/sample.json) | **CH0155 configuration** (model + mouth texture + baseline + render/lighting/background) |
+| [assets/sample.glb](../assets/sample.glb) | Model (= CH0155, 24 animation clips) |
+| [assets/mouth/](../assets/mouth/) | Mouth fix atlases (kivo: `Character_Mouth_2` / `_Black` / `_High`) |
+| [dist/3d-viewer.js](../dist/3d-viewer.js) | **Self-contained single-file build** (1.94 MB, three fully inlined, for embedding; no bare imports) |
+| [dist/3d-viewer.min.js](../dist/3d-viewer.min.js) | Same as above, minified (944 KB, for deployment) |
+| [liltoon-bridge.js](../liltoon-bridge.js) | 4th shading backend adapter layer (feeds lilCfg / Unity materials to three-liltoon) |
+| [vendor/three/](../vendor/three/) | Local three.js r185.1 + addons (including `effects/OutlineEffect.js`) |
+| [vendor/three-liltoon/](../vendor/three-liltoon/) | three-liltoon runtime + compiled lilToon GLSL (2.2 MB, 4th backend loaded on demand) |
 | [CONFIG.md](CONFIG.md) | Complete reference for configuration fields |
 | [README.en.md](README.en.md) · [README.ja.md](README.ja.md) | English / Japanese editions of this README (`CONFIG` / `DEPLOY` / `LILTOON` have `.en` / `.ja` too) |
 | [DEPLOY.md](DEPLOY.md) | Deployment and packaging instructions |
-| [LICENSE](LICENSE) | Project license (MIT) |
-| [THIRD-PARTY-NOTICES.md](THIRD-PARTY-NOTICES.md) | Third-party notices (three.js / lilToon / three-liltoon) |
+| [LICENSE](../LICENSE) | Project license (MIT) |
+| [THIRD-PARTY-NOTICES.md](../THIRD-PARTY-NOTICES.md) | Third-party notices (three.js / lilToon / three-liltoon) |
 
 ## Configuration (JSON)
 
@@ -73,8 +73,8 @@ This directory is a complete site: **just open `index.html`**, or drop the whole
 > **Relative paths are resolved against the directory containing the configuration file**. So if you put the configuration
 > in the site root, its `"./assets/sample.glb"` is always correct — and the model can still be located when embedded by another site.
 >
-> A ready-made CH0155 configuration is in [assets/sample.json](assets/sample.json) (pivot X = +0.25, Z = +0.30),
-> and [assets/fallback.json](assets/fallback.json) can serve as a "copy it and change three things" template.
+> A ready-made CH0155 configuration is in [assets/sample.json](../assets/sample.json) (pivot X = +0.25, Z = +0.30),
+> and [assets/fallback.json](../assets/fallback.json) can serve as a "copy it and change three things" template.
 
 The complete fields (including `data-*` attributes, events, and global hooks) are in [CONFIG.md](CONFIG.md).
 
@@ -206,9 +206,9 @@ a very small proportion → render as opaque; a very large proportion (e.g. shie
 
 ## License
 
-This project is under the **MIT License** (© 2026 Hazuki Kaguya) — see [LICENSE](LICENSE).
+This project is under the **MIT License** (© 2026 Hazuki Kaguya) — see [LICENSE](../LICENSE).
 
-The third-party components distributed with the package are likewise MIT; the full copyright and license texts are in [THIRD-PARTY-NOTICES.md](THIRD-PARTY-NOTICES.md):
+The third-party components distributed with the package are likewise MIT; the full copyright and license texts are in [THIRD-PARTY-NOTICES.md](../THIRD-PARTY-NOTICES.md):
 
 | Component | License | Where it is used |
 |---|---|---|

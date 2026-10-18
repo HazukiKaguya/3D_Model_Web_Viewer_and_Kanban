@@ -2552,7 +2552,7 @@ function afterLoad(info) {
    * ⚠️ 生效时会把这一层的 alpha 置 1 ⇒ 颜色混合按**满强度**算
    *    ⇒ 想「用层的 alpha 控制整只角色的透明度」就用模式 1
    */
-  ['main2nd.alphaMode', '层 Alpha 模式（0不改 1替换 2乘 3加 4减）', 0, 4, 1],    // 对应 _Main2nd*（lil_common_frag.hlsl:671、见 CONFIG.md）
+  ['main2nd.alphaMode', '层 Alpha 模式（0不改 1替换 2乘 3加 4减）', 0, 4, 1],    // 对应 _Main2nd*（lil_common_frag.hlsl:671、见 docs/CONFIG.md）
     ['main2nd.use', '启用', 0, 1, 1],
   // UV 通道 —— ★ Decal（贴花）几乎总要用 1（uv1）· 所以提到最前面
   ['main2nd.uvMode', 'UV 通道（0=uv0 · 1=uv1 ★贴花用这个 · 4=视角球面）', 0, 4, 1],

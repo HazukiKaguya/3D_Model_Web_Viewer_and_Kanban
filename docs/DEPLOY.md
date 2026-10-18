@@ -92,17 +92,17 @@
       · 又把整个 `scripts/` 拷了进去 ⇒ 部署包里多了 5 个**开发工具**
         （部署目录只保留站点运行需要的文件，避免把开发工具一起拷进去）
 
-  ### `deploy-src/` 是什么
+  ### `develop_res/deploy-src/` 是什么
 
   有几个文件**只属于部署包**、仓库根目录里没有对应源：
 
-      deploy-src/.htaccess              → .htaccess
-      deploy-src/_headers               → _headers
-      deploy-src/.nojekyll              → .nojekyll            （0 字节）
-      deploy-src/nginx-3d-viewer.conf   → nginx-3d-viewer.conf
-      deploy-src/_lilpresets.json       → _lilpresets.json     （面板的 lilToon 预设数据）
+      develop_res/deploy-src/.htaccess              → .htaccess
+      develop_res/deploy-src/_headers               → _headers
+      develop_res/deploy-src/.nojekyll              → .nojekyll            （0 字节）
+      develop_res/deploy-src/nginx-3d-viewer.conf   → nginx-3d-viewer.conf
+      develop_res/deploy-src/_lilpresets.json       → _lilpresets.json     （面板的 lilToon 预设数据）
 
-  ⇒ 集中放到 `deploy-src/`、这样整个部署目录就是**完全可重现**的。
+  ⇒ 集中放到 `develop_res/deploy-src/`、这样整个部署目录就是**完全可重现**的。
 
   ### 现在一共 **61 个文件（约 15.2 MB）**
 
@@ -133,7 +133,7 @@
 | `CONFIG.md` | 配置字段完整参考（含 `data-*` 属性、事件、全局钩子） |
 | `CONFIG.en.md` · `CONFIG.ja.md` | 配置参考的英文 / 日文版 |
 | `README.md` | 项目说明 |
-| `README.en.md` · `README.ja.md` | 项目说明的英文 / 日文版 |
+| `docs/README.en.md` · `docs/README.ja.md` | 项目说明的英文 / 日文版 |
 | `DEPLOY.en.md` · `DEPLOY.ja.md` | 本文件的英文 / 日文版 |
 | `LICENSE` | 项目许可证（MIT © 2026 Hazuki Kaguya）——**分发时必须保留** |
 | `THIRD-PARTY-NOTICES.md` | 第三方声明（three.js / lilToon / three-liltoon 的 MIT 全文）——**分发时必须保留** |

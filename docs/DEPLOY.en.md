@@ -92,17 +92,17 @@ Pure static site, **no build step, no CDN dependency, no Node required**, everyt
       · and the entire `scripts/` was copied in ⇒ the deployment package gained 5 extra **development tools**
         (the deploy directory keeps only what the site needs to run — do not copy development tools in)
 
-  ### What `deploy-src/` Is
+  ### What `develop_res/deploy-src/` Is
 
   A few files **belong only to the deployment package** and have no corresponding source in the repository root:
 
-      deploy-src/.htaccess              → .htaccess
-      deploy-src/_headers               → _headers
-      deploy-src/.nojekyll              → .nojekyll            (0 bytes)
-      deploy-src/nginx-3d-viewer.conf   → nginx-3d-viewer.conf
-      deploy-src/_lilpresets.json       → _lilpresets.json     (the panel's lilToon preset data)
+      develop_res/deploy-src/.htaccess              → .htaccess
+      develop_res/deploy-src/_headers               → _headers
+      develop_res/deploy-src/.nojekyll              → .nojekyll            (0 bytes)
+      develop_res/deploy-src/nginx-3d-viewer.conf   → nginx-3d-viewer.conf
+      develop_res/deploy-src/_lilpresets.json       → _lilpresets.json     (the panel's lilToon preset data)
 
-  ⇒ They are centralized in `deploy-src/`, so that the entire deployment directory is **fully reproducible**.
+  ⇒ They are centralized in `develop_res/deploy-src/`, so that the entire deployment directory is **fully reproducible**.
 
   ### Currently **61 files (~15.2 MB)**
 
@@ -133,7 +133,7 @@ Pure static site, **no build step, no CDN dependency, no Node required**, everyt
 | `CONFIG.md` | Complete configuration field reference (including `data-*` attributes, events, global hooks) |
 | `CONFIG.en.md` · `CONFIG.ja.md` | English / Japanese editions of the configuration reference |
 | `README.md` | Project description |
-| `README.en.md` · `README.ja.md` | English / Japanese editions of the project description |
+| `docs/README.en.md` · `docs/README.ja.md` | English / Japanese editions of the project description |
 | `DEPLOY.en.md` · `DEPLOY.ja.md` | English / Japanese editions of this file |
 | `LICENSE` | Project license (MIT © 2026 Hazuki Kaguya) —— **must be retained when redistributing** |
 | `THIRD-PARTY-NOTICES.md` | Third-party notices (full MIT texts of three.js / lilToon / three-liltoon) —— **must be retained when redistributing** |

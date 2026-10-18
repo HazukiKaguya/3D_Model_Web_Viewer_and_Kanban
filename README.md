@@ -1,6 +1,6 @@
 # 3D 角色模型查看器（3D 模型网页内嵌看板娘）
 
-中文 ｜ [English](README.en.md) ｜ [日本語](README.ja.md)
+中文 ｜ [English](docs/README.en.md) ｜ [日本語](docs/README.ja.md)
 
 three.js 角色查看器：**可配置**（模型 / 嘴部贴图 / 基准 JSON）、**可嵌入**（自包含单文件版）、**可部署**（纯静态）。
 
@@ -8,10 +8,10 @@ three.js 角色查看器：**可配置**（模型 / 嘴部贴图 / 基准 JSON�
 **Cel 分档**（简易的 BA 模型特化着色器）· **lilToon 风格**（自研移植实现）· **three-liltoon**（直接使用上游对真 lilToon 源码的转译产物，按需加载）· **不注入（原生）**。
 
 - 材质模型三档：原始（PBR）/ **卡通材质（Toon）** / 无光照（Unlit）；着色后端挂在**卡通材质**上（PBR / Unlit 用的是 three 自带材质，没有注入点）。默认 **卡通材质 + Cel 分档**。
-- **three-liltoon 是「lilToon 风格」的变体**：只把表面材质换成上游的 `LilToonMaterial`；**描边仍走自研实现**（0.1.9 起上游描边需用 `shaderVariant` 显式选 `Hidden/lilToonOutline`；实测蒙皮网格能出细边，静态道具会整片填充）。
+- **three-liltoon 是「lilToon 风格」的变体**：只把表面材质换成上游的 `LilToonMaterial`；**描边仍走自研实现**（0.1.9 起上游描边需用 `shaderVariant` 显式选 `Hidden/lilToonOutline`；实测蒙皮网格能出细边 ✓，静态道具会整片填充 ✗）。
 - lilToon 是卡通（NPR）着色器家族 —— 不存在「把 lilToon 用在 PBR 材质上」这种做法。
 
-【[部署本工具](DEPLOY.md)】  【[模型 JSON 配置](CONFIG.md)】  【[第三方库许可证声明](THIRD-PARTY-NOTICES.md)】
+【[部署本工具](docs/DEPLOY.md)】  【[模型 JSON 配置](docs/CONFIG.md)】  【[第三方库许可证声明](THIRD-PARTY-NOTICES.md)】
 
 ## 快速开始
 
@@ -37,9 +37,9 @@ three.js 角色查看器：**可配置**（模型 / 嘴部贴图 / 基准 JSON�
 | [liltoon-bridge.js](liltoon-bridge.js) | 第 4 着色后端适配层（把 lilCfg / Unity 材质喂给 three-liltoon） |
 | [vendor/three/](vendor/three/) | 本地 three.js r185.1 + addons（含 `effects/OutlineEffect.js`） |
 | [vendor/three-liltoon/](vendor/three-liltoon/) | three-liltoon 运行时 + 编译好的 lilToon GLSL（2.2 MB，第 4 后端按需加载） |
-| [CONFIG.md](CONFIG.md) | 配置字段完整参考 |
-| [README.en.md](README.en.md) · [README.ja.md](README.ja.md) | 本说明的英文 / 日文版（`CONFIG` / `DEPLOY` / `LILTOON` 同样有 `.en` / `.ja`） |
-| [DEPLOY.md](DEPLOY.md) | 部署与打包说明 |
+| [CONFIG.md](docs/CONFIG.md) | 配置字段完整参考 |
+| [README.en.md](docs/README.en.md) · [README.ja.md](docs/README.ja.md) | 本说明的英文 / 日文版（`CONFIG` / `DEPLOY` / `LILTOON` 同样有 `.en` / `.ja`） |
+| [DEPLOY.md](docs/DEPLOY.md) | 部署与打包说明 |
 | [LICENSE](LICENSE) | 项目许可证（MIT） |
 | [THIRD-PARTY-NOTICES.md](THIRD-PARTY-NOTICES.md) | 第三方声明（three.js / lilToon / three-liltoon） |
 
@@ -76,7 +76,7 @@ three.js 角色查看器：**可配置**（模型 / 嘴部贴图 / 基准 JSON�
 > 现成的 CH0155 配置见 [assets/sample.json](assets/sample.json)（基准 X = +0.25，Z = +0.30），
 > 另有 [assets/fallback.json](assets/fallback.json) 可作"复制一份改三处"的模板。
 
-完整字段（含 `data-*` 属性、事件、全局钩子）见 [CONFIG.md](CONFIG.md)。
+完整字段（含 `data-*` 属性、事件、全局钩子）见 [CONFIG.md](docs/CONFIG.md)。
 
 ## 三种使用方式
 
@@ -149,7 +149,7 @@ await viewer.load();
 - **部件面板**：隐藏 / 显示可选部件与道具
 - **打光预设**：白昼 / 早晨·傍晚 / 黑夜
 - **背景**：默认**透明**（透出网页内容），另有 4 预设色 + 取色器
-- **动作**：24 段动画切换，默认只播 idle；也能直接播 Unity 的 `.anim`（表情 blendShape / 换装显隐 / 通用变换曲线，见 [CONFIG.md](CONFIG.md)）；换装动作（`m_IsActive` 那类）在工具栏是**按钮**：点一下换上、再点一下脱掉（按换装前的状态还原，可反复切换）；自定义模型可**一次多选** `.anim`、lilToon `.mat` / `.asset`（按材质名各自对应）与 Unity `.prefab`（据此复现「哪些部件默认隐藏」—— 这个状态只在 prefab 里、FBX 与 .anim 都不存）；**整个 Unity 工程文件夹也可以直接拖进来**，会自动认出模型 / prefab / `.anim` / `.mat` / 贴图，以及 Humanoid 肌肉换算表（`humanoid-muscles.json`）并加载
+- **动作**：24 段动画切换，默认只播 idle；也能直接播 Unity 的 `.anim`（表情 blendShape / 换装显隐 / 通用变换曲线，见 [CONFIG.md](docs/CONFIG.md)）；换装动作（`m_IsActive` 那类）在工具栏是**按钮**：点一下换上、再点一下脱掉（按换装前的状态还原，可反复切换）；自定义模型可**一次多选** `.anim`、lilToon `.mat` / `.asset`（按材质名各自对应）与 Unity `.prefab`（据此复现「哪些部件默认隐藏」—— 这个状态只在 prefab 里、FBX 与 .anim 都不存）；**整个 Unity 工程文件夹也可以直接拖进来**，会自动认出模型 / prefab / `.anim` / `.mat` / 贴图，以及 Humanoid 肌肉换算表（`humanoid-muscles.json`）并加载
 - **视角**：轴视图（前 / 后 / 左 / 右）；**720° 无极旋转**；旋转基准位置可配置 X/Z（滑杆 + 数字输入）
 - **浮窗布局**：位置尺寸自动记住，控制台 `ba3dResetLayout()` 恢复默认
 - **移动端**：支持触控
@@ -159,7 +159,7 @@ await viewer.load();
 ## 部署
 
 纯静态站点，**无构建步骤、无 CDN 依赖**，全部使用相对路径（根路径/子路径部署都不用改配置）。
-`dist/` 已预打包好，直接上传即可；完整清单见 [DEPLOY.md](DEPLOY.md)。
+`dist/` 已预打包好，直接上传即可；完整清单见 [DEPLOY.md](docs/DEPLOY.md)。
 
 `.glb` 的 MIME 需要是 `model/gltf-binary`（`_headers` / `.htaccess` / `.nojekyll` 已随包提供，见下表）：
 

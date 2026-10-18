@@ -92,17 +92,17 @@
       · 又把整个 `scripts/` 拷了进去 ⇒ 部署包里多了 5 个**开发工具**
         （デプロイディレクトリにはサイトの実行に必要なものだけを置き、開発ツールを一緒にコピーしないこと）
 
-  ### `deploy-src/` とは
+  ### `develop_res/deploy-src/` とは
 
   いくつかのファイルは**デプロイパッケージにのみ属し**、リポジトリのルートディレクトリに対応するソースがありません：
 
-      deploy-src/.htaccess              → .htaccess
-      deploy-src/_headers               → _headers
-      deploy-src/.nojekyll              → .nojekyll            （0 字节）
-      deploy-src/nginx-3d-viewer.conf   → nginx-3d-viewer.conf
-      deploy-src/_lilpresets.json       → _lilpresets.json     （面板的 lilToon 预设数据）
+      develop_res/deploy-src/.htaccess              → .htaccess
+      develop_res/deploy-src/_headers               → _headers
+      develop_res/deploy-src/.nojekyll              → .nojekyll            （0 字节）
+      develop_res/deploy-src/nginx-3d-viewer.conf   → nginx-3d-viewer.conf
+      develop_res/deploy-src/_lilpresets.json       → _lilpresets.json     （面板的 lilToon 预设数据）
 
-  ⇒ `deploy-src/` に一括して置くことで、デプロイディレクトリ全体が**完全に再現可能**になります。
+  ⇒ `develop_res/deploy-src/` に一括して置くことで、デプロイディレクトリ全体が**完全に再現可能**になります。
 
   ### 現在は **61 ファイル（約 15.2 MB）**
 
@@ -133,7 +133,7 @@
 | `CONFIG.md` | 設定フィールドの完全リファレンス（`data-*` 属性、イベント、グローバルフックを含む） |
 | `CONFIG.en.md` · `CONFIG.ja.md` | 設定リファレンスの英語版 / 日本語版 |
 | `README.md` | プロジェクトの説明 |
-| `README.en.md` · `README.ja.md` | プロジェクト説明の英語版 / 日本語版 |
+| `docs/README.en.md` · `docs/README.ja.md` | プロジェクト説明の英語版 / 日本語版 |
 | `DEPLOY.en.md` · `DEPLOY.ja.md` | 本ファイルの英語版 / 日本語版 |
 | `LICENSE` | プロジェクトのライセンス（MIT © 2026 Hazuki Kaguya）——**再配布時は必ず保持** |
 | `THIRD-PARTY-NOTICES.md` | サードパーティ通知（three.js / lilToon / three-liltoon の MIT 全文）——**再配布時は必ず保持** |
