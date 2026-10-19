@@ -1,0 +1,23 @@
+{
+  "lighting": {
+    "day": "白昼",
+    "golden": "早晨 / 傍晚",
+    "night": "黑夜"
+  },
+  "render": {
+    "pbr": "原始（PBR）",
+    "cel": "卡通（Cel）",
+    "unlit": "无光照（Unlit）"
+  },
+  "renderToon": {
+    "pbr": "原始（PBR）",
+    "toon": "卡通材质（Toon）",
+    "unlit": "无光照（Unlit）"
+  },
+  "shader": {
+    "none": "不注入（原生）",
+    "cel": "Cel 分档",
+    "lilToon": "lilToon 风格",
+    "lilSrc": "lilToon 源码"
+  }
+}

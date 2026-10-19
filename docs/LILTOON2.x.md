@@ -1,6 +1,6 @@
 # lilToon 2.3.4 → Web (three.js) 移植基线
 
-中文 ｜ [English](LILTOON2.x.en.md) ｜ [日本語](LILTOON2.x.ja.md)
+**简体中文** ｜ [繁體中文](LILTOON2.x.zh-TW.md) ｜ [English](LILTOON2.x.en.md) ｜ [日本語](LILTOON2.x.ja.md) ｜ [한국어](LILTOON2.x.ko.md)
 
 > **本文档是当前生效的基线**。
 > 旧基线（**1.3.7**）的对照表与核对记录见 [`LILTOON1.x.md`](LILTOON1.x.md)。

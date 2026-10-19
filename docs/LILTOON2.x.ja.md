@@ -1,10 +1,10 @@
 # lilToon 2.3.4 → Web (three.js) 移植ベースライン
 
-[中文](LILTOON2.x.md) ｜ [English](LILTOON2.x.en.md) ｜ **日本語**
+[简体中文](LILTOON2.x.md) ｜ [繁體中文](LILTOON2.x.zh-TW.md) ｜ [English](LILTOON2.x.en.md) ｜ **日本語** ｜ [한국어](LILTOON2.x.ko.md)
 
 > **本ドキュメントは現在有効なベースラインです**。
-> 旧ベースライン（**1.3.7**）の対照表と照合記録は [`LILTOON1.x.md`](LILTOON1.x.md) を参照してください。
-> 実装の詳細とすべての設定キーは [`CONFIG.md`](CONFIG.md) を参照してください。
+> 旧ベースライン（**1.3.7**）の対照表と照合記録は [`LILTOON1.x.ja.md`](LILTOON1.x.ja.md) を参照してください。
+> 実装の詳細とすべての設定キーは [`CONFIG.ja.md`](CONFIG.ja.md) を参照してください。
 
 ---
 
@@ -146,7 +146,7 @@ VRC Light Volumes / Udon Light Volume
 | 行 | マクロ / 関数 | 私たちの対応物 |
 |---|---|---|
 | 395 | `OVERRIDE_OUTLINE_COLOR` | アウトラインの受光 |
-| 488 / 506 | `OVERRIDE_DISSOLVE` | Dissolve |
+| 488 / 506 | `OVERRIDE_DISSOLVE` | ディゾルブ |
 | 527 / 534 | `OVERRIDE_DITHER` | ★ 2.3.4 で新規追加 |
 | 566 / 573 | `OVERRIDE_NORMAL_1ST` | 1st 法線 |
 | 585 / 598 | `OVERRIDE_NORMAL_2ND` | 2nd 法線（Whiteout）|
@@ -166,14 +166,14 @@ VRC Light Volumes / Udon Light Volume
 | **1955** | `OVERRIDE_EMISSION_2ND` | 自発光 2nd |
 | **2057** | `OVERRIDE_DISTANCE_FADE` | 距離フェード |
 
-### 4.3 マクロと光照（`lil_common_macro.hlsl`）
+### 4.3 マクロとライティング（`lil_common_macro.hlsl`）
 
 | 行 | 内容 | 説明 |
 |---|---|---|
 | **621** | `lilHeadDirection` | 頭の向き（MatCap の視差に使う、非 VR では無効）|
 | **696** | `lilBlendVRParallax` | ⚠️ 非 VR では**そのまま b を返す**、引数は無効 |
-| **2079** | `LIL_CORRECT_LIGHTCOLOR_VS` | 光照をクランプするマクロ |
-| **2081 / 2086** | `lightColor = clamp(lightColor, _LightMinLimit, _LightMaxLimit)` | ★ 光照クランプ本体 |
+| **2079** | `LIL_CORRECT_LIGHTCOLOR_VS` | ライティングをクランプするマクロ |
+| **2081 / 2086** | `lightColor = clamp(lightColor, _LightMinLimit, _LightMaxLimit)` | ★ ライティングクランプ本体 |
 
 ### 4.4 装飾レイヤーの**順序**（`lil_pass_forward_normal.hlsl`）
 
@@ -260,10 +260,10 @@ GLSL  mat3(a,b,c) * v          は**列の組み合わせ**  ⇒ 両者は異な
 
 ⇒ 移植時は `dot` を直接書くのが最も取り違えにくい、（`lilCalcMatCapUV` がその一例）
 
-### 7.5 ★★ three の toon 光照は `material.diffuseColor` を読む（ローカルの `diffuseColor` ではない）
+### 7.5 ★★ three の toon ライティングは `material.diffuseColor` を読む（ローカルの `diffuseColor` ではない）
 
   ⚠️⚠️ **受光の結果**を変えたいなら、**`material.diffuseColor`**（あの struct のフィールド）を変えなければならない。
-     ローカルの `diffuseColor` を変えても**後続の段階**（alpha / emissive / fog）にしか影響せず、光照には影響しない。
+     ローカルの `diffuseColor` を変えても**後続の段階**（alpha / emissive / fog）にしか影響せず、ライティングには影響しない。
 
       lights_toon_pars_fragment：
           reflectedLight.directDiffuse   += irradiance * BRDF_Lambert( material.diffuseColor );
@@ -332,7 +332,7 @@ three は `onBeforeCompile` の**後**に `resolveIncludes` を行う。
 ### 7.7 プリセットは**マテリアル単位**
 
 lilToon のプリセットはもともとマテリアルごとに 1 つで、私たちのアーキテクチャは「グローバル既定 + マテリアル単位の疎な上書き」。
-詳しくは [`CONFIG.md`](CONFIG.md) と `LILTOON1.x.md` の第 9 節を参照。
+詳しくは [`CONFIG.ja.md`](CONFIG.ja.md) と `LILTOON1.x.md` の第 9 節を参照。
 
 ---
 
@@ -375,7 +375,7 @@ lilToon のプリセットはもともとマテリアルごとに 1 つで、私
 | レイヤー溶解の「UV」モード | **メッシュ UV0**（= アトラス）を使う、キャラクター上では断片が切り出され、**Unity の挙動と一致する** |
 | **Decal の実用性** | ⚠️ 数式 / 注入 / エッジ AA / ミラー / 片側 / アトラスアニメーションは**すべて lilToon どおりに忠実に実装**したが、**このモデルには Decal が使う UV レイアウトが欠けている** ⇒ 実際には縞模様しか得られない、詳細は下記 || `_ReflectionCubeTex` | 未対応、Unity は Reflection Probe に頼っており、ビューアにはない ⇒ 鏡面ハイライトの経路だけを実装 |
 | 非トゥーン経路の完全な GGX | 未対応、`_SpecularToon` の既定は 1 ⇒ プリセットはすべてトゥーン経路を通る ⇒ 十分近い近似を与えている |
-| 光照クランプと lilToon の差異 | lilToon の間接光も同じ `lightColor` を掛ける ⇒ 影の中の環境光が押し下げられる、一方 three の環境光は**独立に加算される** ⇒ 下限をとても高くすると lilToon よりやや明るくなる、これは光照構造の差異であり、無理に模擬しない |
+| ライティングクランプと lilToon の差異 | lilToon の間接光も同じ `lightColor` を掛ける ⇒ 影の中の環境光が押し下げられる、一方 three の環境光は**独立に加算される** ⇒ 下限をとても高くすると lilToon よりやや明るくなる、これはライティング構造の差異であり、無理に模擬しない |
 | cel モード | cel と lilToon は**2 本の直交する軸**であり、毎回 lilToon 側の変更が cel を汚染していないことを検証する |
 
 ### ★ B5 Decal の実用性について（誤解を避けるため個別に説明）
@@ -404,7 +404,7 @@ lilToon のプリセットはもともとマテリアルごとに 1 つで、私
       ST スケール = (0.1, 0.1)  ⇒ テクスチャの 1/10 だけを取り出す ⇒ 10 倍に拡大してモデルに敷く
       ST オフセット = (0.3, 0.5)  ⇒ どの部分を取るか
 
-  ⇒ 「テクスチャの一角を取って敷き詰める」ことはできるが、**自由な配置ではない**。
+  ⇒ 「テクスチャの一角を取って敷き詰める」ことはできるが、**自由な設定ではない**。
   ⇒ 「★Decal デバッグ = 2」で decal UV をそのまま色として出力でき、UV がどこに落ちるかの確認に使う。
 
   ### 本当に「顔に小さなテクスチャを描く」ために必要なもの
@@ -423,8 +423,8 @@ lilToon のプリセットはもともとマテリアルごとに 1 つで、私
 
 | ファイル | 内容 |
 |---|---|
-| [`LILTOON1.x.md`](LILTOON1.x.md) | 旧ベースライン（1.3.7）と現行ベースラインの対照、アウトラインの完全仕様、プリセットのマテリアル単位アーキテクチャ |
-| [`CONFIG.md`](CONFIG.md) | すべての設定キー、実装の詳細、各回の落とし穴と教訓 |
+| [`LILTOON1.x.ja.md`](LILTOON1.x.ja.md) | 旧ベースライン（1.3.7）と現行ベースラインの対照、アウトラインの完全仕様、プリセットのマテリアル単位アーキテクチャ |
+| [`CONFIG.ja.md`](CONFIG.ja.md) | すべての設定キー、実装の詳細、各回の落とし穴と教訓 |
 | `viewer.js` | 93 箇所の行番号参照、すべて 2.3.4 に整合済み |
 | `develop_res/liltoon-2.3.4/` | 現在のベースラインのソース |
 | `develop_res/lilToon/` | 旧ベースラインのソース（対照用に保持）|
@@ -434,7 +434,7 @@ lilToon のプリセットはもともとマテリアルごとに 1 つで、私
 ## 九、2026-10-10 今回：スタイル後端の明るさセマンティクス整合（随時更新）
 
 「lilToon スタイル」後端と対照後端（lilToon ソースの移植）には、以前から肉眼で分かる明るさの偏差が 2 箇所あった。
-今回、スタイル側の**光照合成 / 出力処理 / ベースカラーの取得元**を、対照側の実際のセマンティクスに合わせた。
+今回、スタイル側の**ライティング合成 / 出力処理 / ベースカラーの取得元**を、対照側の実際のセマンティクスに合わせた。
 
 ### 9.1 変更点
 

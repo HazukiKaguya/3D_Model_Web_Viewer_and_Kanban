@@ -1,0 +1,511 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>3D model web-embed mascot demo — draggable panel / right-drag rotate / action hooks</title>
+<link rel="icon" href="./favicon.ico" type="image/x-icon">
+<style>
+  /* ---------- 米白主题 ---------- */
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    font: 15px/1.7 system-ui, -apple-system, "PingFang SC", sans-serif;
+    color: #2c2822; min-height: 100vh;
+    /* 米白底 + 两团很淡的暖 / 冷光晕，给页面一点层次 */
+    background:
+      radial-gradient(90% 60% at 80% 0%, rgba(214,172,110,.26), transparent 62%),
+      radial-gradient(70% 60% at 5% 100%, rgba(150,182,206,.22), transparent 62%),
+      #f7f4ec;
+  }
+  .wrap { max-width: 1180px; margin: 0 auto; padding: 40px 24px 90px; }
+  h1 { font-size: 24px; font-weight: 600; margin-bottom: 8px; color: #241f19; }
+  .sub { color: #6b6357; margin-bottom: 28px; }
+  h2 { font-size: 16px; font-weight: 600; margin: 34px 0 12px; color: #443d33; }
+  p { color: #5d564a; margin-bottom: 12px; }
+  pre {
+    background: #efeade; border: 1px solid rgba(44,40,34,.10);
+    border-radius: 10px; padding: 16px 18px; overflow-x: auto;
+    font: 12.5px/1.65 ui-monospace, SFMono-Regular, Consolas, monospace; color: #4a4438;
+  }
+  code { font-family: ui-monospace, Consolas, monospace; color: #9a5b18; }
+  table { width: 100%; border-collapse: collapse; margin: 12px 0 4px; font-size: 14px; }
+  th, td { text-align: left; padding: 9px 12px; border-bottom: 1px solid rgba(44,40,34,.10); }
+  th { color: #8a8172; font-weight: 600; font-size: 13px; }
+  td code { color: #a8620f; }
+
+  /* 页面右下角的操作日志 */
+  #log {
+    position: fixed; right: 16px; bottom: 16px; z-index: 80;
+    width: 360px; max-height: 220px; overflow: auto;
+    background: rgba(255,253,247,.94); border: 1px solid rgba(44,40,34,.14);
+    border-radius: 10px; padding: 10px 12px;
+    font: 12px/1.6 ui-monospace, Consolas, monospace; color: #8a5a1f;
+    box-shadow: 0 8px 26px rgba(60,50,35,.10);
+    backdrop-filter: blur(8px);
+  }
+  #log b { color: #2f7d4f; font-weight: 400; }
+  #log .d { color: #9a9184; }
+
+  /* 页面左下角：面板尺寸百分比缩放控件 */
+  #scaler {
+    position: fixed; left: 16px; bottom: 16px; z-index: 80;
+    background: rgba(255,253,247,.94); border: 1px solid rgba(44,40,34,.14);
+    border-radius: 10px; padding: 10px 12px;
+    font: 12px/1.7 ui-monospace, Consolas, monospace; color: #8a5a1f;
+    box-shadow: 0 8px 26px rgba(60,50,35,.10);
+    backdrop-filter: blur(8px);
+    display: flex; flex-direction: column; gap: 6px; width: 300px;
+  }
+  #scaler .row { display: flex; align-items: center; gap: 8px; }
+  #scaler label { color: #8a8172; flex: none; }
+  #scaler input[type="range"] { flex: 1; accent-color: #c07a2a; min-width: 0; }
+  #scaler input[type="number"] {
+    width: 62px; height: 24px; padding: 0 6px; text-align: right;
+    border-radius: 6px; border: 1px solid rgba(44,40,34,.20);
+    background: #fffdf7; color: #3a342b;
+    font: 12px/1 ui-monospace, Consolas, monospace; outline: none;
+  }
+  #scaler input[type="number"]:focus { border-color: rgba(192,122,42,.65); }
+  #scaler .unit { color: #8a8172; flex: none; }
+  #scaler .info { color: #2f7d4f; }
+  #scaler .hint { color: #9a9184; }
+  #scaler button {
+    height: 24px; padding: 0 10px; border-radius: 6px; cursor: pointer;
+    border: 1px solid rgba(44,40,34,.20); background: #fffdf7;
+    color: #3a342b; font: 12px/1 system-ui, sans-serif;
+  }
+  #scaler button:hover { border-color: rgba(192,122,42,.65); color: #8a5a1f; }
+
+
+  /* ---------- 可拖动的浮动面板 ----------
+     平时完全不可见（无边框、无阴影、无背景），角色看起来就像直接站在网页上；
+     鼠标移入范围时才显出边框和投影，提示"这里是一块可拖动的浮层"。 */
+  .floater {
+    position: fixed; left: 56px; top: 120px;
+    width: 420px; height: 430px;   /* 刚好装下角色：除 _Cam 机位动画外全部 23 段（含 Vital_Death）实测需 ≥384×386px */
+    border-radius: 16px; overflow: hidden;
+    /* 用「透明边框」而不是 border:none —— 尺寸不变，悬停时不会导致布局跳动 */
+    border: 1px solid transparent;
+    /* ⚠️ 这里不要给不透明背景：查看器画布本身是透明的
+       （配置 background.transparent = true），容器一有实色背景，
+       透明就看不出来了 —— 背后的网页内容会被整块盖住，看着像"背景没生效"。 */
+    background: transparent;
+    box-shadow: none;
+    transition: border-color .18s ease, box-shadow .18s ease;
+    z-index: 60;
+    /* 触摸设备上避免页面跟着滚动 */
+    touch-action: none;
+  }
+  .floater:hover {
+    /* 米白底上要用深色描边才看得见（原来在深色底上用的是白色） */
+    border-color: rgba(44,40,34,.22);
+    box-shadow: 0 18px 44px rgba(60,50,35,.18);
+  }
+
+  /* 动画选单：放在左下角控件区，只通过全局 play3dmodelaction([...]) 驱动 */
+  #animSel {
+    flex: 1; min-width: 0; height: 24px;
+    padding: 0 22px 0 8px;
+    border-radius: 7px; border: 1px solid rgba(44,40,34,.20);
+    background: #fffdf7 url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='10' height='6'><path d='M0 0l5 6 5-6z' fill='%238a8172'/></svg>") no-repeat right 8px center;
+    color: #3a342b; font: 12px/1 system-ui, sans-serif;
+    appearance: none; -webkit-appearance: none; cursor: pointer;
+    outline: none;
+  }
+  #animSel:hover { border-color: rgba(192,122,42,.65); }
+  #animSel option { background: #fffdf7; color: #3a342b; }
+
+  @media (max-width: 900px) {
+    /* 注意：这里刻意不用 transform 居中 —— 拖动会把内联 transform 覆盖掉，
+       用 margin 居中才能避免「首次拖动跳位」 */
+    .floater {
+      /* 注意 max() 不是 min()：margin 要等于「盒宽的一半」。
+         92vw 更窄时盒宽 = 92vw → -46vw；否则盒宽 = 420px → -210px */
+      left: 50%; margin-left: max(-46vw, -210px); top: 76px;
+      width: min(92vw, 420px); height: 430px;
+    }
+    #log, #scaler { display: none; }
+  }
+
+/* ===== 语言切换条（与 demo 页面同色系 · 语言分文件 ⇒ 链接到对应的 .html 文件 ✓）===== */
+.ba3d-lang-switch{position:fixed;left:16px;top:16px;z-index:9998;display:flex;align-items:center;flex-wrap:nowrap;white-space:nowrap;gap:8px;max-width:calc(100vw - 32px);overflow:hidden;font:12.5px/1.6 system-ui,sans-serif;background:rgba(255,253,247,.94);color:#3a342b;border:1px solid rgba(44,40,34,.14);border-radius:10px;padding:6px 12px;box-shadow:0 8px 26px rgba(60,50,35,.10);backdrop-filter:blur(8px)}
+.ba3d-lang-switch .bls-label{color:#8a8172;letter-spacing:.02em}
+.ba3d-lang-switch .bls-sep{color:rgba(44,40,34,.22)}
+.ba3d-lang-switch .bls-link{color:#a8620f;text-decoration:none;border-bottom:1px solid rgba(168,98,15,.35);padding-bottom:1px}
+.ba3d-lang-switch .bls-link:hover{color:#8a5a1f;border-bottom-color:rgba(138,90,31,.7)}
+.ba3d-lang-switch .bls-cur{font-weight:600;color:#2f7d4f}
+@media (max-width:900px){.ba3d-lang-switch{left:12px;top:10px;gap:6px;padding:5px 10px;font-size:12px}}
+@media (max-width:560px){.ba3d-lang-switch{font-size:11.5px;gap:5px;padding:4px 8px}}
+</style>
+</head>
+<body>
+<div id="ba3dLangSwitch" class="ba3d-lang-switch" data-ba3d-noi18n="1" aria-label="Language"><span class="bls-label">Language</span><span class="bls-sep">|</span><a class="bls-link" href="embed-demo.html">简体中文</a><span class="bls-sep">|</span><a class="bls-link" href="embed-demo.zh-TW.html">繁體中文</a><span class="bls-sep">|</span><span class="bls-cur">English</span><span class="bls-sep">|</span><a class="bls-link" href="embed-demo.ja.html">日本語</a><span class="bls-sep">|</span><a class="bls-link" href="embed-demo.ko.html">한국어</a></div>
+<div class="wrap">
+
+  <h1>3D model web-embed mascot demo</h1>
+  <p class="sub">
+    The character on the left is the embedded viewer — the floating layer itself is<b>completely invisible at rest</b>(only the border and shadow appear when the pointer enters), so it looks as if the character is standing right on the page.<b>Drag the character itself to move the whole panel</b>，
+    <b>Drag with the right button to rotate the character</b>. While the left button is held the page calls <code>play3dmodelaction</code> 
+    <code>Formation_Pickup</code> and restores it on release.
+  </p>
+
+  <h2>1. One container + two lines of script</h2>
+  <pre>&lt;!-- data-ba3d-drag enables “left-drag the character to move the container” --&gt;
+&lt;div data-ba3d data-ba3d-drag data-ba3d-config="./assets/sample.json"
+     style="width:420px;height:430px"&gt;&lt;/div&gt;
+
+&lt;script type="module"&gt;
+  import { autoMount } from './dist/3d-viewer.min.js';  // self-contained single-file build, no importmap needed
+  autoMount();
+&lt;/script&gt;</pre>
+
+  <p>
+    Some characters have downward-spreading clips such as “fall down / death”, so the embed default framing offset is <b>42</b> so the character does not leave the scene when the card is shorter or the motion is larger; in that case write <code>data-ba3d-framing-offset</code>  — larger values move the view up and leave more space below.
+  </p>
+  <pre>&lt;!-- default 42 (no attribute needed) --&gt;
+&lt;div data-ba3d data-ba3d-drag data-ba3d-config="./assets/sample.json"
+     style="width:420px;height:430px"&gt;&lt;/div&gt;
+
+&lt;!-- to move it further up: write the value explicitly (unit: <b>container CSS pixels</b>) --&gt;
+&lt;div data-ba3d data-ba3d-drag data-ba3d-config="./assets/sample.json"
+     data-ba3d-framing-offset="70"
+     style="width:420px;height:430px"&gt;&lt;/div&gt;
+
+&lt;!-- no downward offset at all --&gt;
+&lt;div data-ba3d data-ba3d-drag data-ba3d-config="./assets/sample.json"
+     data-ba3d-framing-offset="0"
+     style="width:420px;height:430px"&gt;&lt;/div&gt;</pre>
+  <p class="sub">
+    ⚠️ Note: the same value behaves differently in<b>containers of different heights</b>(it is converted to world units using the container height), so retry after changing the size.
+  </p>
+
+  <h2>2. Container data-* attributes</h2>
+  <table>
+    <tr><th>Attribute</th><th>Description</th></tr>
+    <tr><td><code>data-ba3d</code></td><td>Marks this container as a viewer mount point</td></tr>
+    <tr><td><code>data-ba3d-config</code></td><td>Config JSON (model / mouth texture / baseline / render / lighting / background)</td></tr>
+    <tr><td><code>data-ba3d-model</code></td><td>Model file URL (<code>.glb</code>）</td></tr>
+    <tr><td><code>data-ba3d-mouth</code></td><td>Mouth-fix texture URL (<code>.png</code>）</td></tr>
+    <tr><td><code>data-ba3d-framing-offset</code></td><td>Vertical framing offset (CSS px · positive = framing down ⇒ content up). Embed default <b>42</b> — increase it when the character has downward clips such as fall/death to leave more space below.<br>⚠️ Converted by container height; retry after resizing. See section 1 for examples.</td></tr>
+<tr><td><code>data-ba3d-grid</code></td><td>Show ground grid (<b>off by default</b>  · usually unnecessary for an embedded mascot)</td></tr>
+<tr><td><code>data-ba3d-axes</code></td><td>Show origin XYZ axes (off by default)</td></tr>
+<tr><td><code>data-ba3d-gizmo</code></td><td>Show view gizmo (off by default)</td></tr>
+<tr><td><code>data-ba3d-light-helper</code></td><td>Show key-light direction helper (off by default)</td></tr>
+<tr><td><code>data-ba3d-drag</code></td><td>Enable “left-drag on the model to move the container”</td></tr>
+    <tr><td><code>data-ba3d-auto-rotate</code></td><td><code>true</code> Auto-rotate</td></tr>
+  </table>
+
+  <h2>3. Panel size: changing it by percentage scales everything proportionally</h2>
+  <p>Framing-related config fields:</p>
+  <table>
+    <tr><th>Field</th><th>Description</th></tr>
+    <tr><td><code>renderer.framing</code></td>
+        <td><code>"tight"</code> = use<b>the real skinned content</b>for centring (centring/grounding by the whole box is wrong and makes the character off-centre and floating)</td></tr>
+    <tr><td><code>renderer.framingReferenceHeight</code></td>
+        <td><b>reference panel height</b>. Camera parameters are computed once from it as<b>fixed world units</b>  — so scaling the panel by percentage scales the whole view proportionally (character size and relative position change together). This example uses 430 (panel height)</td></tr>
+    <tr><td><code>renderer.framingOffsetY</code></td>
+        <td>Vertical framing offset in CSS px (relative to the reference height); positive = framing down / content up. Falling clips push the content to the bottom, so 57px down balances the margins</td></tr>
+  </table>
+  <p>So just change the container size proportionally — no other parameter needs touching:</p>
+  <pre>&lt;!-- original (reference) size --&gt;
+&lt;div data-ba3d data-ba3d-drag data-ba3d-config="./assets/sample.json"
+     style="width:420px;height:430px"&gt;&lt;/div&gt;
+
+&lt;!-- scale 1.5× --&gt;
+&lt;div ... style="width:630px;height:645px"&gt;&lt;/div&gt;
+
+&lt;!-- scale down to 60% --&gt;
+&lt;div ... style="width:252px;height:258px"&gt;&lt;/div&gt;
+
+&lt;!-- or use percentages / responsive units --&gt;
+&lt;div ... style="width:50vh;height:51vh"&gt;&lt;/div&gt;</pre>
+  <p>If the model looks too small or too large,<strong>do not edit the config — just scroll the wheel to zoom</strong> and you are done.</p>
+
+  <h2>4. Interaction conventions</h2>
+  <table>
+    <tr><th>Action</th><th>Behaviour</th></tr>
+    <tr><td>Left button on<b>the model</b>drag</td><td>moves the whole container (requires <code>data-ba3d-drag</code>）</td></tr>
+    <tr><td>Right button on<b>the model</b>drag</td><td>rotates the character (the left button no longer rotates)</td></tr>
+    <tr><td>Wheel</td><td>zoom</td></tr>
+  </table>
+  <h3>Hold to count as “press”: 0.2s threshold</h3>
+  <p>After pressing the left button on the model<b>it does not fire immediately</b> — it waits first, and once held longer than <code>pressHoldMs</code> (default <b>200ms</b> it counts as a press and then dispatches <code>ba3d:press</code>  and starts dragging the container; releasing early counts as a click and dispatches <code>ba3d:click</code> without dragging.</p>
+  <p>This way<b>clicking once to trigger an action but dragging the panel away instead</b>can no longer happen.</p>
+  <pre>panel.addEventListener('ba3d:press', (e) =&gt; {
+  // e.detail = { button, heldMs, thresholdMs, hit }   held long enough → trigger the action
+});
+panel.addEventListener('ba3d:click', (e) =&gt; {
+  // e.detail = { button, heldMs, thresholdMs, hit }   short press → counts as a click
+});</pre>
+  <p>All press/release events are dispatched on the container as<strong>bubbling CustomEvents</strong>, so the page can listen directly:</p>
+  <pre>panel.addEventListener('ba3d:pointerdown', (e) =&gt; {
+  // e.detail = { button, hit }                        hit = whether the press was on the model (dispatched immediately, before the threshold)
+});
+panel.addEventListener('ba3d:pointerup', (e) =&gt; {
+  // e.detail = { button, hit, pressedOnModel, pressed }
+  //   pressed = whether the hold threshold was crossed this time (true = pressed / false = just a click)
+});</pre>
+
+  <h2>5. Action hooks: <code>play3dmodelaction([动作数组])</code></h2>
+  <pre>play3dmodelaction(['Formation_Pickup']);   // play the first clip that matches
+play3dmodelaction(['A', 'B']);             // search in order, play the first one that exists
+play3dmodelaction([3]);                    // an index works too
+play3dmodelaction('Cafe_Idle');            // a single string works too
+play3dmodelaction();                       // no argument → back to the default clip (random idle)</pre>
+  <p>Matching: exact name → case-insensitive exact → “name contains” (case-insensitive).
+     So <code>'Formation_Pickup'</code> matches <code>xxx_Formation_Pickup</code>。</p>
+
+  <h3>Action menu in the bottom-left control area</h3>
+  <p>The dropdown at the top of the bottom-left control area is plain page code: it asks the viewer once for the clip list,<b>and switching clips only goes through the global hook</b>,
+     never touching the model internals:</p>
+  <pre>const sel = document.getElementById('animSel');
+let current = null;
+
+// 1) fill the menu with the clip list
+for (const a of viewer.getAnimations()) {
+  const o = document.createElement('option');
+  o.value = a.name;
+  o.textContent = a.name.replace(/^[^_]*_/, '');
+  sel.appendChild(o);
+}
+// 2) listen to the viewer’s ba3d:action event to sync the selection (without reading viewer internals)
+panel.addEventListener('ba3d:action', (e) =&gt; { sel.value = current = e.detail.name; });
+
+// 3) switching = call the global hook (returns the clip name actually played)
+sel.addEventListener('change', () =&gt; {
+  const played = play3dmodelaction([sel.value]);
+  if (played) current = played;
+});</pre>
+  <p>Left-button press/release uses the same <code>current</code>, so “press triggers Pickup → release restores” restores
+     exactly the clip you picked in the menu.</p>
+
+  <p>Test code on this page (what runs in the bottom-left log):</p>
+  <pre>const panel = document.getElementById('floatPanel');
+let prevAction = null;
+
+// only ≥200ms counts as a “press”
+panel.addEventListener('ba3d:press', (e) =&gt; {
+  if (e.detail.button !== 0) return;
+  prevAction = current;                                 // remember the menu selection
+  play3dmodelaction(['Formation_Pickup']);              // press: trigger the action
+});
+
+// a short press counts as a click and does not trigger press
+panel.addEventListener('ba3d:click', (e) =&gt; {
+  console.log('点击，按住', e.detail.heldMs, 'ms / 阈值', e.detail.thresholdMs, 'ms');
+});
+
+panel.addEventListener('ba3d:pointerup', (e) =&gt; {
+  if (e.detail.button !== 0 || !e.detail.pressed) return;   // restore only if it was really pressed
+  play3dmodelaction(prevAction ? [prevAction] : undefined); // no argument = back to the default clip
+});</pre>
+
+  <h2>6. Default clip</h2>
+  <p>When the config has no <code>animation.name</code> , the viewer<b>picks one at random from clips whose name contains <code>idle</code> </b>as the initial clip
+     (this model has <code>Normal_Idle</code> / <code>Cafe_Idle</code> / <code>Formation_Idle</code> clips).
+     Reload a few times and the initial clip changes.</p>
+
+  <h2>7. Creating it from JS is equivalent</h2>
+  <pre>import { createViewer } from './dist/3d-viewer.min.js';
+
+const viewer = createViewer(document.getElementById('floatPanel'), {
+  modelUrl:       './assets/sample.glb',
+  mouthAtlasUrl:  './assets/mouth/Character_Mouth_High.png',
+  configUrl:      './assets/sample.json',   // you can also pass an object: config: {...}
+  dragContainer:  true,              // left-drag on the model to move the container
+  backgroundTransparent: true,
+});
+await viewer.load();
+viewer.playAction(['Formation_Pickup']);</pre>
+
+</div>
+
+<!-- ======== 浮层背后的彩色装饰：验证查看器背景真的是透明的 ======== -->
+<div id="showcase"></div>
+
+<!-- ======== 可drag的浮动面板（就是内嵌的查看器容器） ======== -->
+<div id="floatPanel" class="floater"
+     data-ba3d data-ba3d-drag data-ba3d-config="./assets/sample.json"></div>
+
+<div id="log"><div class="d">— Action log —</div></div>
+
+<!-- Panel size百分比zoom：验证「按百分比改面板 = 整体等比zoom」 -->
+<div id="scaler">
+  <div class="row">
+    <!-- Clip选单：页面自己维护，切换时只调 play3dmodelaction([...]) -->
+    <label for="animSel">Clip</label>
+    <select id="animSel" title="Choose the clip to play (via play3dmodelaction)">
+      <option>Loading…</option>
+    </select>
+  </div>
+  <div class="row">
+    <label for="scaleNum">Panel size</label>
+    <input id="scaleNum" type="number" min="20" max="400" step="5" value="100" />
+    <span class="unit">%</span>
+    <button id="scaleReset" type="button">Reset</button>
+  </div>
+  <div class="row">
+    <input id="scaleRange" type="range" min="40" max="200" step="5" value="100" />
+  </div>
+  <div class="row">
+    <span class="info" id="scaleInfo">420 × 430 px</span>
+    <span class="hint" id="scaleHint"></span>
+  </div>
+</div>
+
+<script type="module">
+  import { autoMount } from './dist/3d-viewer.min.js';
+
+  const logEl = document.getElementById('log');
+  const log = (msg, hi) => {
+    const d = document.createElement('div');
+    d.innerHTML = hi ? '<b>' + msg + '</b>' : msg;
+    logEl.appendChild(d);
+    logEl.scrollTop = logEl.scrollHeight;
+  };
+
+  const panel = document.getElementById('floatPanel');
+  let viewer = null;
+
+  try {
+    const viewers = autoMount(); // 扫描 [data-ba3d] → 建查看器并自动开始加载
+    viewer = viewers[0] || null;
+    log('Viewer mounted: ' + viewers.length);
+  } catch (e) {
+    panel.innerHTML = '<div style="padding:24px;color:#ff9b9b;font:13px monospace">Init failed: '
+      + (e && e.message ? e.message : e) + '</div>';
+  }
+
+  // 加载失败时把原因贴出来，避免"只看到一片空白"
+  const t = setInterval(() => {
+    if (panel.dataset.ba3dError) {
+      clearInterval(t);
+      panel.innerHTML = '<div style="padding:24px;color:#ff9b9b;font:13px monospace">Model load failed: '
+        + panel.dataset.ba3dError + '</div>';
+    }
+  }, 400);
+  setTimeout(() => clearInterval(t), 20000);
+
+  /* ---------- 动作：全部只通过全局 play3dmodelaction([...]) 驱动 ---------- */
+  const animSel = document.getElementById('animSel');
+  let currentAction = null;   // 页面自己记录当前动作（不依赖模型 js 的内部状态）
+
+  /** 唯一入口：调用全局钩子，成功后记下实际播放的名字 */
+  function playVia(actions) {
+    const played = typeof window.play3dmodelaction === 'function'
+      ? window.play3dmodelaction(actions)
+      : null;
+    if (played) currentAction = played;
+    return played;
+  }
+
+  /** 用模型里的动作列表填充选单（列表本身要问一次查看器） */
+  function fillAnimMenu() {
+    if (!viewer || !viewer.getAnimations) return;
+    const list = viewer.getAnimations();
+    animSel.innerHTML = '';
+    for (const a of list) {
+      const o = document.createElement('option');
+      o.value = a.name;
+	  
+      o.textContent = a.name.replace(/^[^_]*_/, '');   // 显示时去掉前缀
+      animSel.appendChild(o);
+    }
+    // 选中当前生效的动作（来自 ba3d:action 事件；还没收到就用配置里的默认动作）
+    const cur = currentAction || viewer.getDefaultAction();
+    if (cur) { currentAction = cur; animSel.value = cur; }
+  }
+
+  // 查看器切换动作时会派发 ba3d:action —— 选单据此保持同步（不读查看器内部状态）
+  panel.addEventListener('ba3d:action', (e) => {
+    currentAction = e.detail.name;
+    if (animSel.value !== currentAction) animSel.value = currentAction;
+  });
+
+  // 切选单 → play3dmodelaction([名字])
+  animSel.addEventListener('change', () => {
+    const name = animSel.value;
+    const played = playVia([name]);
+    log('Menu → play3dmodelaction([\'' + name + '\']) → ' + played, true);
+    if (!played) animSel.value = currentAction || '';
+  });
+
+  /* ---------- 左键：按住 ≥0.2s 才算「按下」，短按算「点击」 ---------- */
+  let prevAction = null;
+
+  // 右键：按下即开始旋转
+  panel.addEventListener('ba3d:pointerdown', (e) => {
+    const { button, hit } = e.detail;
+    if (button === 2 && hit) log('Right press · start rotating the character');
+  });
+
+  // 左键按住够久 → 触发动作（拖动容器也在这时才开始）
+  panel.addEventListener('ba3d:press', (e) => {
+    if (e.detail.button !== 0) return;
+    prevAction = currentAction;                       // 记住当前动作，抬起时恢复
+    const played = playVia(['Formation_Pickup']);
+    log('Hold ' + e.detail.heldMs + 'ms → play3dmodelaction([\'Formation_Pickup\']) → ' + played + '<br>'
+      + '<span class="d">(crossed the ' + e.detail.thresholdMs + 'ms threshold, counted as a press; previous clip: '
+      + (prevAction || 'default') + ')</span>', true);
+  });
+
+  // 左键没按够就松手 → 算点击，不触发按下
+  panel.addEventListener('ba3d:click', (e) => {
+    if (e.detail.button !== 0) return;
+    log('Click · held ' + e.detail.heldMs + 'ms (below the ' + e.detail.thresholdMs + 'ms threshold) → no press action');
+  });
+
+  // 抬起：只有真的「按下」过才恢复动作
+  panel.addEventListener('ba3d:pointerup', (e) => {
+    const { button, pressed } = e.detail;
+    if (button !== 0 || !pressed) return;
+    // 没记录到具体动作就交回默认（play3dmodelaction() 不带参数 = 回默认动作）
+    const back = prevAction ? playVia([prevAction]) : playVia();
+    log('Release → restore clip → ' + back);
+    if (back) animSel.value = back;
+  });
+
+  /* ---------- 面板尺寸百分比缩放 ----------
+     tight 模式下取景参数是按「参考高度」算好的固定世界量，
+     所以改容器尺寸就是整体等比缩放：角色尺寸 + 相对位置一起变。   */
+  const REF_W = 420, REF_H = 430, REF_PCT = 100;
+  const scaleNum = document.getElementById('scaleNum');
+  const scaleRange = document.getElementById('scaleRange');
+  const scaleInfo = document.getElementById('scaleInfo');
+  const scaleHint = document.getElementById('scaleHint');
+
+  function applyScale(pct, quiet) {
+    let p = Number(pct);
+    if (!isFinite(p)) p = REF_PCT;
+    p = Math.max(20, Math.min(400, p));
+    const w = Math.round(REF_W * p / 100);
+    const h = Math.round(REF_H * p / 100);
+    panel.style.width = w + 'px';
+    panel.style.height = h + 'px';
+    scaleNum.value = p;
+    scaleRange.value = Math.max(40, Math.min(200, p));
+    scaleInfo.textContent = w + ' × ' + h + ' px';
+    scaleHint.textContent = p < 100 ? '(below 100% may clip the motion edges)' : '';
+    if (!quiet) log('Panel → ' + p + '% = ' + w + '×' + h + 'px · proportional scaling');
+  }
+
+  scaleNum.addEventListener('change', () => applyScale(scaleNum.value));
+  scaleNum.addEventListener('keydown', (e) => { if (e.key === 'Enter') applyScale(scaleNum.value); });
+  scaleRange.addEventListener('input', () => applyScale(scaleRange.value, true));
+  scaleRange.addEventListener('change', () => applyScale(scaleRange.value));
+  document.getElementById('scaleReset').addEventListener('click', () => applyScale(REF_PCT));
+  applyScale(REF_PCT, true); // 初始化
+
+  if (viewer && panel.__ba3dLoad) {
+    // autoMount 已经开始加载了，这里只等它完成（不要再调一次 load）
+    panel.__ba3dLoad
+      .then(() => {
+        fillAnimMenu();
+        log('<span class="d">Model ready · default clip ' + (currentAction || '?')
+          + ' · menu loaded with ' + animSel.options.length + ' clips</span>');
+      })
+      .catch((err) => log('<span style="color:#ff9b9b">加载失败：' + err + '</span>'));
+  }
+</script>
+</body>
+</html>

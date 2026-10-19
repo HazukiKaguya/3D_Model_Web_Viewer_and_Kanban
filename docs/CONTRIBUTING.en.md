@@ -1,6 +1,8 @@
 # Contributing
 
-Bug reports, minimal reproductions and rendering improvements are welcome. Before you start, read the [lilToon porting baseline](LILTOON2.x.md), [configuration and implementation notes](CONFIG.md) and [deployment guide](DEPLOY.md).
+[简体中文](../CONTRIBUTING.md) ｜ [繁體中文](CONTRIBUTING.zh-TW.md) ｜ **English** ｜ [日本語](CONTRIBUTING.ja.md) ｜ [한국어](CONTRIBUTING.ko.md)
+
+Bug reports, minimal reproductions and rendering improvements are welcome. Before you start, read the [lilToon porting baseline](LILTOON2.x.en.md), [configuration and implementation notes](CONFIG.en.md) and [deployment guide](DEPLOY.en.md).
 
 ## Build from source
 
@@ -34,7 +36,7 @@ Specialised checkers (`check-docs`, `check-glsl`, `check-panel`, `check-assets`,
 | `liltoon-bridge.js` | Adapter between our configuration and the upstream runtime |
 | `vendor/three-liltoon` | Upstream runtime (0.1.9, shipped with the package) |
 | `assets`, `vendor/three` | Shipped resources and the three dependencies |
-| `docs` | Every document except the main README and the third-party notices (three languages) |
+| `docs` | Every document except the main README and the third-party notices (five languages) |
 | `scripts` | Build and check scripts |
 | research directory | Upstream sources, experiments, internal documents, archives; not shipped |
 | `models` | Test models and texture fixtures; **do not modify** |
@@ -50,7 +52,7 @@ Numeric claims must state the fixture, the measurement convention and the criter
 ## Submission conventions
 
 - Every document except `README.md` and `THIRD-PARTY-NOTICES.md` lives in the `docs` directory; the deploy package uses the same layout
-- All three languages (`X.md`, `X.en.md`, `X.ja.md`) must be updated in the same change
+- All five languages should be updated in the same change
 - Shipped documents must not contain repository-internal paths (`check-release-safety` rejects them)
 - File names added to packages must be ASCII: the bundled packer does not support non-ASCII file names and silently drops those files
 - Do not submit third-party assets you lack permission to redistribute

@@ -1,11 +1,11 @@
 # BA3D configuration JSON field reference
 
-[中文](CONFIG.md) ｜ **English** ｜ [日本語](CONFIG.ja.md)
+[简体中文](CONFIG.md) ｜ [繁體中文](CONFIG.zh-TW.md) ｜ **English** ｜ [日本語](CONFIG.ja.md) ｜ [한국어](CONFIG.ko.md)
 
 > **lilToon baseline: 2.3.4**
-> **UI labels are kept in their original Chinese** — the viewer's UI itself is Chinese-only — with a translation added on first occurrence.
->   · Source map (2.3.4 line numbers), version-difference list ⇒ [`LILTOON2.x.md`](LILTOON2.x.md)
->   · Comparison and verification record for the old baseline (1.3.7) ⇒ [`LILTOON1.x.md`](LILTOON1.x.md) (archived, line numbers are 1.3.7's)
+> **UI labels in this document follow the viewer’s current interface language** (this is the English edition, so the UI reads “Material / Texture / Outline”).
+>   · Source map (2.3.4 line numbers), version-difference list ⇒ [`LILTOON2.x.en.md`](LILTOON2.x.en.md)
+>   · Comparison and verification record for the old baseline (1.3.7) ⇒ [`LILTOON1.x.en.md`](LILTOON1.x.en.md) (archived, line numbers are 1.3.7's)
 >
 > The `lil_*.hlsl:NNN` line-number references in this document are **all aligned to 2.3.4**.
 
@@ -941,7 +941,6 @@ play3dmodelaction();                       // no argument → back to the defaul
 
 Interaction conventions: **holding the left button on the model and dragging = move the container; right-button dragging = rotate the character** (when `dragContainer` is enabled).
 
-
 ---
 
 ## lilToon outline
@@ -1116,7 +1115,7 @@ viewer.showVertexColors(true)   // render vertex colors as color (no lighting, n
 viewer.vertexColorInfo()        // min/max/mean per mesh, and whether it is all white
 ```
 
-The **[顶点色]** (vertex color) button on the HUD = the former, and it also prints the latter.
+The **[Vertex colours]** (vertex color) button on the HUD = the former, and it also prints the latter.
 
 **For a model without vertex colors**: the mask is constantly 1, all three effects apply over the whole area, (the code uses `#ifdef USE_COLOR` to fall back automatically)
 
@@ -1132,21 +1131,21 @@ Strictly following lil_common_frag.hlsl:371-380:
 
 | Config | lilToon parameter | Panel control |
 |---|---|---|
-| litEnable | _OutlineEnableLighting | 受光生效 (lit enabled) (checkbox) |
-| litColor | _OutlineLitColor (RGB + alpha) | 受光色 (lit color) + 受光强度 (lit strength) |
-| litScale | _OutlineLitScale | 受光对比 (lit contrast) |
-| litOffset | _OutlineLitOffset | 受光阈值 (lit threshold) |
-| litApplyTex | _OutlineLitApplyTex | 受光色乘描边贴图 (multiply lit color by outline texture) (checkbox) |
+| litEnable | _OutlineEnableLighting | Lit outline (lit enabled) (checkbox) |
+| litColor | _OutlineLitColor (RGB + alpha) | Lit colour (lit color) + Lit strength (lit strength) |
+| litScale | _OutlineLitScale | Lit contrast (lit contrast) |
+| litOffset | _OutlineLitOffset | Lit threshold (lit threshold) |
+| litApplyTex | _OutlineLitApplyTex | Lit colour × outline texture (multiply lit color by outline texture) (checkbox) |
 
 ### Not lit by default
 
 _OutlineLitColor.a defaults to 0, so litF = 0, and the result is "texture × outline color".
-**By default this feature does not affect the look at all**; it only takes effect once you raise "受光强度" (lit strength).
+**By default this feature does not affect the look at all**; it only takes effect once you raise "Lit strength" (lit strength).
 
 ### Light direction
 
 The direction is computed every frame from the **actual world position of the main light** and passed in as uOutlineLitDir.
-So when you switch lighting presets (白昼 / 傍晚 / 黑夜, daylight / dusk / night) the lit direction of the outline changes accordingly.
+So when you switch lighting presets (Day / 傍晚 / Night, daylight / dusk / night) the lit direction of the outline changes accordingly.
 
 ### Normal source
 
@@ -1162,7 +1161,7 @@ and is then multiplied by mat3(modelMatrix) to get the world-space normal.
 | tex | _OutlineTex | outline texture, colors the outline with a texture |
 | widthMask | _OutlineWidthMask | width mask, **takes the R channel** |
 
-On the panel, use the "选择文件" (choose file) button (local images go through a blob URL; a relative path can also be given via the JSON config).
+On the panel, use the "Choose file" (choose file) button (local images go through a blob URL; a relative path can also be given via the JSON config).
 
 ### Using the width mask
 
@@ -1174,13 +1173,13 @@ For example when the mouth and the head share the same mesh, skipPattern (by mes
 and in that case a mask image with the mouth painted black gets you pixel precision.
 
 Textures are cached by URL, and the outline is reapplied automatically once loading finishes (no manual refresh needed).
-A load failure prints [outline] 贴图加载失败：... (texture load failed: ...) (warn level, always visible).
+A load failure prints [outline] TextureLoad failed: ... (texture load failed: ...) (warn level, always visible).
 
 ---
 
 ## Verbose log switch
 
-The **详细日志** (verbose log) checkbox on the HUD; the setting is stored in localStorage and survives a refresh.
+The **Verbose log** (verbose log) checkbox on the HUD; the setting is stored in localStorage and survives a refresh.
 It controls window.__ba3dDebugUI and affects three kinds of diagnostic output:
 
 | Output | Controlled by it |
@@ -1192,7 +1191,7 @@ It controls window.__ba3dDebugUI and affects three kinds of diagnostic output:
 
 Normally the console should be left with a single line:
 
-    [viewer] 加载完成 | 模型=... | 网格=11 | 描边=true
+    [viewer] Load完成 | Model=... | 网格=11 | Outline=true
 
 console.warn / console.error are always visible (they only appear on a real exception).
 
@@ -1202,19 +1201,19 @@ console.warn / console.error are always visible (they only appear on a real exce
 
 What the panel can change (when shader = lilToon):
 
-    预设 (preset)   19 lilToon official presets
-    分档 (banding)  浓度 / 第一层边界·过渡 / 第二层边界·过渡 / 第三层边界·过渡 / 第三层开关 / 颜色
-    Rim      强度 / 边界 / 过渡 / 菲涅尔 / 受光方向 / 颜色 / 背光色
-    MatCap   强度 / 贴图文件
-    自发光 (emission)   强度 / 颜色
-    背光 (backlight)    强度 / 指向性
-    描边 (outline)      启用 / 宽度 / 固定宽度 / 顶点色当宽度 / Z 偏移 / 固定宽度生效 /
-              描边颜色 / 不透明度 / 受光色 / 受光强度 / 受光对比 / 受光阈值 /
-              描边贴图 / 宽度遮罩 / 受光生效 / 受光色乘贴图 / Cull 模式 / 跳过部件
+    Preset (preset)   19 lilToon official presets
+    分档 (banding)  Density / 1st border·Transition / 2nd border·Transition / 3rd border·Transition / 第三层开关 / Colour
+    Rim      Strength / Border / Transition / Fresnel / Lit direction / Colour / 背光色
+    MatCap   Strength / Texture文件
+    Emission (emission)   Strength / Colour
+    背光 (backlight)    Strength / Directionality
+    Outline (outline)      Enable / Width / Fixed width / Vertex colour as width / Z offset / Fixed width生效 /
+              Outline colour / 不透明度 / Lit colour / Lit strength / Lit contrast / Lit threshold /
+              Outline texture / Width mask / Lit outline / Lit colour乘Texture / Cull mode / Skip parts
 
 **All 16 config fields of the outline have controls.**
 
-The HUD's **[导出 JSON]** (export JSON) generates a config containing only the entries that differ from the defaults. The outline parameters live under lilToon.outline.
+The HUD's **[Export JSON]** (export JSON) generates a config containing only the entries that differ from the defaults. The outline parameters live under lilToon.outline.
 The export uses a recursive diff; fields equal to the default are omitted.
 
 ---
@@ -1225,9 +1224,9 @@ Use a texture to override the extrusion direction of the outline (hand-drawn out
 
 | Config | lilToon parameter | Panel control |
 |---|---|---|
-| vectorTex | _OutlineVectorTex | 外扩方向 (extrusion direction) (choose file) |
-| vectorScale | _OutlineVectorScale | 方向强度 (direction strength) (-10 ~ 10) |
-| vectorUVMode | _OutlineVectorUVMode | 方向 UV (direction UV) (UV0 ~ UV3) |
+| vectorTex | _OutlineVectorTex | Expand direction (extrusion direction) (choose file) |
+| vectorScale | _OutlineVectorScale | Direction strength (direction strength) (-10 ~ 10) |
+| vectorUVMode | _OutlineVectorUVMode | Direction UV (direction UV) (UV0 ~ UV3) |
 
 The texture is decoded as a **tangent-space** normal and then transformed to object space via the TBN (lil_common_functions.hlsl:272).
 
@@ -1249,7 +1248,7 @@ Whether the outline, when lit, is occluded by the main light's shadow.
 
 | Config | lilToon parameter | Panel control |
 |---|---|---|
-| litShadowReceive | _OutlineLitShadowReceive | 受光接收阴影 (lit receives shadow) (checkbox) |
+| litShadowReceive | _OutlineLitShadowReceive | Lit receives shadow (lit receives shadow) (checkbox) |
 
 ### Why it is computed by ourselves
 
@@ -1280,7 +1279,7 @@ It bypasses three's material system entirely and does not depend on any of three
 
 ### Diagnostic switch on the panel
 
-"阴影遮罩预览（诊断）" (shadow mask preview (diagnostics)) = litShadowDebug, which acts the same as litShadowReceive but
+"Shadow mask preview (diagnostic)" (shadow mask preview (diagnostics)) = litShadowDebug, which acts the same as litShadowReceive but
 is for troubleshooting (it force-applies the shadow mask, so you can see whether the pipeline is connected).
 
 ---
@@ -1292,7 +1291,7 @@ lilCfg.outline.shaderColorMult (default false):
     false → the outline color is multiplied only once, by mat.color (correct, the lit color stays clean)
     true  → the shader multiplies uOutlineColor once more (the lit color gets darkened by the outline color; for comparing against the old behavior)
 
-On the panel this corresponds to the "着色器里再乘一次描边色" (multiply the outline color once more in the shader) checkbox.
+On the panel this corresponds to the "Multiply outline colour in shader again" (multiply the outline color once more in the shader) checkbox.
 
 ---
 
@@ -1346,11 +1345,11 @@ Two pitfalls:
 
 ### Panel
 
-    [● lilToon 参数]                    ← title bar (drag handle)
+    [● lilToon parameters]                    ← title bar (drag handle)
     ─────────────────
-    材质 (material)  [ 全部（默认）▾ ]  [清除覆盖]
+    Material (material)  [ 全部（默认）▾ ]  [Clear overrides]
            选 "全部" changes the global; selecting a material only overrides that one (a ● indicates an existing override, and the panel shows the merged values)
-    预设 (preset)  [（不套用 ▾）]                ← applied to the material selected above
+    Preset (preset)  [（不套用 ▾）]                ← applied to the material selected above
 
 The 40-odd calls in the panel automatically carry the current material through thin wrappers:
 
@@ -1388,11 +1387,11 @@ The export still does a recursive diff against the defaults and writes only the 
 
 ### Per-material override scope (all supported)
 
-    shadow banding (浓度 / 每层边界·过渡 / 每层颜色 / 第三层开关)
-    Rim (强度 / 边界 / 过渡 / 菲涅尔 / 颜色 / 背光色)
-    MatCap (强度 / 边界 / **贴图**)
-    自发光（强度 / 颜色）
-    背光（强度 / 指向性）
+    shadow banding (Density / 每层Border·Transition / 每层Colour / 第三层开关)
+    Rim (Strength / Border / Transition / Fresnel / Colour / 背光色)
+    MatCap (Strength / Border / **Texture**)
+    Emission（Strength / Colour）
+    背光（Strength / Directionality）
     outline's 20 parameters (including outline texture / width mask / extrusion direction)
 
 The MatCap texture used to be a single global one (the lilMatCapTex variable); it has now been changed to
@@ -1405,10 +1404,10 @@ resolveMatCapTexture with per-URL caching + per-material uniform lookup.
 The three panels (#lilPanel / #exportPanel / #partsPanel) are .lp elements,
 and the custom model (#upload) is a separate container. Each has a title bar:
 
-    [● lilToon 参数]        ← the title matches the text of the button that opens it
-    [● 导出 JSON]
-    [● 部件]
-    [● 自定义模型（本地文件，不会上传到任何服务器）]   ← uses .u-title
+    [● lilToon parameters]        ← the title matches the text of the button that opens it
+    [● Export JSON]
+    [● Parts]
+    [● Custom model (local file — never uploaded to any server)]   ← uses .u-title
 
 ### Dragging
 
@@ -1486,7 +1485,7 @@ Solution: **after** lights_fragment_begin (before lights_fragment_end)
     shadowAmbient = 1.0 → no reduction (default, behavior unchanged)
     shadowAmbient = 0.0 → no ambient light at all in the shadow area (deepest)
 
-To get closer to the look of cel mode (阴影浓淡=0 / 脸部=0, shadow strength=0 / face=0), set it to 0~0.2.
+To get closer to the look of cel mode (Shadow strength=0 / Face=0, shadow strength=0 / face=0), set it to 0~0.2.
 
 ### ★ The difference between the two projection paths (why _ShadowReceive did not work in the first version)
 
@@ -1527,7 +1526,7 @@ When mix's t exceeds 1 it **extrapolates**:
 
 This is to work around the "ambient light floor" above; the slider range is 0~2.
 
-### The "（重置为默认）" (reset to default) preset
+### The "(reset to default)" (reset to default) preset
 
 A special entry in the preset dropdown:
 
@@ -1658,14 +1657,14 @@ In lilToon _DissolveColor glows:
     fd.emissionColor += _DissolveColor.rgb * dissolveAlpha;
 
 So the default pure white makes the dissolve boundary **glow**; this is the expected effect.
-If you do not want a white edge, set "边缘颜色" (edge color) to black.
+If you do not want a white edge, set "Rim colour" (edge color) to black.
 (The default feather width was also lowered from 0.1 to 0.03, otherwise the edge band is too wide and the whole model turns white together)
 
 ### Diagnostics
 
 Every time a **new parameter combination** appears it prints a line (the same combination prints only once, and it does not depend on the verbose log switch):
 
-    [dissolve] 生成 GLSL：模式=3 线性=1 阈值=0.200 羽化=0.030 位置/方向=(0,-1,0,0) 遮罩=无 噪声=无
+    [dissolve] 生成 GLSL：Mode=3 线性=1 Threshold=0.200 羽化=0.030 Position/Direction=(0,-1,0,0) 遮罩=无 噪声=无
     [dissolve] 世界空间归一化：k=(1.37118, 0.62073, 1.30632) 尺寸=(0.729, 1.611, 0.766) center=(-0.20, 0.87, 0.02)
 
 These two lines let you see directly "the actual parameters compiled in" and "the coordinate system used for normalization".
@@ -2191,12 +2190,12 @@ A wrong order changes the look when "multiple effects overlay in the same area",
 
   |, Do not use |, Use |
   |---|---|
-  | `pivot` / 取景中心偏移 (framing center offset) | **修正模型位置 XYZ** (correct model position XYZ) |
+  | `pivot` / 取景中心偏移 (framing center offset) | **Adjust model position XYZ** (correct model position XYZ) |
   | `groundOffsetY` | Same as above (it is just an alias for `modelOffset.y`) |
   | `showGrid` / `showAxes` | Ground grid / origin axes |
   | `action` mode | **view** (users call it view; the internal value is still action) |
 
-  ⚠️ A distinction like "the button is called **场景** (Scene) · the panel is called **场景参数** (Scene parameters)" must be **necessary** to be worth it.
+  ⚠️ A distinction like "the button is called **Scene** (Scene) · the panel is called **Scene parameters** (Scene parameters)" must be **necessary** to be worth it.
      Keeping two names purely for historical reasons ⇒ that is just a learning cost.
 
 ## 3. The default state is the correct state
@@ -2254,11 +2253,11 @@ A wrong order changes the look when "multiple effects overlay in the same area",
 
   | id | Title | Content | Default position · size |
   |---|---|---|---|
-  | `#sceneWin` | 场景 (Scene) | `#app` (three canvas) + `#vignette` | 16,16 · 960×700 |
-  | `#hudWin` | 工具栏 (Toolbar) | `#hud` (buttons + action/lighting/brightness/shadow/banding color/clamp) | 16,bottom · 660×210 |
-  | `#infoWin` | 状态 (Status) | `#info` (frame rate / triangle count / material count) | right,16,bottom · 300×130 |
-  | `.lp` ×3 | 参数 / 导出 / 部件 (Parameters / Export / Parts) | lilToon panel · Export JSON · parts list | right,top · 400 wide |
-  | `#upload` | 自定义模型 (Custom model) | Upload glb / texture / config (using its own `.u-title` as the handle) | left,top · 288 wide |
+  | `#sceneWin` | Scene (Scene) | `#app` (three canvas) + `#vignette` | 16,16 · 960×700 |
+  | `#hudWin` | Toolbar (Toolbar) | `#hud` (buttons + action/lighting/brightness/shadow/banding color/clamp) | 16,bottom · 660×210 |
+  | `#infoWin` | Status (Status) | `#info` (frame rate / triangle count / material count) | right,16,bottom · 300×130 |
+  | `.lp` ×3 | 参数 / Export / Parts (Parameters / Export / Parts) | lilToon panel · Export JSON · parts list | right,top · 400 wide |
+  | `#upload` | Custom model (Custom model) | Upload glb / texture / config (using its own `.u-title` as the handle) | left,top · 288 wide |
 
   ⚠️ `#loading` is **not** a floating window —— it is a loading overlay and is still a full-screen cover.
 
@@ -2335,7 +2334,7 @@ A wrong order changes the look when "multiple effects overlay in the same area",
 
       · `renderer.pivot` —— **already removed** from the default configuration, and no longer read on load.
       · `viewer.getPivot()` / `setPivot()` —— kept but **nobody calls them**, regarded as deprecated.
-      · The "取景中心" (framing center) group in the scene panel —— **already deleted**, only "修正模型位置" (correct model position) remains.
+      · The "取景中心" (framing center) group in the scene panel —— **already deleted**, only "Adjust model position" (correct model position) remains.
 
   ### Default-value migration for the three old controls
 
@@ -2449,7 +2448,7 @@ A wrong order changes the look when "multiple effects overlay in the same area",
   In the toolbar there are:
 
       落地微调 (ground fine-tune)   Slider + number box (-0.5 ~ 0.5)
-      自动贴地 (auto-ground)        Button ⇒ `viewer.snapToGround()` (measure once · compensate automatically)
+      Snap to ground (auto-ground)        Button ⇒ `viewer.snapToGround()` (measure once · compensate automatically)
 
   ⚠️ If the slider has been adjusted manually ⇒ auto-grounding **steps aside** (`__autoSnapSkip`) and does not overwrite the user's value.
 
@@ -2498,7 +2497,7 @@ A wrong order changes the look when "multiple effects overlay in the same area",
 
   ### What it does
 
-  A "日间 / 夜间" (Day / Night) button on the far left of the toolbar switches the whole color scheme.
+  A "Day / Night" (Day / Night) button on the far left of the toolbar switches the whole color scheme.
 
   ### ⚠️ The approach is **incremental override**
 
@@ -2529,14 +2528,14 @@ A wrong order changes the look when "multiple effects overlay in the same area",
 
   The default background is "transparent" ⇒ the CSS color of the scene window body shows through ⇒
   in day mode the model stands on a **light-colored** background (this is intentional and consistent with Unity)
-  If you want a fixed base color ⇒ use the "背景" (Background) dropdown in the toolbar to pick a specific color.
+  If you want a fixed base color ⇒ use the "Background" (Background) dropdown in the toolbar to pick a specific color.
 
 ---
 
 ## ★ Added 2026-10-06 (aligned with lilToon 2.3.4)
 
 > This batch is everything that was filled in after switching the baseline from lilToon 1.3.7 to **2.3.4**.
-> For the version comparison and source map, see [`LILTOON2.x.md`](LILTOON2.x.md).
+> For the version comparison and source map, see [`LILTOON2.x.en.md`](LILTOON2.x.en.md).
 
 ### 1. Render state (per material) —— `_TransparentMode` / `_Cutoff` / `_Cull`
 
@@ -2767,7 +2766,7 @@ A wrong order changes the look when "multiple effects overlay in the same area",
          ⇒ Even **old configurations** (where the texture was chosen long ago and no onchange will fire again) get patched up.
 
   ⚠️ Side effect: you **cannot** temporarily turn off a layer that already has a texture via "enabled = 0".
-     To turn it off, click "清除" (Clear) on the texture row (that is the intuitive behavior)
+     To turn it off, click "Clear" (Clear) on the texture row (that is the intuitive behavior)
 
 ### 9. ★★ Fix for a **long-standing bug** (the largest impact)
 
@@ -2798,7 +2797,6 @@ A wrong order changes the look when "multiple effects overlay in the same area",
      ⇒ Use the `ba3dColor2nd` / `ba3dColor3rd` declared in the preamble.
 
 ### 9.5 Additions: layer dissolve / Decal debug / MatCap / outline stencil
-
 
   #### Layer dissolve for main color layers 2nd / 3rd (`main2nd.dissolve*` / `main3rd.dissolve*`)
 
@@ -2855,7 +2853,7 @@ A wrong order changes the look when "multiple effects overlay in the same area",
   | `stencilReadMask` | 255 | `_OutlineStencilReadMask` |
 
   ⇒ There is also a family of `outline.stencil*` (Ref / Comp / WriteMask / Fail / ZFail)
-     See the "模板模式下拉" (Stencil mode dropdown) section of `CONFIG.md`.
+     See the "Stencil mode下拉" (Stencil mode dropdown) section of `CONFIG.md`.
   ⚠️ three does not have as complete a stencil API as Unity ⇒ only the ones that can be done are mapped.
      The ones that cannot (such as some combinations of `_StencilFail`) fall under known deviations.
 

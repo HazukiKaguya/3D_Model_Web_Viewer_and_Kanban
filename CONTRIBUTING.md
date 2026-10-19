@@ -1,5 +1,7 @@
 # 贡献指南
 
+**简体中文** ｜ [繁體中文](docs/CONTRIBUTING.zh-TW.md) ｜ [English](docs/CONTRIBUTING.en.md) ｜ [日本語](docs/CONTRIBUTING.ja.md) ｜ [한국어](docs/CONTRIBUTING.ko.md)
+
 欢迎问题报告、最小复现与渲染改进。开始前建议先读 [lilToon 移植基线](docs/LILTOON2.x.md)、[配置与实现细节](docs/CONFIG.md) 和 [部署说明](docs/DEPLOY.md)。
 
 ## 从源码构建
@@ -34,7 +36,7 @@ node scripts/check-lilsrc.mjs            # 第 4 后端部署检查：描边、�
 | `liltoon-bridge.js` | 我们的配置与上游运行时之间的适配层 |
 | `vendor/three-liltoon` | 上游运行时（0.1.9，随包分发） |
 | `assets`、`vendor/three` | 随包资源、three 依赖 |
-| `docs` | 除 README 与第三方声明外的全部文档（三种语言） |
+| `docs` | 除 README 与第三方声明外的全部文档（五种语言） |
 | `scripts` | 构建与检查脚本 |
 | 研究目录 | 上游源码、实验、内部文档、归档；不进入任何包 |
 | `models` | 测试模型与贴图夹具；**不要修改** |
@@ -50,7 +52,7 @@ node scripts/check-lilsrc.mjs            # 第 4 后端部署检查：描边、�
 ## 提交约定
 
 - 文档除 `README.md` 与 `THIRD-PARTY-NOTICES.md` 外一律放在 `docs` 目录，部署包保持同样的布局
-- 三种语言（`X.md`、`X.en.md`、`X.ja.md`）必须同一次改动里一起更新
+- 五种语言最好在同一次改动里一起更新
 - 随包文档不写仓库内部路径（`check-release-safety` 会拦截）
 - 包内新增文件名使用 ASCII：自制打包器不支持非 ASCII 文件名，会静默丢文件
 - 不提交无权限再分发的第三方素材

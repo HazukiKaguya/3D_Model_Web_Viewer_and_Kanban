@@ -1,0 +1,24 @@
+{
+  "_note": "i18n/en/labels.json —— 查看器动态标签（en）",
+  "lighting": {
+    "day": "Day",
+    "golden": "Morning / evening",
+    "night": "Night"
+  },
+  "render": {
+    "pbr": "Original (PBR)",
+    "cel": "Toon (Cel)",
+    "unlit": "Unlit"
+  },
+  "renderToon": {
+    "pbr": "Original (PBR)",
+    "toon": "Toon material",
+    "unlit": "Unlit"
+  },
+  "shader": {
+    "none": "None (native)",
+    "cel": "Cel banding",
+    "lilToon": "lilToon style",
+    "lilSrc": "lilToon source"
+  }
+}

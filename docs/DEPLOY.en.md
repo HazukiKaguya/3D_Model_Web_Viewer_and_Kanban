@@ -1,6 +1,6 @@
 # 3D Character Model Web-Embedded Mascot Deployment Guide
 
-[中文](DEPLOY.md) ｜ **English** ｜ [日本語](DEPLOY.ja.md)
+[简体中文](DEPLOY.md) ｜ [繁體中文](DEPLOY.zh-TW.md) ｜ **English** ｜ [日本語](DEPLOY.ja.md) ｜ [한국어](DEPLOY.ko.md)
 
 Pure static site, **no build step, no CDN dependency, no Node required**, everything uses relative paths (no config changes needed whether deployed at the root path or a subpath).
 `dist/` is already pre-packaged, so just **upload all files in this directory as-is to the website root directory** (or any subdirectory) and it runs on static hosting (Nginx / Apache / Netlify / Cloudflare Pages / OSS / COS all work).
@@ -131,13 +131,13 @@ Pure static site, **no build step, no CDN dependency, no Node required**, everyt
 | `dist/3d-viewer.js` | **Self-contained single-file build** (about 1.94 MB), for other pages to include via `<script type="module">`, **needs no importmap and no vendor/** |
 | `dist/3d-viewer.min.js` | Minified build of the above (about 0.92 MB), this is what `embed-demo.html` uses |
 | `CONFIG.md` | Complete configuration field reference (including `data-*` attributes, events, global hooks) |
-| `CONFIG.en.md` · `CONFIG.ja.md` | English / Japanese editions of the configuration reference |
+| `CONFIG.zh-TW.md` · `CONFIG.en.md` · `CONFIG.ja.md` · `CONFIG.ko.md` | Traditional Chinese / English / Japanese / Korean editions of the configuration reference |
 | `README.md` | Project description |
-| `docs/README.en.md` · `docs/README.ja.md` | English / Japanese editions of the project description |
-| `DEPLOY.en.md` · `DEPLOY.ja.md` | English / Japanese editions of this file |
+| `docs/README.zh-TW.md` · `docs/README.en.md` · `docs/README.ja.md` · `docs/README.ko.md` | Traditional Chinese / English / Japanese / Korean editions of the project description |
+| `DEPLOY.zh-TW.md` · `DEPLOY.en.md` · `DEPLOY.ja.md` · `DEPLOY.ko.md` | Traditional Chinese / English / Japanese / Korean editions of this file |
 | `LICENSE` | Project license (MIT © 2026 Hazuki Kaguya) —— **must be retained when redistributing** |
 | `THIRD-PARTY-NOTICES.md` | Third-party notices (full MIT texts of three.js / lilToon / three-liltoon) —— **must be retained when redistributing** |
-| `LILTOON1.x.md` · `LILTOON2.x.md` | lilToon baseline comparison (1.3.7 archived / 2.3.4 active); `.en.md` · `.ja.md` editions available |
+| `LILTOON1.x.md` · `LILTOON2.x.md` | lilToon baseline comparison (1.3.7 archived / 2.3.4 active); `.zh-TW` · `.en` · `.ja` · `.ko` editions available |
 | `assets/mouth/_cells-preview-*.png` | Mouth atlas 8×8 index image, use it as a visual reference when choosing `mouthCell` |
 
 What is truly required to run the main page is: **`index.html` + `viewer.js` + the 12 files of `vendor/three/` + the model and configuration in `assets/`**.

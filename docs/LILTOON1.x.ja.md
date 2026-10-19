@@ -1,9 +1,9 @@
 # lilToon 1.3.7 → Web (three.js) 旧ベースライン対照（アーカイブ済み）
 
-[中文](LILTOON1.x.md) ｜ [English](LILTOON1.x.en.md) ｜ **日本語**
+[简体中文](LILTOON1.x.md) ｜ [繁體中文](LILTOON1.x.zh-TW.md) ｜ [English](LILTOON1.x.en.md) ｜ **日本語** ｜ [한국어](LILTOON1.x.ko.md)
 
 > ⚠️ **本ドキュメントはアーカイブ済みです** —— これは**旧ベースライン lilToon 1.3.7** の対照と照合を記録したものです。
-> **現在有効なベースラインは 2.3.4** です。[`LILTOON2.x.md`](LILTOON2.x.md) を参照してください。
+> **現在有効なベースラインは 2.3.4** です。[`LILTOON2.x.ja.md`](LILTOON2.x.ja.md) を参照してください。
 >
 > 本ドキュメントを残している理由：
 >   · フェーズ 1〜3 の**完成度の記録**と当時の判断過程
@@ -132,8 +132,7 @@ Unity での参考効果：      （スクリーンショットがあると尚�
 5. **アウトラインのアップグレード**：`OutlineEffect` から自作の反転ハル法 pass に置き換え → **アウトライン幅テクスチャ**と**頂点カラー制御**に対応
 6. **Main Color のブレンドモード**（Add / Screen / Multiply）
 7. **Backlight / 逆光**
-8. **Dissolve**
-
+8. **ディゾルブ**
 
 ### フェーズ 3 —— 完了
 
@@ -161,7 +160,6 @@ Unity での参考効果：      （スクリーンショットがあると尚�
 `_Shadow2ndNormalStrength` / `_Shadow3rdNormalStrength`
 
 **推奨する以降の順序**：① 自発光の第 2 層（低）② レイヤー溶解（低）③ 距離フェードアウト（中）④ Decal（中）⑤ 法線マップの経路（高、一度に 9+3 個のパラメータが解放される）
-
 
 ### 明確に対象外
 
@@ -262,7 +260,7 @@ fd.col.a  *= _OutlineColor.a;
 | `_OutlineColor` | アウトラインの色 | (0.6, 0.56, 0.73, 1) |
 | `_OutlineTex` | アウトライン用テクスチャ | white |
 | `_OutlineTexHSVG` | 色相/彩度/明度/Gamma | (0,1,1,1) |
-| `_OutlineLitColor` | 受光色 | (1.0, 0.2, 0, **0**) |
+| `_OutlineLitColor` | 明るい色 | (1.0, 0.2, 0, **0**) |
 | `_OutlineLitApplyTex` | 受光時にテクスチャを掛けるか | 0 |
 | `_OutlineLitScale` | 受光の強度 | 10 |
 | `_OutlineLitOffset` | 受光のオフセット | -8 |
@@ -317,7 +315,6 @@ fd.col.a  *= _OutlineColor.a;
 - [ ] プリセットに接続（プリセット内の `_OutlineWidth` などの値を LIL_PRESETS に記入）
 - [ ] GLB と FBX の両方で検証
 - [ ] 既存の OutlineEffect 経路を置き換えるかどうかを決定
-
 
 ---
 

@@ -1,10 +1,10 @@
 # lilToon 2.3.4 → Web (three.js) port baseline
 
-[中文](LILTOON2.x.md) ｜ **English** ｜ [日本語](LILTOON2.x.ja.md)
+[简体中文](LILTOON2.x.md) ｜ [繁體中文](LILTOON2.x.zh-TW.md) ｜ **English** ｜ [日本語](LILTOON2.x.ja.md) ｜ [한국어](LILTOON2.x.ko.md)
 
 > **This document is the currently effective baseline**.
-> The comparison table and verification record of the old baseline (**1.3.7**) are in [`LILTOON1.x.md`](LILTOON1.x.md).
-> Implementation details and all configuration keys are in [`CONFIG.md`](CONFIG.md).
+> The comparison table and verification record of the old baseline (**1.3.7**) are in [`LILTOON1.x.en.md`](LILTOON1.x.en.md).
+> Implementation details and all configuration keys are in [`CONFIG.en.md`](CONFIG.en.md).
 
 ---
 
@@ -332,7 +332,7 @@ three only does `resolveIncludes` **after** `onBeforeCompile`.
 ### 7.7 Presets are **per material**
 
 lilToon's presets are inherently one per material, while our architecture is "global defaults + per-material sparse overrides".
-See [`CONFIG.md`](CONFIG.md) and section 9 of `LILTOON1.x.md` for details.
+See [`CONFIG.en.md`](CONFIG.en.md) and section 9 of `LILTOON1.x.md` for details.
 
 ---
 
@@ -423,8 +423,8 @@ See the method in §5.
 
 | File | Content |
 |---|---|
-| [`LILTOON1.x.md`](LILTOON1.x.md) | comparison of the old baseline (1.3.7) with the current one, full outline specification, per-material preset architecture |
-| [`CONFIG.md`](CONFIG.md) | all configuration keys, implementation details, each round's pitfalls and lessons |
+| [`LILTOON1.x.en.md`](LILTOON1.x.en.md) | comparison of the old baseline (1.3.7) with the current one, full outline specification, per-material preset architecture |
+| [`CONFIG.en.md`](CONFIG.en.md) | all configuration keys, implementation details, each round's pitfalls and lessons |
 | `viewer.js` | 93 line-number references, all aligned to 2.3.4 |
 | `develop_res/liltoon-2.3.4/` | current baseline source |
 | `develop_res/lilToon/` | old baseline source (kept for comparison)|

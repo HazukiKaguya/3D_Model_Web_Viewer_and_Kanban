@@ -1,6 +1,6 @@
 # 3D キャラクターモデルビューア（Web ページ埋め込み看板娘）
 
-[中文](../README.md) ｜ [English](README.en.md) ｜ **日本語**
+[简体中文](../README.md) ｜ [繁體中文](README.zh-TW.md) ｜ [English](README.en.md) ｜ **日本語** ｜ [한국어](README.ko.md)
 
 three.js キャラクタービューア：**設定可能**（モデル / 口元テクスチャ / 基準 JSON）、**組み込み可能**（自己完結型シングルファイル版）、**デプロイ可能**（純粋な静的サイト）。
 
@@ -11,7 +11,7 @@ three.js キャラクタービューア：**設定可能**（モデル / 口元�
 - **three-liltoon は「lilToon スタイル」のバリアント**です：サーフェスマテリアルを上流の `LilToonMaterial` に差し替えるだけで、**アウトラインは自前実装のまま**です（0.1.9 以降、上流のアウトラインは `shaderVariant` で `Hidden/lilToonOutline` を明示選択する必要あり。実測：スキンメッシュは細い輪郭、静的プロップは塗り潰し）。
 - lilToon はトゥーン（NPR）シェーダーファミリーです —— 「lilToon を PBR マテリアルに使う」という発想はありません。
 
-【[本ツールのデプロイ](DEPLOY.md)】  【[モデル JSON 設定](CONFIG.md)】  【[サードパーティライセンス通知](../THIRD-PARTY-NOTICES.md)】
+【[本ツールのデプロイ](DEPLOY.ja.md)】  【[モデル JSON 設定](CONFIG.ja.md)】  【[サードパーティライセンス通知](../THIRD-PARTY-NOTICES.md)】
 
 ## クイックスタート
 
@@ -37,9 +37,9 @@ three.js キャラクタービューア：**設定可能**（モデル / 口元�
 | [liltoon-bridge.js](../liltoon-bridge.js) | 第 4 シェーディングバックエンドの適応層（lilCfg / Unity マテリアルを three-liltoon に渡す） |
 | [vendor/three/](../vendor/three/) | ローカルの three.js r185.1 + addons（`effects/OutlineEffect.js` を含む） |
 | [vendor/three-liltoon/](../vendor/three-liltoon/) | three-liltoon ランタイム + コンパイル済み lilToon GLSL（2.2 MB、第 4 バックエンドはオンデマンド読み込み） |
-| [CONFIG.md](CONFIG.md) | 設定フィールドの完全リファレンス |
-| [README.en.md](README.en.md) · [README.ja.md](README.ja.md) | 本 README の英語版 / 日本語版（`CONFIG` / `DEPLOY` / `LILTOON` にも `.en` / `.ja` があります） |
-| [DEPLOY.md](DEPLOY.md) | デプロイとパッケージングの手順 |
+| [CONFIG.md](CONFIG.ja.md) | 設定フィールドの完全リファレンス |
+| [README.en.md](README.en.md) · [README.ja.md](README.ja.md) · [README.zh-TW.md](README.zh-TW.md) · [README.ko.md](README.ko.md) | 本 README の他言語版（`CONFIG` / `DEPLOY` / `LILTOON` にもあります） |
+| [DEPLOY.md](DEPLOY.ja.md) | デプロイとパッケージングの手順 |
 | [LICENSE](../LICENSE) | プロジェクトライセンス（MIT） |
 | [THIRD-PARTY-NOTICES.md](../THIRD-PARTY-NOTICES.md) | サードパーティ通知（three.js / lilToon / three-liltoon） |
 
@@ -76,7 +76,7 @@ three.js キャラクタービューア：**設定可能**（モデル / 口元�
 > すぐ使える CH0155 の設定は [assets/sample.json](../assets/sample.json) にあります（基準 X = +0.25、Z = +0.30）。
 > ほかに [assets/fallback.json](../assets/fallback.json) があり、「1 つコピーして 3 か所を変える」テンプレートとして使えます。
 
-完全なフィールド（`data-*` 属性、イベント、グローバルフックを含む）は [CONFIG.md](CONFIG.md) を参照してください。
+完全なフィールド（`data-*` 属性、イベント、グローバルフックを含む）は [CONFIG.md](CONFIG.ja.md) を参照してください。
 
 ## 3 つの使い方
 
@@ -159,7 +159,7 @@ await viewer.load();
 ## デプロイ
 
 純粋な静的サイトで、**ビルド手順も CDN 依存もありません**。すべて相対パスを使用します（ルートパス/サブパスへのデプロイで設定を変える必要はありません）。
-`dist/` はバンドル済みなのでそのままアップロードできます。完全な一覧は [DEPLOY.md](DEPLOY.md) を参照してください。
+`dist/` はバンドル済みなのでそのままアップロードできます。完全な一覧は [DEPLOY.md](DEPLOY.ja.md) を参照してください。
 
 `.glb` の MIME は `model/gltf-binary` である必要があります（`_headers` / `.htaccess` / `.nojekyll` は同梱済み。下表参照）：
 

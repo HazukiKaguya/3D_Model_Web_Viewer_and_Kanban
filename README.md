@@ -1,6 +1,6 @@
 # 3D 角色模型查看器（3D 模型网页内嵌看板娘）
 
-中文 ｜ [English](docs/README.en.md) ｜ [日本語](docs/README.ja.md)
+**简体中文** ｜ [繁體中文](docs/README.zh-TW.md) ｜ [English](docs/README.en.md) ｜ [日本語](docs/README.ja.md) ｜ [한국어](docs/README.ko.md)
 
 three.js 角色查看器：**可配置**（模型 / 嘴部贴图 / 基准 JSON）、**可嵌入**（自包含单文件版）、**可部署**（纯静态）。
 
@@ -38,7 +38,7 @@ three.js 角色查看器：**可配置**（模型 / 嘴部贴图 / 基准 JSON�
 | [vendor/three/](vendor/three/) | 本地 three.js r185.1 + addons（含 `effects/OutlineEffect.js`） |
 | [vendor/three-liltoon/](vendor/three-liltoon/) | three-liltoon 运行时 + 编译好的 lilToon GLSL（2.2 MB，第 4 后端按需加载） |
 | [CONFIG.md](docs/CONFIG.md) | 配置字段完整参考 |
-| [README.en.md](docs/README.en.md) · [README.ja.md](docs/README.ja.md) | 本说明的英文 / 日文版（`CONFIG` / `DEPLOY` / `LILTOON` 同样有 `.en` / `.ja`） |
+| [README.zh-TW.md](docs/README.zh-TW.md) · [README.en.md](docs/README.en.md) · [README.ja.md](docs/README.ja.md) · [README.ko.md](docs/README.ko.md) | 本说明的繁體 / 英文 / 日文 / 韓文版（`CONFIG` / `DEPLOY` / `LILTOON` 同样有 `.zh-TW` / `.en` / `.ja` / `.ko`） |
 | [DEPLOY.md](docs/DEPLOY.md) | 部署与打包说明 |
 | [LICENSE](LICENSE) | 项目许可证（MIT） |
 | [THIRD-PARTY-NOTICES.md](THIRD-PARTY-NOTICES.md) | 第三方声明（three.js / lilToon / three-liltoon） |

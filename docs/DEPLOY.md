@@ -1,6 +1,6 @@
 # 3D 角色模型网页内嵌看板娘 部署说明
 
-中文 ｜ [English](DEPLOY.en.md) ｜ [日本語](DEPLOY.ja.md)
+**简体中文** ｜ [繁體中文](DEPLOY.zh-TW.md) ｜ [English](DEPLOY.en.md) ｜ [日本語](DEPLOY.ja.md) ｜ [한국어](DEPLOY.ko.md)
 
 纯静态站点，**无构建步骤、无 CDN 依赖、无需 Node**，全部使用相对路径（根路径/子路径部署都不用改配置）。
 `dist/` 已预打包好，直接把本目录里的**全部文件按原样上传到网站根目录**（或任意子目录）即可，静态托管即可运行（Nginx / Apache / Netlify / Cloudflare Pages / OSS / COS 都行）。
@@ -131,13 +131,13 @@
 | `dist/3d-viewer.js` | **自包含单文件版**（约 1.94 MB），给别的页面用 `<script type="module">` 引入，**不需要 importmap、不需要 vendor/** |
 | `dist/3d-viewer.min.js` | 上者的压缩版（约 0.92 MB），`embed-demo.html` 用的就是它 |
 | `CONFIG.md` | 配置字段完整参考（含 `data-*` 属性、事件、全局钩子） |
-| `CONFIG.en.md` · `CONFIG.ja.md` | 配置参考的英文 / 日文版 |
+| `CONFIG.zh-TW.md` · `CONFIG.en.md` · `CONFIG.ja.md` · `CONFIG.ko.md` | 配置参考的繁體 / 英文 / 日文 / 韓文版 |
 | `README.md` | 项目说明 |
-| `docs/README.en.md` · `docs/README.ja.md` | 项目说明的英文 / 日文版 |
-| `DEPLOY.en.md` · `DEPLOY.ja.md` | 本文件的英文 / 日文版 |
+| `docs/README.zh-TW.md` · `docs/README.en.md` · `docs/README.ja.md` · `docs/README.ko.md` | 项目说明的繁體 / 英文 / 日文 / 韓文版 |
+| `DEPLOY.zh-TW.md` · `DEPLOY.en.md` · `DEPLOY.ja.md` · `DEPLOY.ko.md` | 本文件的繁體 / 英文 / 日文 / 韓文版 |
 | `LICENSE` | 项目许可证（MIT © 2026 Hazuki Kaguya）——**分发时必须保留** |
 | `THIRD-PARTY-NOTICES.md` | 第三方声明（three.js / lilToon / three-liltoon 的 MIT 全文）——**分发时必须保留** |
-| `LILTOON1.x.md` · `LILTOON2.x.md` | lilToon 基线对照（1.3.7 归档 / 2.3.4 现行）；另有 `.en.md` · `.ja.md` 英日版 |
+| `LILTOON1.x.md` · `LILTOON2.x.md` | lilToon 基线对照（1.3.7 归档 / 2.3.4 现行）；另有 `.zh-TW` · `.en` · `.ja` · `.ko` 版 |
 | `assets/mouth/_cells-preview-*.png` | 嘴部图集 8×8 索引图，挑 `mouthCell` 时照着看用 |
 
 跑主页面真正必需的就是：**`index.html` + `viewer.js` + `vendor/three/` 的 12 个文件 + `assets/` 里的模型与配置**。

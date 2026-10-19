@@ -1,6 +1,6 @@
 # 3D Character Model Viewer (mascot embedded in a web page)
 
-[中文](../README.md) ｜ **English** ｜ [日本語](README.ja.md)
+[简体中文](../README.md) ｜ [繁體中文](README.zh-TW.md) ｜ **English** ｜ [日本語](README.ja.md) ｜ [한국어](README.ko.md)
 
 three.js character viewer: **configurable** (model / mouth texture / baseline JSON), **embeddable** (self-contained single-file build), **deployable** (pure static).
 
@@ -11,7 +11,7 @@ Shading backends (**available only for the toon material**):
 - **three-liltoon is a variant of "lilToon style"**: it only swaps the surface material for upstream's `LilToonMaterial`; **outlines still use our own implementation** (since 0.1.9 upstream outlines require explicitly selecting `Hidden/lilToonOutline` via `shaderVariant`; measured: fine rims on skinned meshes, solid fill on static props).
 - lilToon is a toon (NPR) shader family — there is no such thing as "applying lilToon to a PBR material".
 
-【[Deploy this tool](DEPLOY.md)】  【[Model JSON configuration](CONFIG.md)】  【[Third-party license notices](../THIRD-PARTY-NOTICES.md)】
+【[Deploy this tool](DEPLOY.en.md)】  【[Model JSON configuration](CONFIG.en.md)】  【[Third-party license notices](../THIRD-PARTY-NOTICES.md)】
 
 ## Quick start
 
@@ -37,9 +37,9 @@ This directory is a complete site: **just open `index.html`**, or drop the whole
 | [liltoon-bridge.js](../liltoon-bridge.js) | 4th shading backend adapter layer (feeds lilCfg / Unity materials to three-liltoon) |
 | [vendor/three/](../vendor/three/) | Local three.js r185.1 + addons (including `effects/OutlineEffect.js`) |
 | [vendor/three-liltoon/](../vendor/three-liltoon/) | three-liltoon runtime + compiled lilToon GLSL (2.2 MB, 4th backend loaded on demand) |
-| [CONFIG.md](CONFIG.md) | Complete reference for configuration fields |
-| [README.en.md](README.en.md) · [README.ja.md](README.ja.md) | English / Japanese editions of this README (`CONFIG` / `DEPLOY` / `LILTOON` have `.en` / `.ja` too) |
-| [DEPLOY.md](DEPLOY.md) | Deployment and packaging instructions |
+| [CONFIG.md](CONFIG.en.md) | Complete reference for configuration fields |
+| [README.en.md](README.en.md) · [README.ja.md](README.ja.md) · [README.zh-TW.md](README.zh-TW.md) · [README.ko.md](README.ko.md) | Other language editions of this README (`CONFIG` / `DEPLOY` / `LILTOON` have them too) |
+| [DEPLOY.md](DEPLOY.en.md) | Deployment and packaging instructions |
 | [LICENSE](../LICENSE) | Project license (MIT) |
 | [THIRD-PARTY-NOTICES.md](../THIRD-PARTY-NOTICES.md) | Third-party notices (three.js / lilToon / three-liltoon) |
 
@@ -76,7 +76,7 @@ This directory is a complete site: **just open `index.html`**, or drop the whole
 > A ready-made CH0155 configuration is in [assets/sample.json](../assets/sample.json) (pivot X = +0.25, Z = +0.30),
 > and [assets/fallback.json](../assets/fallback.json) can serve as a "copy it and change three things" template.
 
-The complete fields (including `data-*` attributes, events, and global hooks) are in [CONFIG.md](CONFIG.md).
+The complete fields (including `data-*` attributes, events, and global hooks) are in [CONFIG.md](CONFIG.en.md).
 
 ## Three ways to use it
 
@@ -159,7 +159,7 @@ await viewer.load();
 ## Deployment
 
 A pure static site, **no build step and no CDN dependency**, all using relative paths (no configuration changes needed whether deployed at the root path or a subpath).
-`dist/` is already pre-bundled, so just upload it; see [DEPLOY.md](DEPLOY.md) for the complete manifest.
+`dist/` is already pre-bundled, so just upload it; see [DEPLOY.md](DEPLOY.en.md) for the complete manifest.
 
 The MIME type of `.glb` must be `model/gltf-binary` (`_headers` / `.htaccess` / `.nojekyll` are included — see the table below):
 

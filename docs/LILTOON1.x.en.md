@@ -1,9 +1,9 @@
 # lilToon 1.3.7 → Web (three.js) old-baseline comparison (archived)
 
-[中文](LILTOON1.x.md) ｜ **English** ｜ [日本語](LILTOON1.x.ja.md)
+[简体中文](LILTOON1.x.md) ｜ [繁體中文](LILTOON1.x.zh-TW.md) ｜ **English** ｜ [日本語](LILTOON1.x.ja.md) ｜ [한국어](LILTOON1.x.ko.md)
 
 > ⚠️ **This document is archived** —— it records the comparison and verification of the **old baseline lilToon 1.3.7**.
-> **The baseline currently in effect is 2.3.4**, see [`LILTOON2.x.md`](LILTOON2.x.md).
+> **The baseline currently in effect is 2.3.4**, see [`LILTOON2.x.en.md`](LILTOON2.x.en.md).
 >
 > Why this document is kept:
 >   · the **completion records** of phases 1~3 and the judgment process at the time
@@ -134,7 +134,6 @@ Ordered by "visual payoff ÷ work", **in three phases**; after finishing each ph
 7. **Backlight / 逆光**
 8. **Dissolve**
 
-
 ### Phase 3 —— completed
 
 Two items were originally planned; in actual execution **you asked to skip the normal-map path first** (the highest cost) and to do "the others" instead:
@@ -150,8 +149,8 @@ Two items were originally planned; in actual execution **you asked to skip the n
 **10. Edge features such as Stencil** —— ✅ done
 - Stencil: 8 items for the body + 8 for the outline, Unity enum → three constant mapping.
   ★ Precondition: the `renderer` must have `stencil: true` (three r160 defaults to false, and it cannot be added after the fact)
-  ★ On the panel it is split into two groups, **「Stencil 模型」** (Stencil model) and **「Stencil 描边」** (Stencil outline).
-  ★ Plus a 「模板模式」 (Stencil mode) dropdown (4 modes, exported from lilInspector.cs; 2 of the names are counter-intuitive)
+  ★ On the panel it is split into two groups, **「Stencil (model)」** (Stencil model) and **「Stencil (outline)」** (Stencil outline).
+  ★ Plus a 「Stencil mode」 (Stencil mode) dropdown (4 modes, exported from lilInspector.cs; 2 of the names are counter-intuitive)
 - The outline texture's `_OutlineTex_ST` / `_OutlineTex_ScrollRotate` / `_OutlineTexHSVG` —— ✅
 - ❌ Not done: the second emission layer (Emission2nd, 7 items), emission GradSpeed / ParallaxDepth / Fluorescence
 
@@ -161,7 +160,6 @@ Two items were originally planned; in actual execution **you asked to skip the n
 `_Shadow2ndNormalStrength` / `_Shadow3rdNormalStrength`
 
 **Suggested follow-up order**: ① second emission layer (low) ② layer dissolve (low) ③ distance fade-out (medium) ④ Decal (medium) ⑤ normal-map path (high; unlocks 9+3 parameters at once)
-
 
 ### Explicitly not done
 
@@ -317,7 +315,6 @@ Lit shading is an optional advanced feature.
 - [ ] Wire it into the presets (fill values such as `_OutlineWidth` from the presets into LIL_PRESETS)
 - [ ] Verify both GLB and FBX
 - [ ] Decide whether to replace the existing OutlineEffect path
-
 
 ---
 

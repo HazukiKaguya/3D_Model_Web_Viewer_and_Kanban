@@ -1,0 +1,24 @@
+{
+  "_note": "i18n/ja/labels.json —— 查看器动态标签（ja）",
+  "lighting": {
+    "day": "昼",
+    "golden": "朝 / 夕方",
+    "night": "夜"
+  },
+  "render": {
+    "pbr": "オリジナル（PBR）",
+    "cel": "トゥーン（Cel）",
+    "unlit": "アンリット"
+  },
+  "renderToon": {
+    "pbr": "オリジナル（PBR）",
+    "toon": "トゥーン素材",
+    "unlit": "アンリット"
+  },
+  "shader": {
+    "none": "なし（ネイティブ）",
+    "cel": "Cel バンディング",
+    "lilToon": "lilToon スタイル",
+    "lilSrc": "lilToon ソース"
+  }
+}

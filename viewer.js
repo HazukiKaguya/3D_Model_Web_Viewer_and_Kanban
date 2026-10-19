@@ -10,6 +10,7 @@
  *   · 描边（three 的 OutlineEffect：反壳法）
  */
 import * as THREE from 'three';
+import { LABELS } from './i18n/index.js';
 
 /**
  * lilToon 属性映射（**自动生成** ✗ 见 scripts/embed-lilmap.mjs ✓）
@@ -169,7 +170,7 @@ function ba3dSoftShadowGLSL() {
  */
 const LIGHTING_PRESETS = {
   day: {
-    label: '白昼',
+    get label() { return LABELS.lighting.day; },
     hemi: { sky: 0xffffff, ground: 0x30354a, intensity: 0.5 },
     key: { color: 0xffffff, intensity: 2.0, position: [3, 6, 4] },
     rim: { color: 0x7fa8ff, intensity: 1.2 },
@@ -177,7 +178,7 @@ const LIGHTING_PRESETS = {
     exposure: 1.0,
   },
   golden: {
-    label: '早晨 / 傍晚',
+    get label() { return LABELS.lighting.golden; },
     hemi: { sky: 0xffd9b0, ground: 0x5a4632, intensity: 0.45 },
     key: { color: 0xffb469, intensity: 2.1, position: [-4, 2.5, 4] },
     rim: { color: 0xff8a5c, intensity: 1.5 },
@@ -185,7 +186,7 @@ const LIGHTING_PRESETS = {
     exposure: 1.08,
   },
   night: {
-    label: '黑夜',
+    get label() { return LABELS.lighting.night; },
     hemi: { sky: 0x5a6f9e, ground: 0x0a0e18, intensity: 0.28 },
     key: { color: 0x8fb4ff, intensity: 1.25, position: [2, 4, 5] },
     rim: { color: 0x4a6fc0, intensity: 0.9 },
@@ -11867,9 +11868,9 @@ const SHADOW_UNIFORM_KEYS = [
     /** ⚠️ 旧 API。渲染现在是两个正交的轴（render + shader），这里返回合并后的列表以兼容 */
     getShadingModes() {
       return [
-        { key: 'pbr', label: '原始（PBR）' },
-        { key: 'cel', label: '卡通（Cel）' },
-        { key: 'unlit', label: '无光照（Unlit）' },
+        { key: 'pbr', label: LABELS.render.pbr },
+        { key: 'cel', label: LABELS.render.cel },
+        { key: 'unlit', label: LABELS.render.unlit },
       ];
     },
 
@@ -11880,9 +11881,9 @@ const SHADOW_UNIFORM_KEYS = [
     // —— 渲染轴 ①：材质模型 ——
     getRenderModes() {
       return [
-        { key: 'pbr', label: '原始（PBR）' },
-        { key: 'toon', label: '卡通材质（Toon）' },
-        { key: 'unlit', label: '无光照（Unlit）' },
+        { key: 'pbr', label: LABELS.render.pbr },
+        { key: 'toon', label: LABELS.renderToon.toon },
+        { key: 'unlit', label: LABELS.render.unlit },
       ];
     },
     getRender() { return renderMode; },
@@ -11891,10 +11892,10 @@ const SHADOW_UNIFORM_KEYS = [
     // —— 渲染轴 ②：着色器 ——
     getShaderModes() {
       return [
-        { key: 'none', label: '不注入（原生）' },
-        { key: 'cel', label: 'Cel 分档' },
-        { key: 'lilToon', label: 'lilToon 风格' },
-        { key: LIL_SRC_MODE, label: 'lilToon 源码' },
+        { key: 'none', label: LABELS.shader.none },
+        { key: 'cel', label: LABELS.shader.cel },
+        { key: 'lilToon', label: LABELS.shader.lilToon },
+        { key: LIL_SRC_MODE, label: LABELS.shader.lilSrc },
       ];
     },
     getShader() { return (lilSrcOn && shaderMode === 'lilToon') ? LIL_SRC_MODE : shaderMode; },

@@ -1,0 +1,24 @@
+{
+  "_note": "viewer-i18n: 동적 드롭다운 라벨 (ko)",
+  "lighting": {
+    "day": "낮",
+    "golden": "아침 / 저녁",
+    "night": "밤"
+  },
+  "render": {
+    "pbr": "원본(PBR)",
+    "cel": "툰(Cel)",
+    "unlit": "무광(Unlit)"
+  },
+  "renderToon": {
+    "pbr": "원본(PBR)",
+    "toon": "툰 머티리얼(Toon)",
+    "unlit": "무광(Unlit)"
+  },
+  "shader": {
+    "none": "주입 안 함(기본)",
+    "cel": "Cel 밴딩",
+    "lilToon": "lilToon 스타일",
+    "lilSrc": "lilToon 소스"
+  }
+}

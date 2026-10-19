@@ -126,9 +126,20 @@
     }
     #log, #scaler { display: none; }
   }
+
+/* ===== 语言切换条（与 demo 页面同色系 · 语言分文件 ⇒ 链接到对应的 .html 文件 ✓）===== */
+.ba3d-lang-switch{position:fixed;left:16px;top:16px;z-index:9998;display:flex;align-items:center;flex-wrap:nowrap;white-space:nowrap;gap:8px;max-width:calc(100vw - 32px);overflow:hidden;font:12.5px/1.6 system-ui,sans-serif;background:rgba(255,253,247,.94);color:#3a342b;border:1px solid rgba(44,40,34,.14);border-radius:10px;padding:6px 12px;box-shadow:0 8px 26px rgba(60,50,35,.10);backdrop-filter:blur(8px)}
+.ba3d-lang-switch .bls-label{color:#8a8172;letter-spacing:.02em}
+.ba3d-lang-switch .bls-sep{color:rgba(44,40,34,.22)}
+.ba3d-lang-switch .bls-link{color:#a8620f;text-decoration:none;border-bottom:1px solid rgba(168,98,15,.35);padding-bottom:1px}
+.ba3d-lang-switch .bls-link:hover{color:#8a5a1f;border-bottom-color:rgba(138,90,31,.7)}
+.ba3d-lang-switch .bls-cur{font-weight:600;color:#2f7d4f}
+@media (max-width:900px){.ba3d-lang-switch{left:12px;top:10px;gap:6px;padding:5px 10px;font-size:12px}}
+@media (max-width:560px){.ba3d-lang-switch{font-size:11.5px;gap:5px;padding:4px 8px}}
 </style>
 </head>
 <body>
+<div id="ba3dLangSwitch" class="ba3d-lang-switch" data-ba3d-noi18n="1" aria-label="Language"><span class="bls-label">Language</span><span class="bls-sep">|</span><span class="bls-cur">简体中文</span><span class="bls-sep">|</span><a class="bls-link" href="embed-demo.zh-TW.html">繁體中文</a><span class="bls-sep">|</span><a class="bls-link" href="embed-demo.en.html">English</a><span class="bls-sep">|</span><a class="bls-link" href="embed-demo.ja.html">日本語</a><span class="bls-sep">|</span><a class="bls-link" href="embed-demo.ko.html">한국어</a></div>
 <div class="wrap">
 
   <h1>3D 模型网页内嵌看板娘演示</h1>

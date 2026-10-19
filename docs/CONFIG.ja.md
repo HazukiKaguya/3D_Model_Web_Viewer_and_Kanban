@@ -1,18 +1,18 @@
 # BA3D 設定 JSON フィールド説明
 
-[中文](CONFIG.md) ｜ [English](CONFIG.en.md) ｜ **日本語**
+[简体中文](CONFIG.md) ｜ [繁體中文](CONFIG.zh-TW.md) ｜ [English](CONFIG.en.md) ｜ **日本語** ｜ [한국어](CONFIG.ko.md)
 
 > **lilToon ベースライン：2.3.4**
-> 本文書内の **UI ラベルは原文の中国語のまま**記載します（ビューアの UI 自体が中国語のため）。初出時には訳を添えます。
->   · ソースマップ（2.3.4 行番号）、バージョン差分リスト ⇒ [`LILTOON2.x.md`](LILTOON2.x.md)
->   · 旧ベースライン（1.3.7）との対照・照合記録 ⇒ [`LILTOON1.x.md`](LILTOON1.x.md)（アーカイブ済み、行番号は 1.3.7 のもの）
+> 本文書内の **UI ラベルはビューアの現在の表示言語に合わせています**（本文は日本語版なので、UI も「マテリアル / テクスチャ / 輪郭」と表示されます）。
+>   · ソースマップ（2.3.4 行番号）、バージョン差分リスト ⇒ [`LILTOON2.x.ja.md`](LILTOON2.x.ja.md)
+>   · 旧ベースライン（1.3.7）との対照・照合記録 ⇒ [`LILTOON1.x.ja.md`](LILTOON1.x.ja.md)（アーカイブ済み、行番号は 1.3.7 のもの）
 >
 > 本文書内の `lil_*.hlsl:NNN` 行番号参照は**すべて 2.3.4 に合わせてあります**。
 
 1 つの設定 `assets/<角色>.json` が「モデル + 口元の修正テクスチャ + スケール / フレーミング + レンダリング / ライティング / 背景 + 既定のモーション」を記述します。
 
 **相対パスはすべてこの JSON のあるディレクトリを基準に解決します** —— つまり json と glb を同じフォルダに置けば、
-サイトをどこに配置しても、誰に埋め込まれてもパスは成立します。絶対 URL（`http(s):` / `data:` / `blob:`）はそのまま使います。
+サイトをどこに設定しても、誰に埋め込まれてもパスは成立します。絶対 URL（`http(s):` / `data:` / `blob:`）はそのまま使います。
 
 完全な例は `assets/sample.json`（サンプルモデル CH0155）と `assets/fallback.json`（同じモデルの別の設定テンプレート）を参照してください。
 
@@ -124,7 +124,7 @@
 
 **③ ローカルからドラッグイン（アップロード）**
 
-「自定义模型」(カスタムモデル) パネルに **「选择贴图（可多选）」** (テクスチャを選択（複数可）) と **「选整个贴图文件夹」** (テクスチャフォルダ全体を選択) が追加されています ——
+「カスタムモデル」(カスタムモデル) パネルに **「テクスチャを選択（可多选）」** (テクスチャを選択（複数可）) と **「选整个テクスチャ文件夹」** (テクスチャフォルダ全体を選択) が追加されています ——
 選択したファイルは**ファイル名**でマッピングを作ります（`body.png → blob:…`） —— FBX にどんなパスが入っていても関係なく、ファイル名が分かれば十分です。
 
 > パスはすべて**設定ファイルのあるディレクトリからの相対**で解決され、`model.url` と同じです。
@@ -229,7 +229,7 @@ createViewer(el, { autoConfig: false })
    ### 段階色 + 遷移帯（`celBandRamp` / `celBandSoft`）
 
    **既定では有効化されません** —— `celBandRamp = null` のときはまさに上の古い式を通り、**生成される GLSL はバイト単位で不変**、
-   したがって「cel モードは変わっていない」という回帰の保証は引き続き成立します。パネル上の「分档色」(段階色) にチェックを入れて初めて以下に切り替わります。
+   したがって「cel モードは変わっていない」という回帰の保証は引き続き成立します。パネル上の「影色」(段階色) にチェックを入れて初めて以下に切り替わります。
 
    従来は「最暗段の明るさ + 暗部の色調」が 1 つだけあり、明暗の間は**線形**の遷移で、各段は同じ色相しか使えませんでした。
    今は **4 つの色停止点それぞれに色を指定**でき（最暗段 → 最亮段）、各段が自分の段の色を取ります：
@@ -262,7 +262,7 @@ vec3 getGradientIrradiance( vec3 normal, vec3 lightDirection ) {
    ⚠️ 各段が受け取るのは**色停止点を補間した色**であり（`bandSoft = 0` のときはハードエッジの切り替え）、
    「各段に独立したスライダー 1 本」ではありません。4 つの色停止点で寒色 / 暖色の段階を表現するには十分で、しかもパネルが爆発せずに済みます。
 
-   ⚠️ パネル上の「分档色」(段階色) に**チェックを入れない**とき、`bandRamp` には `null`、`bandSoft` には `0` が渡されます —— 一度も開いたことがない状態と完全に同じです。
+   ⚠️ パネル上の「影色」(段階色) に**チェックを入れない**とき、`bandRamp` には `null`、`bandSoft` には `0` が渡されます —— 一度も開いたことがない状態と完全に同じです。
 
 ```jsonc
 "celBandRamp": [                 // 青紫の暗部 → 白い亮部、4 つの色相
@@ -473,13 +473,13 @@ Natsu.glb    288 個の顔の頂点 → 148 個が遮られる (51.4%)
    —— `receiveShadow` は `lights_fragment_begin` 内で**すべてのマテリアル種別**（toon / standard / lambert / phong）に検査されるので、
    PBR 経路もまとめてカバーされます（シェーダーの軟化だけに頼ると PBR では無効です）
 
-UI：**「脸部」(顔) スライダー**（隣がグローバルの「阴影浓淡」(影の濃淡)）。触っていない間はグローバルに追従しリアルタイムで同期表示され、一度動かすと独立した値になります。
+UI：**「顔」(顔) スライダー**（隣がグローバルの「影の濃さ」(影の濃淡)）。触っていない間はグローバルに追従しリアルタイムで同期表示され、一度動かすと独立した値になります。
 追従に戻したい場合：設定に `null` を書く、または `viewer.setCel({ faceShadowMin: null })`。
 
 > 削除したもの：独立した「面部阴影」(顔の影) スイッチ、および `setFaceNoShadow()` API —— どちらもこの 1 つのパラメータに統合しました。
 > `renderer.faceNoShadow` も読まれなくなっています（設定に書いても無視されます）。
 
-インデックスページの右下に **「阴影浓淡」(影の濃淡) スライダー**（0 ~ 0.95）があり、リアルタイムで調整できます。設定 JSON に書くこともできます：
+インデックスページの右下に **「影の濃さ」(影の濃淡) スライダー**（0 ~ 0.95）があり、リアルタイムで調整できます。設定 JSON に書くこともできます：
 
 ```jsonc
 "renderer": {
@@ -494,10 +494,10 @@ UI：**「脸部」(顔) スライダー**（隣がグローバルの「阴影�
 
 実行時の等価な書き方：`viewer.setCel({ shadowMin: 0.3 })`
 
-#### 微調整（インデックスページに「光照亮度」(ライトの明るさ) スライダー + 数値入力欄あり）
+#### 微調整（インデックスページに「明るさ」(ライトの明るさ) スライダー + 数値入力欄あり）
 
 - **影が淡すぎる** → `viewer.setCel({ dark: 0.68 })` を調整（`celDark` が小さいほど影が深い；現在 0.80）
-- **全体が暗い / 明るい** → **UI 上の「光照亮度」(ライトの明るさ) スライダー**（リアルタイム；両方の経路に効く、1.0 = プリセットの元の値）
+- **全体が暗い / 明るい** → **UI 上の「明るさ」(ライトの明るさ) スライダー**（リアルタイム；両方の経路に効く、1.0 = プリセットの元の値）
 - トゥーンには別に総元栓 `toneMappingExposure × 1.15` があり、これを調整しても同様に比例し、影のコントラストを損ないません
 - **もっと「トゥーン」らしい段階分けが欲しい** → `viewer.setCel({ steps: 4 })`（4 段のグラデーションに戻る）
 
@@ -568,7 +568,7 @@ viewer.getOptionalParts()
 **症状**：モデルのハローが `unlit` では正常だが、**PBR / Cel では真っ黒**。
 
 **原因**：かなりの数のモデルで**ハローメッシュに NORMAL 属性がまったくありません**。glTF 仕様どおり、
-GLTFLoader は法線が欠けていると**ゼロベクトル**のバッファで埋めます；ゼロ法線は受光マテリアルでは光照が常に 0 → 真っ黒。
+GLTFLoader は法線が欠けていると**ゼロベクトル**のバッファで埋めます；ゼロ法線は受光マテリアルではライティングが常に 0 → 真っ黒。
 一方 unlit は `MeshBasicMaterial` を使っており、**法線をまったく読まない**ので正常に見えます。
 
 **範囲**（60 モデルをスキャン）：29 / 1078 メッシュがゼロ法線で、**そのうち 28 個がハロー**
@@ -850,7 +850,7 @@ index.html?model=./assets/sample.glb&mouth=./assets/mouth/Character_Mouth_2.png
 | `ba3d:pointerdown` | `{ button, hit }` | 即座に発火（しきい値未満）；`hit` = 左ボタンがモデル上に押されたか |
 | `ba3d:press` | `{ button, heldMs, thresholdMs, hit }` | **十分長く押して初めて「押下」**（既定 200ms）、ここからコンテナのドラッグを開始 |
 | `ba3d:click` | `{ button, heldMs, thresholdMs, hit }` | 押し足りずに離した → クリック扱い、ドラッグは発火しない |
-| `ba3d:pointerup` | `{ button, hit, pressedOnModel, pressed }` | 抬起；`pressed` = 本次是否越过按住阈值 |
+| `ba3d:pointerup` | `{ button, hit, pressedOnModel, pressed }` | 抬起；`pressed` = 本次是否越过按住しきい値 |
 | `ba3d:action` | `{ name }` | モーション切り替え（メニューの同期に使う） |
 
 **押下しきい値**は `renderer.pressHoldMs` で制御します（既定 `200`）。左ボタンをモデル上で押すとまず保留状態に入ります：
@@ -941,7 +941,6 @@ play3dmodelaction();                       // 渡さない → 既定のモー�
 
 操作の取り決め：**左ボタンでモデル上をドラッグ = コンテナを移動；右ボタンドラッグ = キャラクターを回転**（`dragContainer` がオンのとき）。
 
-
 ---
 
 ## lilToon アウトライン（Outline）
@@ -978,7 +977,7 @@ play3dmodelaction();                       // 渡さない → 既定のモー�
 コード内で**メッシュのワールドスケールで正規化**しているので、`width` の物理的な意味はモデルのスケールに依存しません。
 （Unity では 1 単位 = 1 メートル、キャラクターは約 1.5、したがって width 0.08 は約 0.8 ミリメートルで、かなり細い）
 
-**⇒ パネル上の「宽度」(幅) の範囲は 0 ~ 10、ステップ 0.01**。
+**⇒ パネル上の「太さ」(幅) の範囲は 0 ~ 10、ステップ 0.01**。
 
 ### fixWidthMode
 
@@ -996,7 +995,7 @@ outlineWidth *= lerp(1.0, saturate(length(headDirection)), _OutlineFixWidth);
 | `'lilToon'`（既定）| saturate を保持、**lilToon と完全に一致** |
 | `'screen'` | saturate を外し、`fixWidth=1` のとき**アウトラインの画面太さが一定**（遠ざかっても細くならない）|
 
-パネル上は「固定宽度生效（去掉 saturate）」(固定幅を有効化（saturate を外す）) チェックボックスに対応します。
+パネル上は「固定幅生效（去掉 saturate）」(固定幅を有効化（saturate を外す）) チェックボックスに対応します。
 
 ### skipPattern
 
@@ -1009,11 +1008,11 @@ outlineWidth *= lerp(1.0, saturate(length(headDirection)), _OutlineFixWidth);
 "skipPattern": "^CH0155_Body_4_Mouth_Split$"   // 完全一致
 ```
 
-**「部件」(パーツ) パネルを使うと各メッシュの本当の名前が分かります**（ホバーで階層パスとマテリアル名を表示）
+**「パーツ」(パーツ) パネルを使うと各メッシュの本当の名前が分かります**（ホバーで階層パスとマテリアル名を表示）
 
 ### 旧アウトラインとの排他
 
-lilToon アウトラインを有効にすると、内蔵の `OutlineEffect`（HUD の「描边」(アウトライン) ボタン）は**自動的に譲ります**。
+lilToon アウトラインを有効にすると、内蔵の `OutlineEffect`（HUD の「輪郭」(アウトライン) ボタン）は**自動的に譲ります**。
 両者が重なることはありません。
 
 **FBX モデル**：内蔵アウトラインは FBX には一律で効きません（反転ハルの実装がその座標系に敏感です）。
@@ -1023,7 +1022,7 @@ lilToon アウトラインを有効にすると、内蔵の `OutlineEffect`（HU
 
 ## パーツパネル
 
-HUD 上の **[部件]** (パーツ) ボタンで、モデルのすべてのメッシュを一覧します。
+HUD 上の **[パーツ]** (パーツ) ボタンで、モデルのすべてのメッシュを一覧します。
 
 | 要素 | 役割 |
 |---|---|
@@ -1043,7 +1042,7 @@ HUD 上の **[部件]** (パーツ) ボタンで、モデルのすべてのメ�
 \* 自動ロジックには次が含まれます：`hideParts`（正規表現による非表示）`hideOptional`（モーションに応じたオプションパーツの非表示）
 `hideByBoneScale`（小道具が体内まで縮小されたときの非表示）
 
-**[全显] / [全隐]** (すべて表示 / すべて非表示) **はすべてのパーツを同時にロックします**、そうでないと自動ロジックで一部のパーツがまた現れてしまいます。
+**[すべて表示] / [すべて非表示]** (すべて表示 / すべて非表示) **はすべてのパーツを同時にロックします**、そうでないと自動ロジックで一部のパーツがまた現れてしまいます。
 
 ### API
 
@@ -1132,11 +1131,11 @@ HUD 上の **[頂点色]** ボタン = 前者で、後者も出力します。
 
 | 設定 | lilToon パラメータ | パネルコントロール |
 |---|---|---|
-| litEnable | _OutlineEnableLighting | 受光生效（受光を有効化）（チェックボックス） |
-| litColor | _OutlineLitColor（RGB + alpha） | 受光色 + 受光強度 |
+| litEnable | _OutlineEnableLighting | 明るさの影響（受光を有効化）（チェックボックス） |
+| litColor | _OutlineLitColor（RGB + alpha） | 明るい色 + 受光強度 |
 | litScale | _OutlineLitScale | 受光コントラスト |
 | litOffset | _OutlineLitOffset | 受光しきい値 |
-| litApplyTex | _OutlineLitApplyTex | 受光色にアウトライン テクスチャを乗算（チェックボックス） |
+| litApplyTex | _OutlineLitApplyTex | 明るい色にアウトライン テクスチャを乗算（チェックボックス） |
 
 ### 既定では受光しません
 
@@ -1146,7 +1145,7 @@ _OutlineLitColor.a の既定値は 0 なので、litF = 0 となり、結果は�
 ### 光源方向
 
 毎フレーム、**メインライトの実際のワールド位置**から方向を計算し、uOutlineLitDir に渡します。
-そのためライティングプリセット（白昼 / 夕方 / 夜）を切り替えると、アウトラインの受光方向もそれに追従して変わります。
+そのためライティングプリセット（昼 / 夕方 / 夜）を切り替えると、アウトラインの明るい方向もそれに追従して変わります。
 
 ### 法線の取得元
 
@@ -1162,7 +1161,7 @@ _OutlineLitColor.a の既定値は 0 なので、litF = 0 となり、結果は�
 | tex | _OutlineTex | アウトラインテクスチャ。テクスチャでアウトラインに色を付けます |
 | widthMask | _OutlineWidthMask | 幅マスク。**R チャンネルを使用** |
 
-パネル上では「选择文件」（ファイルを選択）ボタンを使います（ローカル画像は blob URL を通し、JSON 設定で相対パスを与えることもできます）。
+パネル上では「ファイルを選択」（ファイルを選択）ボタンを使います（ローカル画像は blob URL を通し、JSON 設定で相対パスを与えることもできます）。
 
 ### 幅マスクの使い方
 
@@ -1174,25 +1173,25 @@ _OutlineLitColor.a の既定値は 0 なので、litF = 0 となり、結果は�
 そのようなときはマスク画像を与えて口の部分を黒く描けば、ピクセル単位で正確に制御できます。
 
 テクスチャは URL ごとにキャッシュし、読み込み完了後にアウトラインを自動で再適用します（手動での更新は不要です）。
-読み込みに失敗すると [outline] 贴图加载失败：... を出力します（warn レベル、常に表示されます）。
+読み込みに失敗すると [outline] テクスチャ読み込み失敗： ... を出力します（warn レベル、常に表示されます）。
 
 ---
 
 ## 詳細ログのスイッチ
 
-HUD 上の **详细日志**（詳細ログ） チェックボックスで、設定は localStorage に保存され、更新後も保持されます。
+HUD 上の **詳細ログ**（詳細ログ） チェックボックスで、設定は localStorage に保存され、更新後も保持されます。
 これは window.__ba3dDebugUI を制御し、3 種類の診断出力に影響します。
 
 | 出力 | これに制御されるか |
 |---|---|
-| 阴影自检表格（影のセルフチェック表）（详细日志：読み込みごとに 1 回 console.table） | はい |
+| 阴影自检表格（影のセルフチェック表）（詳細ログ：読み込みごとに 1 回 console.table） | はい |
 | syncRenderUI の判定入力の出力 | はい |
 | [lilPanel] 已打开、控件 N 个 | はい |
 | viewer.js 内の 21 か所の console.debug | **いいえ** —— DevTools の Verbose レベルで制御されます |
 
 通常時、コンソールには 1 行だけが残るはずです：
 
-    [viewer] 加载完成 | 模型=... | 网格=11 | アウトライン=true
+    [viewer] 読み込み完成 | モデル=... | 网格=11 | アウトライン=true
 
 console.warn / console.error は常に表示されます（本当の異常のときだけ出ます）。
 
@@ -1202,19 +1201,19 @@ console.warn / console.error は常に表示されます（本当の異常のと
 
 パネルで変更できるもの（シェーダー = lilToon のとき）：
 
-    预设（プリセット）          19 個の lilToon 公式プリセット
+    プリセット（プリセット）          19 個の lilToon 公式プリセット
     分档（分档：明暗の段階）    濃さ / 第 1 層の境界·遷移 / 第 2 層の境界·遷移 / 第 3 層の境界·遷移 / 第 3 層のスイッチ / 色
-    Rim      強度 / 境界 / 遷移 / フレネル / 受光方向 / 色 / 背光色
+    Rim      強度 / 境界 / 遷移 / フレネル / 明るい方向 / 色 / 背光色
     MatCap   強度 / テクスチャ ファイル
     エミッション   強度 / 色
     背光（バックライト）     強度 / 指向性
     アウトライン     有効 / 幅 / 固定幅 / 頂点カラーを幅として使う / Z オフセット / 固定幅を有効化 /
-             アウトライン色 / 不透明度 / 受光色 / 受光強度 / 受光コントラスト / 受光しきい値 /
-             アウトラインテクスチャ / 幅マスク / 受光生效 / 受光色にテクスチャを乗算 / Cull モード / パーツをスキップ
+             アウトライン色 / 不透明度 / 明るい色 / 受光強度 / 受光コントラスト / 受光しきい値 /
+             アウトラインテクスチャ / 幅マスク / 明るさの影響 / 明るい色にテクスチャを乗算 / Cull モード / パーツをスキップ
 
 **アウトラインの 16 個の設定フィールドはすべてにコントロールがあります。**
 
-HUD の **[导出 JSON]（JSON をエクスポート）** は、既定値と異なる項目だけを含む設定を生成します。アウトラインパラメータは lilToon.outline の下にあります。
+HUD の **[JSON 書き出し]（JSON をエクスポート）** は、既定値と異なる項目だけを含む設定を生成します。アウトラインパラメータは lilToon.outline の下にあります。
 エクスポートは再帰的な diff を使っており、既定値と等しいフィールドは省略されます。
 
 ---
@@ -1249,7 +1248,7 @@ three の MeshBasicMaterial は、ジオメトリに tangent 属性がある場�
 
 | 設定 | lilToon パラメータ | パネルコントロール |
 |---|---|---|
-| litShadowReceive | _OutlineLitShadowReceive | 受光が影を受け取る（受光生效：受光を有効化）（チェックボックス） |
+| litShadowReceive | _OutlineLitShadowReceive | 受光が影を受け取る（明るさの影響：受光を有効化）（チェックボックス） |
 
 ### なぜ自前で計算しているのか
 
@@ -1280,7 +1279,7 @@ three のマテリアル システムを完全に迂回し、three の影 chunk 
 
 ### パネル上の診断スイッチ
 
-「阴影遮罩预览（诊断）」（影マスクのプレビュー（診断））= litShadowDebug で、作用は litShadowReceive と同じですが
+「影マスクのプレビュー（診断）」（影マスクのプレビュー（診断））= litShadowDebug で、作用は litShadowReceive と同じですが
 調査用です（影マスクを強制的に適用し、パイプラインがつながっているかを確認しやすくします）。
 
 ---
@@ -1289,10 +1288,10 @@ three のマテリアル システムを完全に迂回し、three の影 chunk 
 
 lilCfg.outline.shaderColorMult（既定 false）：
 
-    false → アウトライン色は mat.color によって 1 回だけ乗算されます（正しい、受光色が純粋）
-    true  → シェーダー内でもう一度 uOutlineColor を乗算します（受光色がアウトライン色で暗く染まります。旧挙動との比較用）
+    false → アウトライン色は mat.color によって 1 回だけ乗算されます（正しい、明るい色が純粋）
+    true  → シェーダー内でもう一度 uOutlineColor を乗算します（明るい色がアウトライン色で暗く染まります。旧挙動との比較用）
 
-パネル上は「着色器里再乘一次アウトライン色」（シェーダー内でもう一度アウトライン色を乗算）チェックボックスに対応します。
+パネル上は「シェーダー里再乘一次アウトライン色」（シェーダー内でもう一度アウトライン色を乗算）チェックボックスに対応します。
 
 ---
 
@@ -1346,11 +1345,11 @@ mergeLilCfg は**1 段の深いマージ**を行います（outline / rim / matc
 
 ### パネル
 
-    [● lilToon 参数]                    ← タイトルバー（ドラッグ ハンドル）
+    [● lilToon パラメータ]                    ← タイトルバー（ドラッグ ハンドル）
     ─────────────────
-    材质（マテリアル）  [ 全部（默认）（すべて（既定））▾ ]  [清除覆盖（上書きをクリア）]
+    マテリアル（マテリアル）  [ 全部（默认）（すべて（既定））▾ ]  [上書きをクリア（上書きをクリア）]
           「全部」を選ぶとグローバルを変更します。あるマテリアルを選ぶとそれだけを上書きします（● が付いていれば上書きあり、パネルはマージ後の値を表示します）
-    预设  [（不套用 ▾）]（プリセット（適用しない））                ← 上で選択したマテリアルに適用されます
+    プリセット  [（不套用 ▾）]（プリセット（適用しない））                ← 上で選択したマテリアルに適用されます
 
 パネル内の 40 か所以上の呼び出しは、薄いラッパーを通して現在のマテリアルを自動的に伴います：
 
@@ -1373,7 +1372,7 @@ mergeLilCfg は**1 段の深いマージ**を行います（outline / rim / matc
     viewer.getLilOutline(matName)
     viewer.setLilOutline(o, matName)
     viewer.applyLilPreset(name, matName)
-    viewer.getLilMaterials()                  // 模型里的材质名列表
+    viewer.getLilMaterials()                  // モデル里的マテリアル名列表
     viewer.getLilCfgByMaterial() / setLilCfgByMaterial(obj)
     viewer.clearLilMaterialOverride(matName)
 
@@ -1388,7 +1387,7 @@ mergeLilCfg は**1 段の深いマージ**を行います（outline / rim / matc
 
 ### マテリアル単位の上書き範囲（すべて対応）
 
-    阴影分档（影の明暗段階）（濃さ / 各層の境界·遷移 / 各層の色 / 第 3 層のスイッチ）
+    影の段階（影の明暗段階）（濃さ / 各層の境界·遷移 / 各層の色 / 第 3 層のスイッチ）
     Rim（強度 / 境界 / 遷移 / フレネル / 色 / 背光色）
     MatCap（強度 / 境界 / **テクスチャ**）
     エミッション（強度 / 色）
@@ -1405,10 +1404,10 @@ resolveMatCapTexture による URL ごとのキャッシュ + マテリアルご
 3 つのパネル（#lilPanel / #exportPanel / #partsPanel）は .lp 要素で、
 カスタムモデル（#upload）は独立したコンテナです。それぞれにタイトルバーがあります：
 
-    [● lilToon 参数]        ← タイトルはそれを開くボタンの文字と同じ
-    [● 导出 JSON]
-    [● 部件]（パーツ）
-    [● 自定义模型（本地文件，不会上传到任何服务器）]   ← .u-title を使用
+    [● lilToon パラメータ]        ← タイトルはそれを開くボタンの文字と同じ
+    [● JSON 書き出し]
+    [● パーツ]（パーツ）
+    [● カスタムモデル（ローカルファイル・サーバーには送信されません）]   ← .u-title を使用
 
 ### ドラッグ
 
@@ -1417,7 +1416,7 @@ resolveMatCapTexture による URL ごとのキャッシュ + マテリアルご
   · リスナーは**パネル自体**に付けます（イベント委譲）。タイトル要素には付けません
     —— lilToon パネルは開くたび/プリセット変更のたびに innerHTML = '' で再構築されるため、タイトルに付けると無効になります。
   · ハンドルの識別順序：指定セレクタ > .lp-title > .u-title > h4
-  · パネルは元々 right:16px + top:16px の配置で、ドラッグ時に left/top に切り替わります。
+  · パネルは元々 right:16px + top:16px の設定で、ドラッグ時に left/top に切り替わります。
   · ウィンドウ外にドラッグするとクランプします（Math.max(4, ...) / Math.min(innerWidth - w - 4, ...)）。
   · ウィンドウの resize 後、パネルがビューポート外にある場合は自動で右寄せに戻します。
 
@@ -1486,7 +1485,7 @@ three の toon は環境光を**分档の外側に別途加算**します：
     shadowAmbient = 1.0 → 削減しない（既定、挙動は変わらない）
     shadowAmbient = 0.0 → 影領域に環境光がまったくない（最も深い）
 
-cel モード（「阴影浓淡」=0 / 「脸部」=0）に近い見た目にしたい場合は、0~0.2 に調整します。
+cel モード（「影の濃さ」=0 / 「顔」=0）に近い見た目にしたい場合は、0~0.2 に調整します。
 
 ### ★ 2 つの投射路径の差異（_ShadowReceive が最初のバージョンで効かなかった理由）
 
@@ -1527,7 +1526,7 @@ mix の t が 1 を超える場合は**外挿**になります：
 
 これは上記の「環境光の床」を回避するためのもので、スライダーの範囲は 0~2 です。
 
-### 「（重置为默认）」プリセット
+### 「（既定に戻す）」プリセット
 
 プリセット ドロップダウン内の特殊項目：
 
@@ -1536,7 +1535,7 @@ mix の t が 1 を超える場合は**外挿**になります：
 
 ---
 
-## Dissolve（フェーズ 2）
+## ディゾルブ（フェーズ 2）
 
 ### フェーズ 2 の 4 項目のうち、3 項目はもともと完了していました
 
@@ -1545,7 +1544,7 @@ mix の t が 1 を超える場合は**外挿**になります：
 | 5 | アウトラインのアップグレード（自作の反転ハル + 幅テクスチャ + 頂点カラー制御） | すでに完了、applyLilOutline() |
 | 6 | 装飾層のブレンド モード（Normal/Add/Screen/Multiply） | すでに完了、ba3dBlend() |
 | 7 | Backlight / 逆光 | すでに完了 |
-| 8 | Dissolve | **今回のラウンドで実装** |
+| 8 | ディゾルブ | **今回のラウンドで実装** |
 
 （6 について：lilToon 1.3.7 の _MainColor 自体にはブレンド モードがありません。
   ブレンド モードは装飾層にのみあり、それらは実装済みです）
@@ -1554,29 +1553,29 @@ mix の t が 1 を超える場合は**外挿**になります：
 
 | 設定 | lilToon | 説明 |
 |---|---|---|
-| dissolve.mode | _DissolveParams.r | 0=オフ 1=テクスチャしきい値 2=UV 3=オブジェクト空間 |
-| dissolve.linear | _DissolveParams.g | 1=線形/平面 0=円形/球形 |
-| dissolve.threshold | _DissolveParams.b | しきい値 |
-| dissolve.softness | _DissolveParams.a | エッジのフェード幅（フォールバック 0.001、そうでないとゼロ除算） |
-| dissolve.pos | _DissolvePos | 線形のときは**方向**、円形/球形のときは**中心点**、w はモード 2 の回転のみ |
-| dissolve.color | _DissolveColor.rgb | エッジの色（**加色**、lil_common_frag.hlsl:1841 を参照） |
-| dissolve.maskTex | _DissolveMask | モード 1 のマスク、.r をサンプリング |
-| dissolve.noiseTex / noiseStrength | _DissolveNoiseMask / _DissolveNoiseStrength | ノイズによる擾乱 |
+| dissolve.mode | _ディゾルブParams.r | 0=オフ 1=テクスチャしきい値 2=UV 3=オブジェクト空間 |
+| dissolve.linear | _ディゾルブParams.g | 1=線形/平面 0=円形/球形 |
+| dissolve.threshold | _ディゾルブParams.b | しきい値 |
+| dissolve.softness | _ディゾルブParams.a | エッジのフェード幅（フォールバック 0.001、そうでないとゼロ除算） |
+| dissolve.pos | _ディゾルブPos | 線形のときは**方向**、円形/球形のときは**中心点**、w はモード 2 の回転のみ |
+| dissolve.color | _ディゾルブColor.rgb | エッジの色（**加色**、lil_common_frag.hlsl:1841 を参照） |
+| dissolve.maskTex | _ディゾルブMask | モード 1 のマスク、.r をサンプリング |
+| dissolve.noiseTex / noiseStrength | _ディゾルブNoiseMask / _ディゾルブNoiseStrength | ノイズによる擾乱 |
 
 ### 注入箇所（2 か所、lilToon と同じ）
 
     (1) #include <alphatest_fragment> の前
         マスクを計算 → diffuseColor.a *= maskVal
-        同時にエッジ係数をグローバル ba3dDissolveEdge に格納
+        同時にエッジ係数をグローバル ba3dディゾルブEdge に格納
     (2) #include <dithering_fragment>
-        gl_FragColor.rgb += _DissolveColor.rgb * ba3dDissolveEdge;
+        gl_FragColor.rgb += _ディゾルブColor.rgb * ba3dディゾルブEdge;
 
 （検証済み：toon フラグメントでは alphatest が 37 行目、dithering が 53 行目。
   opaque_fragment の後でないと gl_FragColor は存在しないため、(2) の位置は正しい）
 
 ### 座標の正規化（lilToon に対する私たちの変更）
 
-lilToon は _DissolvePos の生のオブジェクト空間座標を直接使います。Unity ではキャラクターの身長が 1~2 単位しかないためです。
+lilToon は _ディゾルブPos の生のオブジェクト空間座標を直接使います。Unity ではキャラクターの身長が 1~2 単位しかないためです。
 このビューアが読み込むモデルはスケールが一定でないため、正規化を行います：
 
     mode 3 の評価座標 = ( vBa3dPositionWS - center ) * vec3( 1/sizeX, 1/sizeY, 1/sizeZ )
@@ -1587,8 +1586,8 @@ lilToon は _DissolvePos の生のオブジェクト空間座標を直接使い�
 
 ### ⚠️ lilToon のモード 2 の線形には 2 つの異なる実装があります
 
-    ノイズなし（lil_common_functions.hlsl:628）→ lilRotateUV( uv, _DissolvePos.w ).x
-    ノイズあり（:675）                         → dot( uv, normalize(_DissolvePos.xy) ) + noise
+    ノイズなし（lil_common_functions.hlsl:628）→ lilRotateUV( uv, _ディゾルブPos.w ).x
+    ノイズあり（:675）                         → dot( uv, normalize(_ディゾルブPos.xy) ) + noise
 
 前者は回転角を 1 つだけ使い、xy はまったく使われず、ビューア側では推測できません。
 後者は生の uv を直接 dot するため、方向が負のとき結果が [-1, 0] に入り、しきい値 > 0 では永遠に成立しません。
@@ -1596,15 +1595,15 @@ lilToon は _DissolvePos の生のオブジェクト空間座標を直接使い�
 
 **私たちは統一しました**：
 
-    ba3dDissolveAlpha = dot( vBa3dUv - 0.5, normalize(pos.xy) ) + 0.5;   // 範囲 0~1
+    ba3dディゾルブAlpha = dot( vBa3dUv - 0.5, normalize(pos.xy) ) + 0.5;   // 範囲 0~1
 
 中心化した後はしきい値 0~1 がちょうどテクスチャ全体を走査し、意味はモード 3 の平面と一致します。
 
 ### ★ この機能では 6 つの落とし穴を踏みました（いずれも「2 か所の取り決めの不一致」という類）
 
 1. **非同期テクスチャ vs 同期コンパイル**
-   GLSL 内の texture2D( ba3dDissolveMask, ... ) は同期的に生成されます。
-   一方 uniform sampler2D ba3dDissolveMask; は元々、テクスチャの**読み込み成功**後にのみ宣言されていました。
+   GLSL 内の texture2D( ba3dディゾルブMask, ... ) は同期的に生成されます。
+   一方 uniform sampler2D ba3dディゾルブMask; は元々、テクスチャの**読み込み成功**後にのみ宣言されていました。
    最初のフレームでは必ず null が返り、→ undeclared identifier、コンパイル失敗になります。
    修正方法：uniform を**無条件に宣言**し、プレースホルダ テクスチャで間に合わせます
      マスクのプレースホルダ = 純白（.r=1.0、「マスクが効かない」と等価、lilToon のマスク無効と一致）
@@ -1615,7 +1614,7 @@ lilToon は _DissolvePos の生のオブジェクト空間座標を直接使い�
    USE_ALPHATEST マクロはとっくに確定しており、alphatest_fragment 内の discard は**効きません**。
    症状：「モデルがシルエットになる」—— alpha は小さく変更されますが破棄されず、不透明レンダリングでは alpha がまた無視されます。
    修正方法：patchToonMaterial の先頭（コールバックの前）に移動し、mat.needsUpdate = true を設定
-   さらに syncDissolveAlphaTest() を追加して applyLilOutline() のたびに呼びます
+   さらに syncディゾルブAlphaTest() を追加して applyLilOutline() のたびに呼びます
      （マテリアルが再利用されて patchToonMaterial が走らなくなり、alphaTest が古くなるのを防ぎます）
 
 3. **アウトラインのシェルも一緒に溶解させる必要がある**
@@ -1652,20 +1651,20 @@ lilToon は _DissolvePos の生のオブジェクト空間座標を直接使い�
 
 ### エッジの色は「加色」です
 
-lilToon では _DissolveColor が発光します：
+lilToon では _ディゾルブColor が発光します：
 
-    fd.col.rgb += _DissolveColor.rgb * dissolveAlpha;
-    fd.emissionColor += _DissolveColor.rgb * dissolveAlpha;
+    fd.col.rgb += _ディゾルブColor.rgb * dissolveAlpha;
+    fd.emissionColor += _ディゾルブColor.rgb * dissolveAlpha;
 
 そのため既定の純白では溶解の境界が**明るく光ります**。これは想定された効果です。
-白い縁が不要な場合は、「边缘颜色」（エッジの色）を黒に設定してください。
+白い縁が不要な場合は、「縁の色」（エッジの色）を黒に設定してください。
 （既定のフェード幅も 0.1 から 0.03 に下げました。そうでないとエッジ帯が広すぎてモデル全体が白っぽくなります）
 
 ### 診断
 
 **新しいパラメータの組み合わせ**が現れるたびに 1 行出力します（同じ組み合わせは 1 回だけ、詳細ログのスイッチには依存しません）：
 
-    [dissolve] 生成 GLSL：模式=3 线性=1 阈值=0.200 羽化=0.030 位置/方向=(0,-1,0,0) 遮罩=无 噪声=无
+    [dissolve] 生成 GLSL：モード=3 线性=1 しきい値=0.200 羽化=0.030 位置/方向=(0,-1,0,0) 遮罩=无 噪声=无
     [dissolve] 世界空间归一化：k=(1.37118, 0.62073, 1.30632) 尺寸=(0.729, 1.611, 0.766) center=(-0.20, 0.87, 0.02)
 
 この 2 行から「コンパイルに実際に入ったパラメータ」と「正規化に使った座標系」が直接分かります。
@@ -1779,7 +1778,7 @@ lilToon では _DissolveColor が発光します：
 | `_Emission2ndParallaxDepth` | — |  |
 | `_Emission2ndFluorescence` | — |  |
 
-### 背光 Backlight（4/6 実装済み）
+### 逆光（4/6 実装済み）
 
 | lilToon パラメータ | 状態 | 私たちのキー |
 |---|---|---|
@@ -1790,7 +1789,7 @@ lilToon では _DissolveColor が発光します：
 | `_BacklightDirectivity` | ✅ | `backlight.directivity` |
 | `_BacklightViewStrength` | ✅ | `backlight.viewStrength` |
 
-### Dissolve（3/3 実装済み）
+### ディゾルブ（3/3 実装済み）
 
 | lilToon パラメータ | 状態 | 私たちのキー |
 |---|---|---|
@@ -1894,7 +1893,7 @@ cull=1（裏面のみ）は **side=FrontSide** のマテリアルでは**フラ�
 ⚠️ lilToon の MatCap には**完全版**と **lite 版**の 2 種類があります：
 
     完全版（:1414-1436 / :1482-1504）
-        float4 matCapColor = _MatCapColor;                    ← 染色あり
+        float4 matCapColor = _MatCapColor;                    ← 色付けあり
         matCapColor *= SAMPLE( _MatCapTex, matUV );
         matCapColor.rgb = lerp( rgb, rgb * fd.lightColor, _MatCapEnableLighting );
         matCapColor.a   = lerp( a, a * fd.shadowmix, _MatCapShadowMask );
@@ -1939,7 +1938,7 @@ color / backfaceMask / albedo を使う mainStrength を補いました。
 
 #### テクスチャ キャッシュ
 
-    resolveMaskTexture()  →  resolveDissolveTexture を再利用（**データ テクスチャ**、NoColorSpace）
+    resolveMaskTexture()  →  resolveディゾルブTexture を再利用（**データ テクスチャ**、NoColorSpace）
     ⚠️ sRGB を通してはいけません。そうしないと 0~1 のマスク値が gamma で歪み、有効領域がすべて狂います。
     ⚠️ 非同期読み込み中は null を返すため、uniform は**無条件に宣言**し、プレースホルダ テクスチャで間に合わせます。
        マスクのプレースホルダ = 純白（.r = 1.0、「制限しない」と等価）
@@ -1952,7 +1951,7 @@ color / backfaceMask / albedo を使う mainStrength を補いました。
 |---|---|---|
 | texST | _OutlineTex_ST | [tilingX, tilingY, offsetX, offsetY]、既定 [1,1,0,0] |
 | texScrollRotate | _OutlineTex_ScrollRotate | [scrollX, scrollY, angle, angleSpeed]、既定 [0,0,0,0] |
-| texHSVG | _OutlineTexHSVG | [色相オフセット, 彩度倍率, 明度倍率, gamma]、既定 [0,1,1,1] |
+| texHSVG | _OutlineTexHSVG | [色相オフセット, 彩度倍率, 明度の倍率, gamma]、既定 [0,1,1,1] |
 
     lilCalcUV（lil_common_functions.hlsl:436）：
         outuv = uv * ST.xy + ST.zw;
@@ -2046,7 +2045,7 @@ lil_pass_forward_normal.hlsl:352 / 360 / 411 / 445 / 450 / 457 / 472 / 478：
 
 ## ★ シーンビューの三点セット（Unity スタイル）
 
-> ツールバーの「场景」（UI ラベル「シーン」）ボタンが `#scenePanel` フローティングウィンドウを開き、3 組のコントロールがあります。
+> ツールバーの「シーン」（UI ラベル「シーン」）ボタンが `#scenePanel` フローティングウィンドウを開き、3 組のコントロールがあります。
 > ⚠️ それは普通の `.lp` フローティングウィンドウです ⇒ ドラッグ / スケール / 位置の永続化はすべてフローティングウィンドウの基盤が引き受けます。
 
 ### ⚠️⚠️ 補助表示は**既定で全オフ**、メインページだけが明示的にオンにする
@@ -2328,7 +2327,7 @@ lil_pass_forward_normal.hlsl:352 / 360 / 411 / 445 / 450 / 457 / 472 / 478：
   ⇒ ユーザーの言葉：
 
       「取景中心偏移本身就是为了实现旋转时角色在旋转中心设计的。
-        我们实际需要的就是让人可以直观把模型移动到 000 位置。
+        我们实际需要的就是让人可以直观把モデル移动到 000 位置。
         这样旋转就是角色为中心看、**不动旋转轴、动角色位置**」
 
   ### ⚠️ `pivot` は廃止（ただし API は残っている）
@@ -2536,7 +2535,7 @@ lil_pass_forward_normal.hlsl:352 / 360 / 411 / 445 / 450 / 457 / 472 / 478：
 ## ★ 2026-10-06 追加（lilToon 2.3.4 に合わせる）
 
 > この一群はすべて、ベースラインを lilToon 1.3.7 から **2.3.4** に替えた後に補ったものです。
-> バージョン比較とソースマップは [`LILTOON2.x.md`](LILTOON2.x.md) を参照。
+> バージョン比較とソースマップは [`LILTOON2.x.ja.md`](LILTOON2.x.ja.md) を参照。
 
 ### 1. レンダリング状態（マテリアルごと）—— `_TransparentMode` / `_Cutoff` / `_Cull`
 
@@ -2572,7 +2571,7 @@ lil_pass_forward_normal.hlsl:352 / 360 / 411 / 445 / 450 / 457 / 472 / 478：
 
   ### 同期チェーン（順序が重要）
 
-      syncDissolveAlphaTest();   // ① alphaTest（唯一の権威）
+      syncディゾルブAlphaTest();   // ① alphaTest（唯一の権威）
       syncRenderState();         // ② transparent / depthWrite / side
       syncLayerDoubleSide();     // ③ 主色レイヤーのカリング（明示的な _Cull が優先 · スキップすることがある）
       syncStencil();             // ④ ステンシルパラメータ
@@ -2585,7 +2584,7 @@ lil_pass_forward_normal.hlsl:352 / 360 / 411 / 445 / 450 / 457 / 472 / 478：
 
   | キー | 既定 | 対応 |
   |---|---|---|
-  | `mainTexHSVG` | `[0,1,1,1]` | `_MainTexHSVG`：（色相オフセット, 彩度倍率, 明度倍率, Gamma） |
+  | `mainTexHSVG` | `[0,1,1,1]` | `_MainTexHSVG`：（色相オフセット, 彩度倍率, 明度の倍率, Gamma） |
   | `mainTexScrollRotate` | `[0,0,0,0]` | `_MainTex_ScrollRotate`：（スクロールX, スクロールY, 回転角, 回転角速度） |
 
   式はそのまま写し（`lil_common_frag.hlsl:263 / :317`）：
@@ -2687,7 +2686,7 @@ lil_pass_forward_normal.hlsl:352 / 360 / 411 / 445 / 450 / 457 / 472 / 478：
   ⇒ BA シリーズの uv1 は大範囲で繰り返す ⇒ `texture2D(tex, uv1)` では**縞**しか得られません。
      （Unity で同じ UV1 + 同じ ST を使ってもまったく同じ縞が出ます、バグではありません）
 
-  ⇒ `texST` の実際の用法はここでは「**テクスチャのどの部分を拡大して敷き詰めるか**」であり、自由な配置ではありません。
+  ⇒ `texST` の実際の用法はここでは「**テクスチャのどの部分を拡大して敷き詰めるか**」であり、自由な設定ではありません。
   ⇒ 「★Decal 调试」= 2 にすると decal UV をそのまま色として出力でき、UV がどこに落ちているかを確認できます。
 
 ### 6. 反射 / スペキュラハイライト —— `_UseReflection` / `_ApplySpecular`
@@ -2798,7 +2797,6 @@ lil_pass_forward_normal.hlsl:352 / 360 / 411 / 445 / 450 / 457 / 472 / 478：
      ⇒ 先頭で宣言済みの `ba3dColor2nd` / `ba3dColor3rd` を使います。
 
 ### 9.5 補完：レイヤー溶解 / Decal 调试 / MatCap / アウトラインのステンシル
-
 
   #### 主色レイヤー 2nd / 3rd のレイヤー溶解（`main2nd.dissolve*` / `main3rd.dissolve*`）
 

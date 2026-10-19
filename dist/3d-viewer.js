@@ -43497,6 +43497,158 @@ var WebGLRenderer = class {
   }
 };
 
+// i18n/zh/labels.json
+var labels_default = {
+  lighting: {
+    day: "白昼",
+    golden: "早晨 / 傍晚",
+    night: "黑夜"
+  },
+  render: {
+    pbr: "原始（PBR）",
+    cel: "卡通（Cel）",
+    unlit: "无光照（Unlit）"
+  },
+  renderToon: {
+    pbr: "原始（PBR）",
+    toon: "卡通材质（Toon）",
+    unlit: "无光照（Unlit）"
+  },
+  shader: {
+    none: "不注入（原生）",
+    cel: "Cel 分档",
+    lilToon: "lilToon 风格",
+    lilSrc: "lilToon 源码"
+  }
+};
+
+// i18n/en/labels.json
+var labels_default2 = {
+  _note: "i18n/en/labels.json —— 查看器动态标签（en）",
+  lighting: {
+    day: "Day",
+    golden: "Morning / evening",
+    night: "Night"
+  },
+  render: {
+    pbr: "Original (PBR)",
+    cel: "Toon (Cel)",
+    unlit: "Unlit"
+  },
+  renderToon: {
+    pbr: "Original (PBR)",
+    toon: "Toon material",
+    unlit: "Unlit"
+  },
+  shader: {
+    none: "None (native)",
+    cel: "Cel banding",
+    lilToon: "lilToon style",
+    lilSrc: "lilToon source"
+  }
+};
+
+// i18n/ja/labels.json
+var labels_default3 = {
+  _note: "i18n/ja/labels.json —— 查看器动态标签（ja）",
+  lighting: {
+    day: "昼",
+    golden: "朝 / 夕方",
+    night: "夜"
+  },
+  render: {
+    pbr: "オリジナル（PBR）",
+    cel: "トゥーン（Cel）",
+    unlit: "アンリット"
+  },
+  renderToon: {
+    pbr: "オリジナル（PBR）",
+    toon: "トゥーン素材",
+    unlit: "アンリット"
+  },
+  shader: {
+    none: "なし（ネイティブ）",
+    cel: "Cel バンディング",
+    lilToon: "lilToon スタイル",
+    lilSrc: "lilToon ソース"
+  }
+};
+
+// i18n/ko/labels.json
+var labels_default4 = {
+  _note: "viewer-i18n: 동적 드롭다운 라벨 (ko)",
+  lighting: {
+    day: "낮",
+    golden: "아침 / 저녁",
+    night: "밤"
+  },
+  render: {
+    pbr: "원본(PBR)",
+    cel: "툰(Cel)",
+    unlit: "무광(Unlit)"
+  },
+  renderToon: {
+    pbr: "원본(PBR)",
+    toon: "툰 머티리얼(Toon)",
+    unlit: "무광(Unlit)"
+  },
+  shader: {
+    none: "주입 안 함(기본)",
+    cel: "Cel 밴딩",
+    lilToon: "lilToon 스타일",
+    lilSrc: "lilToon 소스"
+  }
+};
+
+// i18n/zh-TW/labels.json
+var labels_default5 = {
+  _note: "viewer-i18n：動態下拉標籤（zh-TW）",
+  lighting: {
+    day: "白晝",
+    golden: "早晨 / 傍晚",
+    night: "黑夜"
+  },
+  render: {
+    pbr: "原始（PBR）",
+    cel: "卡通（Cel）",
+    unlit: "無光照（Unlit）"
+  },
+  renderToon: {
+    pbr: "原始（PBR）",
+    toon: "卡通材質（Toon）",
+    unlit: "無光照（Unlit）"
+  },
+  shader: {
+    none: "不注入（原生）",
+    cel: "Cel 分檔",
+    lilToon: "lilToon 風格",
+    lilSrc: "lilToon 原始碼"
+  }
+};
+
+// i18n/index.js
+var LANGS = { zh: labels_default, en: labels_default2, ja: labels_default3, ko: labels_default4, "zh-tw": labels_default5 };
+function normalizeLang(raw) {
+  let v = String(raw == null ? "" : raw).toLowerCase().replace("_", "-").trim();
+  if (!v) return "";
+  if (/^zh-?(tw|hant|hk|mo)$/.test(v) || v === "zhtw") return "zh-tw";
+  v = v.slice(0, 2);
+  return Object.prototype.hasOwnProperty.call(LANGS, v) ? v : "";
+}
+function detectLang() {
+  let v = "";
+  try {
+    const q = new URLSearchParams(location.search).get("lang");
+    if (q) v = q;
+  } catch (e) {
+  }
+  if (!v && typeof window !== "undefined" && window.__ba3dLang) v = window.__ba3dLang;
+  if (!v && typeof document !== "undefined" && document.documentElement) v = document.documentElement.lang || "";
+  return normalizeLang(v) || "zh";
+}
+var LANG_CODE = detectLang();
+var LABELS = LANGS[LANG_CODE] || labels_default;
+
 // assets/lilmap.inline.js
 var LIL_MAP = [{ "p": "mainTexHSVG", "l": "_MainTexHSVG", "t": "vector" }, { "p": "mainTexScrollRotate", "l": "_MainTex_ScrollRotate", "t": "vector" }, { "p": "transparentMode", "l": "_TransparentMode", "t": "int" }, { "p": "cutoff", "l": "_Cutoff", "t": "range" }, { "p": "cull", "l": "_Cull", "t": "int" }, { "p": "useShadow", "l": "_UseShadow", "t": "int" }, { "p": "shadowStrength", "l": "_ShadowStrength", "t": "range" }, { "p": "shadowColor", "l": "_ShadowColor", "t": "color" }, { "p": "shadowBorder", "l": "_ShadowBorder", "t": "range" }, { "p": "shadowBorderRange", "l": "_ShadowBorderRange", "t": "range" }, { "p": "shadowMainStrength", "l": "_ShadowMainStrength", "t": "range" }, { "p": "shadowReceive", "l": "_ShadowReceive", "t": "range" }, { "p": "shadow2ndReceive", "l": "_Shadow2ndReceive", "t": "range" }, { "p": "shadow3rdReceive", "l": "_Shadow3rdReceive", "t": "range" }, { "p": "shadowBlur", "l": "_ShadowBlur", "t": "range" }, { "p": "shadow2ndColor", "l": "_Shadow2ndColor", "t": "color" }, { "p": "shadow2ndBorder", "l": "_Shadow2ndBorder", "t": "range" }, { "p": "shadow2ndBlur", "l": "_Shadow2ndBlur", "t": "range" }, { "p": "shadow3rdColor", "l": "_Shadow3rdColor", "t": "color" }, { "p": "shadow3rdBorder", "l": "_Shadow3rdBorder", "t": "range" }, { "p": "shadow3rdBlur", "l": "_Shadow3rdBlur", "t": "range" }, { "p": "shadowNormalStrength", "l": "_ShadowNormalStrength", "t": "range" }, { "p": "shadow2ndNormalStrength", "l": "_Shadow2ndNormalStrength", "t": "range" }, { "p": "shadow3rdNormalStrength", "l": "_Shadow3rdNormalStrength", "t": "range" }, { "p": "bump.use", "l": "_UseBumpMap", "t": "int" }, { "p": "bump.tex", "l": "_BumpMap", "t": "texture" }, { "p": "bump.scale", "l": "_BumpScale", "t": "range" }, { "p": "bump2nd.use", "l": "_UseBump2ndMap", "t": "int" }, { "p": "bump2nd.tex", "l": "_Bump2ndMap", "t": "texture" }, { "p": "bump2nd.scale", "l": "_Bump2ndScale", "t": "range" }, { "p": "bump2nd.scaleMask", "l": "_Bump2ndScaleMask", "t": "texture" }, { "p": "bump2nd.uvMode", "l": "_Bump2ndMap_UVMode", "t": "int" }, { "p": "outline.enable", "l": "_UseOutline", "t": "int" }, { "p": "outline.color", "l": "_OutlineColor", "t": "color" }, { "p": "outline.tex", "l": "_OutlineTex", "t": "texture" }, { "p": "outline.width", "l": "_OutlineWidth", "t": "range" }, { "p": "outline.widthMask", "l": "_OutlineWidthMask", "t": "texture" }, { "p": "outline.texST", "l": "_OutlineTex_ScrollRotate", "t": "vector" }, { "p": "outline.texScrollRotate", "l": "_OutlineTex_ScrollRotate", "t": "vector" }, { "p": "outline.texHSVG", "l": "_OutlineTexHSVG", "t": "vector" }, { "p": "outline.stencilEnable", "l": "_OutlineStencilRef", "t": "range" }, { "p": "outline.stencilRef", "l": "_OutlineStencilRef", "t": "range" }, { "p": "outline.stencilReadMask", "l": "_OutlineStencilReadMask", "t": "range" }, { "p": "outline.stencilWriteMask", "l": "_OutlineStencilWriteMask", "t": "range" }, { "p": "outline.stencilComp", "l": "_OutlineStencilComp", "t": "float" }, { "p": "outline.stencilPass", "l": "_OutlineStencilPass", "t": "float" }, { "p": "outline.stencilFail", "l": "_OutlineStencilFail", "t": "float" }, { "p": "outline.stencilZFail", "l": "_OutlineStencilZFail", "t": "float" }, { "p": "outline.fixWidth", "l": "_OutlineFixWidth", "t": "range" }, { "p": "outline.fixWidthMode", "l": "_OutlineFixWidth", "t": "range" }, { "p": "outline.vertexR2Width", "l": "_OutlineVertexR2Width", "t": "int" }, { "p": "outline.zBias", "l": "_OutlineZBias", "t": "float" }, { "p": "outline.litEnable", "l": "_OutlineEnableLighting", "t": "range" }, { "p": "outline.litColor", "l": "_OutlineLitColor", "t": "color" }, { "p": "outline.litApplyTex", "l": "_OutlineLitApplyTex", "t": "int" }, { "p": "outline.litShadowReceive", "l": "_OutlineLitShadowReceive", "t": "int" }, { "p": "outline.shaderColorMult", "l": "_OutlineLitColor", "t": "color" }, { "p": "outline.vectorTex", "l": "_OutlineVectorTex", "t": "texture" }, { "p": "outline.vectorScale", "l": "_OutlineVectorScale", "t": "range" }, { "p": "outline.vectorUVMode", "l": "_OutlineVectorUVMode", "t": "int" }, { "p": "outline.litScale", "l": "_OutlineLitScale", "t": "float" }, { "p": "outline.litOffset", "l": "_OutlineLitOffset", "t": "float" }, { "p": "rim.blend", "l": "_RimBlendMode", "t": "int" }, { "p": "rim.color", "l": "_RimColor", "t": "color" }, { "p": "rim.border", "l": "_RimBorder", "t": "range" }, { "p": "rim.blur", "l": "_RimBlur", "t": "range" }, { "p": "rim.fresnelPower", "l": "_RimFresnelPower", "t": "range" }, { "p": "rim.dirStrength", "l": "_RimDirStrength", "t": "range" }, { "p": "rim.dirRange", "l": "_RimDirRange", "t": "range" }, { "p": "rim.indirColor", "l": "_RimIndirColor", "t": "color" }, { "p": "rim.indirBorder", "l": "_RimIndirBorder", "t": "range" }, { "p": "rim.indirBlur", "l": "_RimIndirBlur", "t": "range" }, { "p": "rim.indirRange", "l": "_RimIndirRange", "t": "range" }, { "p": "rim.blendMode", "l": "_RimBlendMode", "t": "int" }, { "p": "rim.enableLighting", "l": "_RimEnableLighting", "t": "range" }, { "p": "rim.mainStrength", "l": "_RimMainStrength", "t": "range" }, { "p": "rim.normalStrength", "l": "_RimNormalStrength", "t": "range" }, { "p": "rim.shadowMask", "l": "_RimShadowMask", "t": "range" }, { "p": "matcap.vrParallax", "l": "_MatCapVRParallaxStrength", "t": "range" }, { "p": "matcap.lod", "l": "_MatCapLod", "t": "range" }, { "p": "matcap.customNormal", "l": "_MatCapCustomNormal", "t": "int" }, { "p": "matcap.bumpMap", "l": "_MatCapBumpMap", "t": "texture" }, { "p": "matcap.bumpScale", "l": "_MatCapBumpScale", "t": "range" }, { "p": "matcap.url", "l": "_MatCapTex", "t": "texture" }, { "p": "matcap.blend", "l": "_MatCapBlend", "t": "range" }, { "p": "matcap.blendMode", "l": "_MatCapBlendMode", "t": "int" }, { "p": "matcap.enableLighting", "l": "_MatCapEnableLighting", "t": "range" }, { "p": "matcap.mainStrength", "l": "_MatCapMainStrength", "t": "range" }, { "p": "matcap.normalStrength", "l": "_MatCapNormalStrength", "t": "range" }, { "p": "matcap.mul", "l": "_MatCapBlend", "t": "range" }, { "p": "matcap.shadowMask", "l": "_MatCapShadowMask", "t": "range" }, { "p": "matcap.color", "l": "_MatCapColor", "t": "color" }, { "p": "matcap.blendMask", "l": "_MatCapBlendMask", "t": "texture" }, { "p": "matcap.backfaceMask", "l": "_MatCapBackfaceMask", "t": "int" }, { "p": "matcap2nd.vrParallax", "l": "_MatCap2ndVRParallaxStrength", "t": "range" }, { "p": "matcap2nd.lod", "l": "_MatCap2ndLod", "t": "range" }, { "p": "matcap2nd.customNormal", "l": "_MatCap2ndCustomNormal", "t": "int" }, { "p": "matcap2nd.bumpMap", "l": "_MatCap2ndBumpMap", "t": "texture" }, { "p": "matcap2nd.bumpScale", "l": "_MatCap2ndBumpScale", "t": "range" }, { "p": "matcap2nd.url", "l": "_MatCap2ndTex", "t": "texture" }, { "p": "matcap2nd.blend", "l": "_MatCap2ndBlend", "t": "range" }, { "p": "matcap2nd.blendMode", "l": "_MatCap2ndBlendMode", "t": "int" }, { "p": "matcap2nd.enableLighting", "l": "_MatCap2ndEnableLighting", "t": "range" }, { "p": "matcap2nd.mainStrength", "l": "_MatCap2ndMainStrength", "t": "range" }, { "p": "matcap2nd.normalStrength", "l": "_MatCap2ndNormalStrength", "t": "range" }, { "p": "matcap2nd.mul", "l": "_MatCap2ndBlend", "t": "range" }, { "p": "matcap2nd.shadowMask", "l": "_MatCap2ndShadowMask", "t": "range" }, { "p": "matcap2nd.color", "l": "_MatCap2ndColor", "t": "color" }, { "p": "matcap2nd.blendMask", "l": "_MatCap2ndBlendMask", "t": "texture" }, { "p": "matcap2nd.backfaceMask", "l": "_MatCap2ndBackfaceMask", "t": "int" }, { "p": "emission.use", "l": "_UseEmission", "t": "int" }, { "p": "emission.color", "l": "_EmissionColor", "t": "color" }, { "p": "emission.blend", "l": "_EmissionBlend", "t": "range" }, { "p": "emission.blendMode", "l": "_EmissionBlendMode", "t": "int" }, { "p": "emission.uvMode", "l": "_EmissionMap_UVMode", "t": "int" }, { "p": "emission.mainStrength", "l": "_EmissionMainStrength", "t": "range" }, { "p": "emission.tex", "l": "_EmissionMap", "t": "texture" }, { "p": "emission.blendMask", "l": "_EmissionBlendMask", "t": "texture" }, { "p": "dither.use", "l": "_UseDither", "t": "int" }, { "p": "dither.url", "l": "_DitherTex", "t": "texture" }, { "p": "dither.maxValue", "l": "_DitherMaxValue", "t": "float" }, { "p": "reflection.use", "l": "_UseReflection", "t": "int" }, { "p": "reflection.apply", "l": "_ApplyReflection", "t": "int" }, { "p": "reflection.toon", "l": "_ReflectionBlendMode", "t": "int" }, { "p": "reflection.normalStrength", "l": "_ReflectionNormalStrength", "t": "range" }, { "p": "reflection.smoothness", "l": "_Smoothness", "t": "range" }, { "p": "reflection.reflectance", "l": "_Reflectance", "t": "range" }, { "p": "reflection.metallic", "l": "_Metallic", "t": "range" }, { "p": "reflection.color", "l": "_ReflectionColor", "t": "color" }, { "p": "reflection.blendMode", "l": "_ReflectionBlendMode", "t": "int" }, { "p": "reflection.aaStrength", "l": "_AAStrength", "t": "range" }, { "p": "backlight.color", "l": "_BacklightColor", "t": "color" }, { "p": "backlight.border", "l": "_BacklightBorder", "t": "range" }, { "p": "backlight.blur", "l": "_BacklightBlur", "t": "range" }, { "p": "backlight.directivity", "l": "_BacklightDirectivity", "t": "float" }, { "p": "backlight.viewStrength", "l": "_BacklightViewStrength", "t": "range" }, { "p": "backlight.normalStrength", "l": "_BacklightNormalStrength", "t": "range" }, { "p": "backlight.mainStrength", "l": "_BacklightMainStrength", "t": "range" }, { "p": "emission2nd.use", "l": "_UseEmission2nd", "t": "int" }, { "p": "emission2nd.color", "l": "_Emission2ndColor", "t": "color" }, { "p": "emission2nd.blend", "l": "_Emission2ndBlend", "t": "range" }, { "p": "emission2nd.blendMode", "l": "_Emission2ndBlendMode", "t": "int" }, { "p": "emission2nd.uvMode", "l": "_Emission2ndMap_UVMode", "t": "int" }, { "p": "emission2nd.tex", "l": "_Emission2ndMap", "t": "texture" }, { "p": "emission2nd.blendMask", "l": "_Emission2ndBlendMask", "t": "texture" }, { "p": "main2nd.decalDebug", "l": "_Main2ndTexIsDecal", "t": "int" }, { "p": "main2nd.isDecal", "l": "_Main2ndTexIsDecal", "t": "int" }, { "p": "main2nd.isLeftOnly", "l": "_Main2ndTexIsLeftOnly", "t": "int" }, { "p": "main2nd.isRightOnly", "l": "_Main2ndTexIsRightOnly", "t": "int" }, { "p": "main2nd.shouldCopy", "l": "_Main2ndTexShouldCopy", "t": "int" }, { "p": "main2nd.shouldFlipMirror", "l": "_Main2ndTexShouldFlipMirror", "t": "int" }, { "p": "main2nd.shouldFlipCopy", "l": "_Main2ndTexShouldFlipCopy", "t": "int" }, { "p": "main2nd.decalAnimation", "l": "_Main2ndTexDecalAnimation", "t": "vector" }, { "p": "main2nd.decalSubParam", "l": "_Main2ndTexDecalSubParam", "t": "vector" }, { "p": "main2nd.texST", "l": "_Main2ndTex_ScrollRotate", "t": "vector" }, { "p": "main2nd.texAngle", "l": "_Main2ndTexAngle", "t": "float" }, { "p": "main2nd.alphaMode", "l": "_Main2ndTexAlphaMode", "t": "int" }, { "p": "main2nd.color", "l": "_Color", "t": "color" }, { "p": "main2nd.tex", "l": "_Main2ndTex", "t": "texture" }, { "p": "main2nd.uvMode", "l": "_Main2ndTex_UVMode", "t": "int" }, { "p": "main2nd.blendMode", "l": "_Main2ndTexBlendMode", "t": "int" }, { "p": "main2nd.enableLighting", "l": "_Main2ndEnableLighting", "t": "range" }, { "p": "main2nd.blendMask", "l": "_Main2ndBlendMask", "t": "texture" }, { "p": "main2nd.cull", "l": "_Cull", "t": "int" }, { "p": "main2nd.dissolveMode", "l": "_Main2ndDissolveParams", "c": "x", "t": "vector" }, { "p": "main2nd.dissolveDir", "l": "_Main2ndDissolvePos", "t": "vector" }, { "p": "main2nd.dissolveThreshold", "l": "_Main2ndDissolveParams", "c": "z", "t": "vector" }, { "p": "main2nd.dissolveSoftness", "l": "_Main2ndDissolveParams", "c": "w", "t": "vector" }, { "p": "main2nd.dissolvePos", "l": "_Main2ndDissolvePos", "t": "vector" }, { "p": "main2nd.dissolveColor", "l": "_Main2ndDissolveColor", "t": "color" }, { "p": "main2nd.dissolveMask", "l": "_Main2ndDissolveMask", "t": "texture" }, { "p": "main2nd.dissolveNoiseMask", "l": "_Main2ndDissolveNoiseMask", "t": "texture" }, { "p": "main2nd.dissolveNoiseMaskST", "l": "_Main2ndDissolveNoiseMask_ScrollRotate", "t": "vector" }, { "p": "main2nd.dissolveNoiseScrollRotate", "l": "_Main2ndDissolveNoiseMask_ScrollRotate", "t": "vector" }, { "p": "main2nd.dissolveNoiseStrength", "l": "_Main2ndDissolveNoiseStrength", "t": "float" }, { "p": "main2nd.distFadeNear", "l": "_Main2ndDistanceFade", "c": "x", "t": "vector" }, { "p": "main2nd.distFadeFar", "l": "_Main2ndDistanceFade", "c": "y", "t": "vector" }, { "p": "main2nd.distFadeStrength", "l": "_Main2ndDistanceFade", "c": "z", "t": "vector" }, { "p": "main3rd.decalDebug", "l": "_Main3rdTexIsDecal", "t": "int" }, { "p": "main3rd.isDecal", "l": "_Main3rdTexIsDecal", "t": "int" }, { "p": "main3rd.isLeftOnly", "l": "_Main3rdTexIsLeftOnly", "t": "int" }, { "p": "main3rd.isRightOnly", "l": "_Main3rdTexIsRightOnly", "t": "int" }, { "p": "main3rd.shouldCopy", "l": "_Main3rdTexShouldCopy", "t": "int" }, { "p": "main3rd.shouldFlipMirror", "l": "_Main3rdTexShouldFlipMirror", "t": "int" }, { "p": "main3rd.shouldFlipCopy", "l": "_Main3rdTexShouldFlipCopy", "t": "int" }, { "p": "main3rd.decalAnimation", "l": "_Main3rdTexDecalAnimation", "t": "vector" }, { "p": "main3rd.decalSubParam", "l": "_Main3rdTexDecalSubParam", "t": "vector" }, { "p": "main3rd.texST", "l": "_Main3rdTex_ScrollRotate", "t": "vector" }, { "p": "main3rd.texAngle", "l": "_Main3rdTexAngle", "t": "float" }, { "p": "main3rd.alphaMode", "l": "_Main3rdTexAlphaMode", "t": "int" }, { "p": "main3rd.color", "l": "_Color", "t": "color" }, { "p": "main3rd.tex", "l": "_Main3rdTex", "t": "texture" }, { "p": "main3rd.uvMode", "l": "_Main3rdTex_UVMode", "t": "int" }, { "p": "main3rd.blendMode", "l": "_Main3rdTexBlendMode", "t": "int" }, { "p": "main3rd.enableLighting", "l": "_Main3rdEnableLighting", "t": "range" }, { "p": "main3rd.blendMask", "l": "_Main3rdBlendMask", "t": "texture" }, { "p": "main3rd.cull", "l": "_Cull", "t": "int" }, { "p": "main3rd.dissolveMode", "l": "_Main3rdDissolveParams", "c": "x", "t": "vector" }, { "p": "main3rd.dissolveDir", "l": "_Main3rdDissolvePos", "t": "vector" }, { "p": "main3rd.dissolveThreshold", "l": "_Main3rdDissolveParams", "c": "z", "t": "vector" }, { "p": "main3rd.dissolveSoftness", "l": "_Main3rdDissolveParams", "c": "w", "t": "vector" }, { "p": "main3rd.dissolvePos", "l": "_Main3rdDissolvePos", "t": "vector" }, { "p": "main3rd.dissolveColor", "l": "_Main3rdDissolveColor", "t": "color" }, { "p": "main3rd.dissolveMask", "l": "_Main3rdDissolveMask", "t": "texture" }, { "p": "main3rd.dissolveNoiseMask", "l": "_Main3rdDissolveNoiseMask", "t": "texture" }, { "p": "main3rd.dissolveNoiseMaskST", "l": "_Main3rdDissolveNoiseMask_ScrollRotate", "t": "vector" }, { "p": "main3rd.dissolveNoiseScrollRotate", "l": "_Main3rdDissolveNoiseMask_ScrollRotate", "t": "vector" }, { "p": "main3rd.dissolveNoiseStrength", "l": "_Main3rdDissolveNoiseStrength", "t": "float" }, { "p": "main3rd.distFadeNear", "l": "_Main3rdDistanceFade", "c": "x", "t": "vector" }, { "p": "main3rd.distFadeFar", "l": "_Main3rdDistanceFade", "c": "y", "t": "vector" }, { "p": "main3rd.distFadeStrength", "l": "_Main3rdDistanceFade", "c": "z", "t": "vector" }, { "p": "stencil.use", "l": "_StencilRef", "t": "range" }, { "p": "stencil.ref", "l": "_StencilRef", "t": "range" }, { "p": "stencil.readMask", "l": "_StencilReadMask", "t": "range" }, { "p": "stencil.writeMask", "l": "_StencilWriteMask", "t": "range" }, { "p": "stencil.comp", "l": "_StencilComp", "t": "float" }, { "p": "stencil.pass", "l": "_StencilPass", "t": "float" }, { "p": "stencil.fail", "l": "_StencilFail", "t": "float" }, { "p": "stencil.zfail", "l": "_StencilZFail", "t": "float" }, { "p": "dissolve.mode", "l": "_DissolveParams", "c": "x", "t": "vector" }, { "p": "dissolve.linear", "l": "_DissolveParams", "c": "y", "t": "vector" }, { "p": "dissolve.threshold", "l": "_DissolveParams", "c": "z", "t": "vector" }, { "p": "dissolve.softness", "l": "_DissolveParams", "c": "w", "t": "vector" }, { "p": "dissolve.pos", "l": "_DissolvePos", "t": "vector" }, { "p": "dissolve.color", "l": "_DissolveColor", "t": "color" }, { "p": "dissolve.maskTex", "l": "_DissolveMask", "t": "texture" }, { "p": "dissolve.noiseTex", "l": "_DissolveNoiseMask", "t": "texture" }, { "p": "dissolve.noiseStrength", "l": "_DissolveNoiseStrength", "t": "float" }];
 var LIL_BY_NAME = { "_MainTexHSVG": [{ "p": "mainTexHSVG", "l": "_MainTexHSVG", "t": "vector" }], "_MainTex_ScrollRotate": [{ "p": "mainTexScrollRotate", "l": "_MainTex_ScrollRotate", "t": "vector" }], "_TransparentMode": [{ "p": "transparentMode", "l": "_TransparentMode", "t": "int" }], "_Cutoff": [{ "p": "cutoff", "l": "_Cutoff", "t": "range" }], "_Cull": [{ "p": "cull", "l": "_Cull", "t": "int" }, { "p": "main2nd.cull", "l": "_Cull", "t": "int" }, { "p": "main3rd.cull", "l": "_Cull", "t": "int" }], "_UseShadow": [{ "p": "useShadow", "l": "_UseShadow", "t": "int" }], "_ShadowStrength": [{ "p": "shadowStrength", "l": "_ShadowStrength", "t": "range" }], "_ShadowColor": [{ "p": "shadowColor", "l": "_ShadowColor", "t": "color" }], "_ShadowBorder": [{ "p": "shadowBorder", "l": "_ShadowBorder", "t": "range" }], "_ShadowBorderRange": [{ "p": "shadowBorderRange", "l": "_ShadowBorderRange", "t": "range" }], "_ShadowMainStrength": [{ "p": "shadowMainStrength", "l": "_ShadowMainStrength", "t": "range" }], "_ShadowReceive": [{ "p": "shadowReceive", "l": "_ShadowReceive", "t": "range" }], "_Shadow2ndReceive": [{ "p": "shadow2ndReceive", "l": "_Shadow2ndReceive", "t": "range" }], "_Shadow3rdReceive": [{ "p": "shadow3rdReceive", "l": "_Shadow3rdReceive", "t": "range" }], "_ShadowBlur": [{ "p": "shadowBlur", "l": "_ShadowBlur", "t": "range" }], "_Shadow2ndColor": [{ "p": "shadow2ndColor", "l": "_Shadow2ndColor", "t": "color" }], "_Shadow2ndBorder": [{ "p": "shadow2ndBorder", "l": "_Shadow2ndBorder", "t": "range" }], "_Shadow2ndBlur": [{ "p": "shadow2ndBlur", "l": "_Shadow2ndBlur", "t": "range" }], "_Shadow3rdColor": [{ "p": "shadow3rdColor", "l": "_Shadow3rdColor", "t": "color" }], "_Shadow3rdBorder": [{ "p": "shadow3rdBorder", "l": "_Shadow3rdBorder", "t": "range" }], "_Shadow3rdBlur": [{ "p": "shadow3rdBlur", "l": "_Shadow3rdBlur", "t": "range" }], "_ShadowNormalStrength": [{ "p": "shadowNormalStrength", "l": "_ShadowNormalStrength", "t": "range" }], "_Shadow2ndNormalStrength": [{ "p": "shadow2ndNormalStrength", "l": "_Shadow2ndNormalStrength", "t": "range" }], "_Shadow3rdNormalStrength": [{ "p": "shadow3rdNormalStrength", "l": "_Shadow3rdNormalStrength", "t": "range" }], "_UseBumpMap": [{ "p": "bump.use", "l": "_UseBumpMap", "t": "int" }], "_BumpMap": [{ "p": "bump.tex", "l": "_BumpMap", "t": "texture" }], "_BumpScale": [{ "p": "bump.scale", "l": "_BumpScale", "t": "range" }], "_UseBump2ndMap": [{ "p": "bump2nd.use", "l": "_UseBump2ndMap", "t": "int" }], "_Bump2ndMap": [{ "p": "bump2nd.tex", "l": "_Bump2ndMap", "t": "texture" }], "_Bump2ndScale": [{ "p": "bump2nd.scale", "l": "_Bump2ndScale", "t": "range" }], "_Bump2ndScaleMask": [{ "p": "bump2nd.scaleMask", "l": "_Bump2ndScaleMask", "t": "texture" }], "_Bump2ndMap_UVMode": [{ "p": "bump2nd.uvMode", "l": "_Bump2ndMap_UVMode", "t": "int" }], "_UseOutline": [{ "p": "outline.enable", "l": "_UseOutline", "t": "int" }], "_OutlineColor": [{ "p": "outline.color", "l": "_OutlineColor", "t": "color" }], "_OutlineTex": [{ "p": "outline.tex", "l": "_OutlineTex", "t": "texture" }], "_OutlineWidth": [{ "p": "outline.width", "l": "_OutlineWidth", "t": "range" }], "_OutlineWidthMask": [{ "p": "outline.widthMask", "l": "_OutlineWidthMask", "t": "texture" }], "_OutlineTex_ScrollRotate": [{ "p": "outline.texST", "l": "_OutlineTex_ScrollRotate", "t": "vector" }, { "p": "outline.texScrollRotate", "l": "_OutlineTex_ScrollRotate", "t": "vector" }], "_OutlineTexHSVG": [{ "p": "outline.texHSVG", "l": "_OutlineTexHSVG", "t": "vector" }], "_OutlineStencilRef": [{ "p": "outline.stencilEnable", "l": "_OutlineStencilRef", "t": "range" }, { "p": "outline.stencilRef", "l": "_OutlineStencilRef", "t": "range" }], "_OutlineStencilReadMask": [{ "p": "outline.stencilReadMask", "l": "_OutlineStencilReadMask", "t": "range" }], "_OutlineStencilWriteMask": [{ "p": "outline.stencilWriteMask", "l": "_OutlineStencilWriteMask", "t": "range" }], "_OutlineStencilComp": [{ "p": "outline.stencilComp", "l": "_OutlineStencilComp", "t": "float" }], "_OutlineStencilPass": [{ "p": "outline.stencilPass", "l": "_OutlineStencilPass", "t": "float" }], "_OutlineStencilFail": [{ "p": "outline.stencilFail", "l": "_OutlineStencilFail", "t": "float" }], "_OutlineStencilZFail": [{ "p": "outline.stencilZFail", "l": "_OutlineStencilZFail", "t": "float" }], "_OutlineFixWidth": [{ "p": "outline.fixWidth", "l": "_OutlineFixWidth", "t": "range" }, { "p": "outline.fixWidthMode", "l": "_OutlineFixWidth", "t": "range" }], "_OutlineVertexR2Width": [{ "p": "outline.vertexR2Width", "l": "_OutlineVertexR2Width", "t": "int" }], "_OutlineZBias": [{ "p": "outline.zBias", "l": "_OutlineZBias", "t": "float" }], "_OutlineEnableLighting": [{ "p": "outline.litEnable", "l": "_OutlineEnableLighting", "t": "range" }], "_OutlineLitColor": [{ "p": "outline.litColor", "l": "_OutlineLitColor", "t": "color" }, { "p": "outline.shaderColorMult", "l": "_OutlineLitColor", "t": "color" }], "_OutlineLitApplyTex": [{ "p": "outline.litApplyTex", "l": "_OutlineLitApplyTex", "t": "int" }], "_OutlineLitShadowReceive": [{ "p": "outline.litShadowReceive", "l": "_OutlineLitShadowReceive", "t": "int" }], "_OutlineVectorTex": [{ "p": "outline.vectorTex", "l": "_OutlineVectorTex", "t": "texture" }], "_OutlineVectorScale": [{ "p": "outline.vectorScale", "l": "_OutlineVectorScale", "t": "range" }], "_OutlineVectorUVMode": [{ "p": "outline.vectorUVMode", "l": "_OutlineVectorUVMode", "t": "int" }], "_OutlineLitScale": [{ "p": "outline.litScale", "l": "_OutlineLitScale", "t": "float" }], "_OutlineLitOffset": [{ "p": "outline.litOffset", "l": "_OutlineLitOffset", "t": "float" }], "_RimBlendMode": [{ "p": "rim.blend", "l": "_RimBlendMode", "t": "int" }, { "p": "rim.blendMode", "l": "_RimBlendMode", "t": "int" }], "_RimColor": [{ "p": "rim.color", "l": "_RimColor", "t": "color" }], "_RimBorder": [{ "p": "rim.border", "l": "_RimBorder", "t": "range" }], "_RimBlur": [{ "p": "rim.blur", "l": "_RimBlur", "t": "range" }], "_RimFresnelPower": [{ "p": "rim.fresnelPower", "l": "_RimFresnelPower", "t": "range" }], "_RimDirStrength": [{ "p": "rim.dirStrength", "l": "_RimDirStrength", "t": "range" }], "_RimDirRange": [{ "p": "rim.dirRange", "l": "_RimDirRange", "t": "range" }], "_RimIndirColor": [{ "p": "rim.indirColor", "l": "_RimIndirColor", "t": "color" }], "_RimIndirBorder": [{ "p": "rim.indirBorder", "l": "_RimIndirBorder", "t": "range" }], "_RimIndirBlur": [{ "p": "rim.indirBlur", "l": "_RimIndirBlur", "t": "range" }], "_RimIndirRange": [{ "p": "rim.indirRange", "l": "_RimIndirRange", "t": "range" }], "_RimEnableLighting": [{ "p": "rim.enableLighting", "l": "_RimEnableLighting", "t": "range" }], "_RimMainStrength": [{ "p": "rim.mainStrength", "l": "_RimMainStrength", "t": "range" }], "_RimNormalStrength": [{ "p": "rim.normalStrength", "l": "_RimNormalStrength", "t": "range" }], "_RimShadowMask": [{ "p": "rim.shadowMask", "l": "_RimShadowMask", "t": "range" }], "_MatCapVRParallaxStrength": [{ "p": "matcap.vrParallax", "l": "_MatCapVRParallaxStrength", "t": "range" }], "_MatCapLod": [{ "p": "matcap.lod", "l": "_MatCapLod", "t": "range" }], "_MatCapCustomNormal": [{ "p": "matcap.customNormal", "l": "_MatCapCustomNormal", "t": "int" }], "_MatCapBumpMap": [{ "p": "matcap.bumpMap", "l": "_MatCapBumpMap", "t": "texture" }], "_MatCapBumpScale": [{ "p": "matcap.bumpScale", "l": "_MatCapBumpScale", "t": "range" }], "_MatCapTex": [{ "p": "matcap.url", "l": "_MatCapTex", "t": "texture" }], "_MatCapBlend": [{ "p": "matcap.blend", "l": "_MatCapBlend", "t": "range" }, { "p": "matcap.mul", "l": "_MatCapBlend", "t": "range" }], "_MatCapBlendMode": [{ "p": "matcap.blendMode", "l": "_MatCapBlendMode", "t": "int" }], "_MatCapEnableLighting": [{ "p": "matcap.enableLighting", "l": "_MatCapEnableLighting", "t": "range" }], "_MatCapMainStrength": [{ "p": "matcap.mainStrength", "l": "_MatCapMainStrength", "t": "range" }], "_MatCapNormalStrength": [{ "p": "matcap.normalStrength", "l": "_MatCapNormalStrength", "t": "range" }], "_MatCapShadowMask": [{ "p": "matcap.shadowMask", "l": "_MatCapShadowMask", "t": "range" }], "_MatCapColor": [{ "p": "matcap.color", "l": "_MatCapColor", "t": "color" }], "_MatCapBlendMask": [{ "p": "matcap.blendMask", "l": "_MatCapBlendMask", "t": "texture" }], "_MatCapBackfaceMask": [{ "p": "matcap.backfaceMask", "l": "_MatCapBackfaceMask", "t": "int" }], "_MatCap2ndVRParallaxStrength": [{ "p": "matcap2nd.vrParallax", "l": "_MatCap2ndVRParallaxStrength", "t": "range" }], "_MatCap2ndLod": [{ "p": "matcap2nd.lod", "l": "_MatCap2ndLod", "t": "range" }], "_MatCap2ndCustomNormal": [{ "p": "matcap2nd.customNormal", "l": "_MatCap2ndCustomNormal", "t": "int" }], "_MatCap2ndBumpMap": [{ "p": "matcap2nd.bumpMap", "l": "_MatCap2ndBumpMap", "t": "texture" }], "_MatCap2ndBumpScale": [{ "p": "matcap2nd.bumpScale", "l": "_MatCap2ndBumpScale", "t": "range" }], "_MatCap2ndTex": [{ "p": "matcap2nd.url", "l": "_MatCap2ndTex", "t": "texture" }], "_MatCap2ndBlend": [{ "p": "matcap2nd.blend", "l": "_MatCap2ndBlend", "t": "range" }, { "p": "matcap2nd.mul", "l": "_MatCap2ndBlend", "t": "range" }], "_MatCap2ndBlendMode": [{ "p": "matcap2nd.blendMode", "l": "_MatCap2ndBlendMode", "t": "int" }], "_MatCap2ndEnableLighting": [{ "p": "matcap2nd.enableLighting", "l": "_MatCap2ndEnableLighting", "t": "range" }], "_MatCap2ndMainStrength": [{ "p": "matcap2nd.mainStrength", "l": "_MatCap2ndMainStrength", "t": "range" }], "_MatCap2ndNormalStrength": [{ "p": "matcap2nd.normalStrength", "l": "_MatCap2ndNormalStrength", "t": "range" }], "_MatCap2ndShadowMask": [{ "p": "matcap2nd.shadowMask", "l": "_MatCap2ndShadowMask", "t": "range" }], "_MatCap2ndColor": [{ "p": "matcap2nd.color", "l": "_MatCap2ndColor", "t": "color" }], "_MatCap2ndBlendMask": [{ "p": "matcap2nd.blendMask", "l": "_MatCap2ndBlendMask", "t": "texture" }], "_MatCap2ndBackfaceMask": [{ "p": "matcap2nd.backfaceMask", "l": "_MatCap2ndBackfaceMask", "t": "int" }], "_UseEmission": [{ "p": "emission.use", "l": "_UseEmission", "t": "int" }], "_EmissionColor": [{ "p": "emission.color", "l": "_EmissionColor", "t": "color" }], "_EmissionBlend": [{ "p": "emission.blend", "l": "_EmissionBlend", "t": "range" }], "_EmissionBlendMode": [{ "p": "emission.blendMode", "l": "_EmissionBlendMode", "t": "int" }], "_EmissionMap_UVMode": [{ "p": "emission.uvMode", "l": "_EmissionMap_UVMode", "t": "int" }], "_EmissionMainStrength": [{ "p": "emission.mainStrength", "l": "_EmissionMainStrength", "t": "range" }], "_EmissionMap": [{ "p": "emission.tex", "l": "_EmissionMap", "t": "texture" }], "_EmissionBlendMask": [{ "p": "emission.blendMask", "l": "_EmissionBlendMask", "t": "texture" }], "_UseDither": [{ "p": "dither.use", "l": "_UseDither", "t": "int" }], "_DitherTex": [{ "p": "dither.url", "l": "_DitherTex", "t": "texture" }], "_DitherMaxValue": [{ "p": "dither.maxValue", "l": "_DitherMaxValue", "t": "float" }], "_UseReflection": [{ "p": "reflection.use", "l": "_UseReflection", "t": "int" }], "_ApplyReflection": [{ "p": "reflection.apply", "l": "_ApplyReflection", "t": "int" }], "_ReflectionBlendMode": [{ "p": "reflection.toon", "l": "_ReflectionBlendMode", "t": "int" }, { "p": "reflection.blendMode", "l": "_ReflectionBlendMode", "t": "int" }], "_ReflectionNormalStrength": [{ "p": "reflection.normalStrength", "l": "_ReflectionNormalStrength", "t": "range" }], "_Smoothness": [{ "p": "reflection.smoothness", "l": "_Smoothness", "t": "range" }], "_Reflectance": [{ "p": "reflection.reflectance", "l": "_Reflectance", "t": "range" }], "_Metallic": [{ "p": "reflection.metallic", "l": "_Metallic", "t": "range" }], "_ReflectionColor": [{ "p": "reflection.color", "l": "_ReflectionColor", "t": "color" }], "_AAStrength": [{ "p": "reflection.aaStrength", "l": "_AAStrength", "t": "range" }], "_BacklightColor": [{ "p": "backlight.color", "l": "_BacklightColor", "t": "color" }], "_BacklightBorder": [{ "p": "backlight.border", "l": "_BacklightBorder", "t": "range" }], "_BacklightBlur": [{ "p": "backlight.blur", "l": "_BacklightBlur", "t": "range" }], "_BacklightDirectivity": [{ "p": "backlight.directivity", "l": "_BacklightDirectivity", "t": "float" }], "_BacklightViewStrength": [{ "p": "backlight.viewStrength", "l": "_BacklightViewStrength", "t": "range" }], "_BacklightNormalStrength": [{ "p": "backlight.normalStrength", "l": "_BacklightNormalStrength", "t": "range" }], "_BacklightMainStrength": [{ "p": "backlight.mainStrength", "l": "_BacklightMainStrength", "t": "range" }], "_UseEmission2nd": [{ "p": "emission2nd.use", "l": "_UseEmission2nd", "t": "int" }], "_Emission2ndColor": [{ "p": "emission2nd.color", "l": "_Emission2ndColor", "t": "color" }], "_Emission2ndBlend": [{ "p": "emission2nd.blend", "l": "_Emission2ndBlend", "t": "range" }], "_Emission2ndBlendMode": [{ "p": "emission2nd.blendMode", "l": "_Emission2ndBlendMode", "t": "int" }], "_Emission2ndMap_UVMode": [{ "p": "emission2nd.uvMode", "l": "_Emission2ndMap_UVMode", "t": "int" }], "_Emission2ndMap": [{ "p": "emission2nd.tex", "l": "_Emission2ndMap", "t": "texture" }], "_Emission2ndBlendMask": [{ "p": "emission2nd.blendMask", "l": "_Emission2ndBlendMask", "t": "texture" }], "_Main2ndTexIsDecal": [{ "p": "main2nd.decalDebug", "l": "_Main2ndTexIsDecal", "t": "int" }, { "p": "main2nd.isDecal", "l": "_Main2ndTexIsDecal", "t": "int" }], "_Main2ndTexIsLeftOnly": [{ "p": "main2nd.isLeftOnly", "l": "_Main2ndTexIsLeftOnly", "t": "int" }], "_Main2ndTexIsRightOnly": [{ "p": "main2nd.isRightOnly", "l": "_Main2ndTexIsRightOnly", "t": "int" }], "_Main2ndTexShouldCopy": [{ "p": "main2nd.shouldCopy", "l": "_Main2ndTexShouldCopy", "t": "int" }], "_Main2ndTexShouldFlipMirror": [{ "p": "main2nd.shouldFlipMirror", "l": "_Main2ndTexShouldFlipMirror", "t": "int" }], "_Main2ndTexShouldFlipCopy": [{ "p": "main2nd.shouldFlipCopy", "l": "_Main2ndTexShouldFlipCopy", "t": "int" }], "_Main2ndTexDecalAnimation": [{ "p": "main2nd.decalAnimation", "l": "_Main2ndTexDecalAnimation", "t": "vector" }], "_Main2ndTexDecalSubParam": [{ "p": "main2nd.decalSubParam", "l": "_Main2ndTexDecalSubParam", "t": "vector" }], "_Main2ndTex_ScrollRotate": [{ "p": "main2nd.texST", "l": "_Main2ndTex_ScrollRotate", "t": "vector" }], "_Main2ndTexAngle": [{ "p": "main2nd.texAngle", "l": "_Main2ndTexAngle", "t": "float" }], "_Main2ndTexAlphaMode": [{ "p": "main2nd.alphaMode", "l": "_Main2ndTexAlphaMode", "t": "int" }], "_Color": [{ "p": "main2nd.color", "l": "_Color", "t": "color" }, { "p": "main3rd.color", "l": "_Color", "t": "color" }], "_Main2ndTex": [{ "p": "main2nd.tex", "l": "_Main2ndTex", "t": "texture" }], "_Main2ndTex_UVMode": [{ "p": "main2nd.uvMode", "l": "_Main2ndTex_UVMode", "t": "int" }], "_Main2ndTexBlendMode": [{ "p": "main2nd.blendMode", "l": "_Main2ndTexBlendMode", "t": "int" }], "_Main2ndEnableLighting": [{ "p": "main2nd.enableLighting", "l": "_Main2ndEnableLighting", "t": "range" }], "_Main2ndBlendMask": [{ "p": "main2nd.blendMask", "l": "_Main2ndBlendMask", "t": "texture" }], "_Main2ndDissolveParams": [{ "p": "main2nd.dissolveMode", "l": "_Main2ndDissolveParams", "c": "x", "t": "vector" }, { "p": "main2nd.dissolveThreshold", "l": "_Main2ndDissolveParams", "c": "z", "t": "vector" }, { "p": "main2nd.dissolveSoftness", "l": "_Main2ndDissolveParams", "c": "w", "t": "vector" }], "_Main2ndDissolvePos": [{ "p": "main2nd.dissolveDir", "l": "_Main2ndDissolvePos", "t": "vector" }, { "p": "main2nd.dissolvePos", "l": "_Main2ndDissolvePos", "t": "vector" }], "_Main2ndDissolveColor": [{ "p": "main2nd.dissolveColor", "l": "_Main2ndDissolveColor", "t": "color" }], "_Main2ndDissolveMask": [{ "p": "main2nd.dissolveMask", "l": "_Main2ndDissolveMask", "t": "texture" }], "_Main2ndDissolveNoiseMask": [{ "p": "main2nd.dissolveNoiseMask", "l": "_Main2ndDissolveNoiseMask", "t": "texture" }], "_Main2ndDissolveNoiseMask_ScrollRotate": [{ "p": "main2nd.dissolveNoiseMaskST", "l": "_Main2ndDissolveNoiseMask_ScrollRotate", "t": "vector" }, { "p": "main2nd.dissolveNoiseScrollRotate", "l": "_Main2ndDissolveNoiseMask_ScrollRotate", "t": "vector" }], "_Main2ndDissolveNoiseStrength": [{ "p": "main2nd.dissolveNoiseStrength", "l": "_Main2ndDissolveNoiseStrength", "t": "float" }], "_Main2ndDistanceFade": [{ "p": "main2nd.distFadeNear", "l": "_Main2ndDistanceFade", "c": "x", "t": "vector" }, { "p": "main2nd.distFadeFar", "l": "_Main2ndDistanceFade", "c": "y", "t": "vector" }, { "p": "main2nd.distFadeStrength", "l": "_Main2ndDistanceFade", "c": "z", "t": "vector" }], "_Main3rdTexIsDecal": [{ "p": "main3rd.decalDebug", "l": "_Main3rdTexIsDecal", "t": "int" }, { "p": "main3rd.isDecal", "l": "_Main3rdTexIsDecal", "t": "int" }], "_Main3rdTexIsLeftOnly": [{ "p": "main3rd.isLeftOnly", "l": "_Main3rdTexIsLeftOnly", "t": "int" }], "_Main3rdTexIsRightOnly": [{ "p": "main3rd.isRightOnly", "l": "_Main3rdTexIsRightOnly", "t": "int" }], "_Main3rdTexShouldCopy": [{ "p": "main3rd.shouldCopy", "l": "_Main3rdTexShouldCopy", "t": "int" }], "_Main3rdTexShouldFlipMirror": [{ "p": "main3rd.shouldFlipMirror", "l": "_Main3rdTexShouldFlipMirror", "t": "int" }], "_Main3rdTexShouldFlipCopy": [{ "p": "main3rd.shouldFlipCopy", "l": "_Main3rdTexShouldFlipCopy", "t": "int" }], "_Main3rdTexDecalAnimation": [{ "p": "main3rd.decalAnimation", "l": "_Main3rdTexDecalAnimation", "t": "vector" }], "_Main3rdTexDecalSubParam": [{ "p": "main3rd.decalSubParam", "l": "_Main3rdTexDecalSubParam", "t": "vector" }], "_Main3rdTex_ScrollRotate": [{ "p": "main3rd.texST", "l": "_Main3rdTex_ScrollRotate", "t": "vector" }], "_Main3rdTexAngle": [{ "p": "main3rd.texAngle", "l": "_Main3rdTexAngle", "t": "float" }], "_Main3rdTexAlphaMode": [{ "p": "main3rd.alphaMode", "l": "_Main3rdTexAlphaMode", "t": "int" }], "_Main3rdTex": [{ "p": "main3rd.tex", "l": "_Main3rdTex", "t": "texture" }], "_Main3rdTex_UVMode": [{ "p": "main3rd.uvMode", "l": "_Main3rdTex_UVMode", "t": "int" }], "_Main3rdTexBlendMode": [{ "p": "main3rd.blendMode", "l": "_Main3rdTexBlendMode", "t": "int" }], "_Main3rdEnableLighting": [{ "p": "main3rd.enableLighting", "l": "_Main3rdEnableLighting", "t": "range" }], "_Main3rdBlendMask": [{ "p": "main3rd.blendMask", "l": "_Main3rdBlendMask", "t": "texture" }], "_Main3rdDissolveParams": [{ "p": "main3rd.dissolveMode", "l": "_Main3rdDissolveParams", "c": "x", "t": "vector" }, { "p": "main3rd.dissolveThreshold", "l": "_Main3rdDissolveParams", "c": "z", "t": "vector" }, { "p": "main3rd.dissolveSoftness", "l": "_Main3rdDissolveParams", "c": "w", "t": "vector" }], "_Main3rdDissolvePos": [{ "p": "main3rd.dissolveDir", "l": "_Main3rdDissolvePos", "t": "vector" }, { "p": "main3rd.dissolvePos", "l": "_Main3rdDissolvePos", "t": "vector" }], "_Main3rdDissolveColor": [{ "p": "main3rd.dissolveColor", "l": "_Main3rdDissolveColor", "t": "color" }], "_Main3rdDissolveMask": [{ "p": "main3rd.dissolveMask", "l": "_Main3rdDissolveMask", "t": "texture" }], "_Main3rdDissolveNoiseMask": [{ "p": "main3rd.dissolveNoiseMask", "l": "_Main3rdDissolveNoiseMask", "t": "texture" }], "_Main3rdDissolveNoiseMask_ScrollRotate": [{ "p": "main3rd.dissolveNoiseMaskST", "l": "_Main3rdDissolveNoiseMask_ScrollRotate", "t": "vector" }, { "p": "main3rd.dissolveNoiseScrollRotate", "l": "_Main3rdDissolveNoiseMask_ScrollRotate", "t": "vector" }], "_Main3rdDissolveNoiseStrength": [{ "p": "main3rd.dissolveNoiseStrength", "l": "_Main3rdDissolveNoiseStrength", "t": "float" }], "_Main3rdDistanceFade": [{ "p": "main3rd.distFadeNear", "l": "_Main3rdDistanceFade", "c": "x", "t": "vector" }, { "p": "main3rd.distFadeFar", "l": "_Main3rdDistanceFade", "c": "y", "t": "vector" }, { "p": "main3rd.distFadeStrength", "l": "_Main3rdDistanceFade", "c": "z", "t": "vector" }], "_StencilRef": [{ "p": "stencil.use", "l": "_StencilRef", "t": "range" }, { "p": "stencil.ref", "l": "_StencilRef", "t": "range" }], "_StencilReadMask": [{ "p": "stencil.readMask", "l": "_StencilReadMask", "t": "range" }], "_StencilWriteMask": [{ "p": "stencil.writeMask", "l": "_StencilWriteMask", "t": "range" }], "_StencilComp": [{ "p": "stencil.comp", "l": "_StencilComp", "t": "float" }], "_StencilPass": [{ "p": "stencil.pass", "l": "_StencilPass", "t": "float" }], "_StencilFail": [{ "p": "stencil.fail", "l": "_StencilFail", "t": "float" }], "_StencilZFail": [{ "p": "stencil.zfail", "l": "_StencilZFail", "t": "float" }], "_DissolveParams": [{ "p": "dissolve.mode", "l": "_DissolveParams", "c": "x", "t": "vector" }, { "p": "dissolve.linear", "l": "_DissolveParams", "c": "y", "t": "vector" }, { "p": "dissolve.threshold", "l": "_DissolveParams", "c": "z", "t": "vector" }, { "p": "dissolve.softness", "l": "_DissolveParams", "c": "w", "t": "vector" }], "_DissolvePos": [{ "p": "dissolve.pos", "l": "_DissolvePos", "t": "vector" }], "_DissolveColor": [{ "p": "dissolve.color", "l": "_DissolveColor", "t": "color" }], "_DissolveMask": [{ "p": "dissolve.maskTex", "l": "_DissolveMask", "t": "texture" }], "_DissolveNoiseMask": [{ "p": "dissolve.noiseTex", "l": "_DissolveNoiseMask", "t": "texture" }], "_DissolveNoiseStrength": [{ "p": "dissolve.noiseStrength", "l": "_DissolveNoiseStrength", "t": "float" }] };
@@ -51401,7 +51553,9 @@ function ba3dSoftShadowGLSL() {
 }
 var LIGHTING_PRESETS = {
   day: {
-    label: "白昼",
+    get label() {
+      return LABELS.lighting.day;
+    },
     hemi: { sky: 16777215, ground: 3159370, intensity: 0.5 },
     key: { color: 16777215, intensity: 2, position: [3, 6, 4] },
     rim: { color: 8366335, intensity: 1.2 },
@@ -51409,7 +51563,9 @@ var LIGHTING_PRESETS = {
     exposure: 1
   },
   golden: {
-    label: "早晨 / 傍晚",
+    get label() {
+      return LABELS.lighting.golden;
+    },
     hemi: { sky: 16767408, ground: 5916210, intensity: 0.45 },
     key: { color: 16757865, intensity: 2.1, position: [-4, 2.5, 4] },
     rim: { color: 16747100, intensity: 1.5 },
@@ -51417,7 +51573,9 @@ var LIGHTING_PRESETS = {
     exposure: 1.08
   },
   night: {
-    label: "黑夜",
+    get label() {
+      return LABELS.lighting.night;
+    },
     hemi: { sky: 5926814, ground: 658968, intensity: 0.28 },
     key: { color: 9417983, intensity: 1.25, position: [2, 4, 5] },
     rim: { color: 4878272, intensity: 0.9 },
@@ -59256,9 +59414,9 @@ function createViewer(container, opts = {}) {
     /** ⚠️ 旧 API。渲染现在是两个正交的轴（render + shader），这里返回合并后的列表以兼容 */
     getShadingModes() {
       return [
-        { key: "pbr", label: "原始（PBR）" },
-        { key: "cel", label: "卡通（Cel）" },
-        { key: "unlit", label: "无光照（Unlit）" }
+        { key: "pbr", label: LABELS.render.pbr },
+        { key: "cel", label: LABELS.render.cel },
+        { key: "unlit", label: LABELS.render.unlit }
       ];
     },
     setShading(mode) {
@@ -59267,9 +59425,9 @@ function createViewer(container, opts = {}) {
     // —— 渲染轴 ①：材质模型 ——
     getRenderModes() {
       return [
-        { key: "pbr", label: "原始（PBR）" },
-        { key: "toon", label: "卡通材质（Toon）" },
-        { key: "unlit", label: "无光照（Unlit）" }
+        { key: "pbr", label: LABELS.render.pbr },
+        { key: "toon", label: LABELS.renderToon.toon },
+        { key: "unlit", label: LABELS.render.unlit }
       ];
     },
     getRender() {
@@ -59281,10 +59439,10 @@ function createViewer(container, opts = {}) {
     // —— 渲染轴 ②：着色器 ——
     getShaderModes() {
       return [
-        { key: "none", label: "不注入（原生）" },
-        { key: "cel", label: "Cel 分档" },
-        { key: "lilToon", label: "lilToon 风格" },
-        { key: LIL_SRC_MODE, label: "lilToon 源码" }
+        { key: "none", label: LABELS.shader.none },
+        { key: "cel", label: LABELS.shader.cel },
+        { key: "lilToon", label: LABELS.shader.lilToon },
+        { key: LIL_SRC_MODE, label: LABELS.shader.lilSrc }
       ];
     },
     getShader() {

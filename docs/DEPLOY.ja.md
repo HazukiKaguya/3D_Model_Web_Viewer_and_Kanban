@@ -1,6 +1,6 @@
 # 3D キャラクターモデルを Web ページに埋め込む看板娘 デプロイ手順
 
-[中文](DEPLOY.md) ｜ [English](DEPLOY.en.md) ｜ **日本語**
+[简体中文](DEPLOY.md) ｜ [繁體中文](DEPLOY.zh-TW.md) ｜ [English](DEPLOY.en.md) ｜ **日本語** ｜ [한국어](DEPLOY.ko.md)
 
 純粋な静的サイトで、**ビルド手順なし・CDN 依存なし・Node 不要**、すべて相対パスを使用しています（ルートパスでもサブパスでもデプロイ時に設定を変更する必要はありません）。
 `dist/` はあらかじめパッケージング済みなので、このディレクトリ内の**すべてのファイルをそのままサイトのルートディレクトリ**（または任意のサブディレクトリ）にアップロードするだけで、静的ホスティングで動作します（Nginx / Apache / Netlify / Cloudflare Pages / OSS / COS のいずれでも可）。
@@ -54,7 +54,7 @@
 > `viewer.js` が依存するのは上表の 5 つの vendor ファイルだけです。`vendor/three/` ディレクトリ全体で合計 1.4 MB です。
 >
 > **第 4 シェーディングバックエンドは必ずパッケージに同梱して配布する必要があります**（`liltoon-bridge.js` + `vendor/three-liltoon/`、元のサイズは 2.2 MB、
-> 圧縮後は約 0.35 MB）—— これらを漏らすと、「lilToon 源码」に切り替えたときに 404 になります。
+> 圧縮後は約 0.35 MB）—— これらを漏らすと、「lilToon ソース」に切り替えたときに 404 になります。
 >
 > ⚠️ 次の 2 つは区別してください：
 > - **パッケージング**：これらのファイルは**必ずデプロイパッケージに入れる**（任意ではない）。
@@ -77,7 +77,7 @@
 
   ⚠️ `_deploy/3D_Model_Web_Viewer/` は**手作業で組み上げたものではなく**、スクリプトが**明示的なマニフェスト**に従って生成します：
 
-      node scripts/make-deploy.mjs            # 重建（会先清空目标目录）
+      node scripts/make-deploy.mjs            # 重建（会先クリア目标目录）
       node scripts/make-deploy.mjs --check    # 只比对 · 不一致 exit=1（CI 用）
       node scripts/check-release-safety.mjs   # リリース物のアサーション：モデルは sample.glb のみ・内部文書/パスなし・リンク切れなし
 
@@ -100,7 +100,7 @@
       develop_res/deploy-src/_headers               → _headers
       develop_res/deploy-src/.nojekyll              → .nojekyll            （0 字节）
       develop_res/deploy-src/nginx-3d-viewer.conf   → nginx-3d-viewer.conf
-      develop_res/deploy-src/_lilpresets.json       → _lilpresets.json     （面板的 lilToon 预设数据）
+      develop_res/deploy-src/_lilpresets.json       → _lilpresets.json     （パネル的 lilToon プリセット数据）
 
   ⇒ `develop_res/deploy-src/` に一括して置くことで、デプロイディレクトリ全体が**完全に再現可能**になります。
 
@@ -131,13 +131,13 @@
 | `dist/3d-viewer.js` | **自己完結型シングルファイル版**（約 1.94 MB）。他のページで `<script type="module">` として読み込んで使う。**importmap 不要、vendor/ 不要** |
 | `dist/3d-viewer.min.js` | 上記の圧縮版（minify 版）（約 0.92 MB）。`embed-demo.html` が使っているのはこれ |
 | `CONFIG.md` | 設定フィールドの完全リファレンス（`data-*` 属性、イベント、グローバルフックを含む） |
-| `CONFIG.en.md` · `CONFIG.ja.md` | 設定リファレンスの英語版 / 日本語版 |
+| `CONFIG.zh-TW.md` · `CONFIG.en.md` · `CONFIG.ja.md` · `CONFIG.ko.md` | 設定リファレンスの繁體中文版 / 英語版 / 日本語版 / 韓国語版 |
 | `README.md` | プロジェクトの説明 |
-| `docs/README.en.md` · `docs/README.ja.md` | プロジェクト説明の英語版 / 日本語版 |
-| `DEPLOY.en.md` · `DEPLOY.ja.md` | 本ファイルの英語版 / 日本語版 |
+| `docs/README.zh-TW.md` · `docs/README.en.md` · `docs/README.ja.md` · `docs/README.ko.md` | プロジェクト説明の繁體中文版 / 英語版 / 日本語版 / 韓国語版 |
+| `DEPLOY.zh-TW.md` · `DEPLOY.en.md` · `DEPLOY.ja.md` · `DEPLOY.ko.md` | 本ファイルの繁體中文版 / 英語版 / 日本語版 / 韓国語版 |
 | `LICENSE` | プロジェクトのライセンス（MIT © 2026 Hazuki Kaguya）——**再配布時は必ず保持** |
 | `THIRD-PARTY-NOTICES.md` | サードパーティ通知（three.js / lilToon / three-liltoon の MIT 全文）——**再配布時は必ず保持** |
-| `LILTOON1.x.md` · `LILTOON2.x.md` | lilToon ベースライン対照（1.3.7 はアーカイブ / 2.3.4 が現行）。`.en.md` · `.ja.md` 版あり |
+| `LILTOON1.x.md` · `LILTOON2.x.md` | lilToon ベースライン対照（1.3.7 はアーカイブ / 2.3.4 が現行）。`.zh-TW` · `.en` · `.ja` · `.ko` 版あり |
 | `assets/mouth/_cells-preview-*.png` | 口元テクスチャアトラスの 8×8 インデックス画像。`mouthCell` を選ぶときに見ながら使う |
 
 メインページを動かすために本当に必須なのは：**`index.html` + `viewer.js` + `vendor/three/` の 12 ファイル + `assets/` 内のモデルと設定**だけです。
@@ -262,7 +262,7 @@ curl -I https://api.sample.site/3d-viewer/assets/sample.glb             # 期望
 
 | アドレス | 内容 |
 |---|---|
-| `/` | 全画面ビューア（"自定义模型" のアップロードパネルを含む） |
+| `/` | 全画面ビューア（"カスタムモデル" のアップロードパネルを含む） |
 | `/?config=./assets/sample.json` | デモモデル |
 | `/embed-demo.html` | Web ページに埋め込む看板娘のデモ |
 

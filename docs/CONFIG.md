@@ -1,9 +1,9 @@
 # BA3D 配置 JSON 字段说明
 
-中文 ｜ [English](CONFIG.en.md) ｜ [日本語](CONFIG.ja.md)
+**简体中文** ｜ [繁體中文](CONFIG.zh-TW.md) ｜ [English](CONFIG.en.md) ｜ [日本語](CONFIG.ja.md) ｜ [한국어](CONFIG.ko.md)
 
 > **lilToon 基线：2.3.4**
-> 本文档里的**界面标签保留中文原文**（查看器界面本身就是中文），首次出现时附译名。
+> 本文档里的 **UI 标签按查看器当前界面语言书写**（本文为简体中文版，界面写「材质 / 贴图 / 描边」等）。
 >   · 源码地图（2.3.4 行号）、版本差异清单 ⇒ [`LILTOON2.x.md`](LILTOON2.x.md)
 >   · 旧基线（1.3.7）的对照与核对记录 ⇒ [`LILTOON1.x.md`](LILTOON1.x.md)（已归档、行号是 1.3.7 的）
 >
@@ -940,7 +940,6 @@ play3dmodelaction();                       // 不传 → 回默认动作
 ```
 
 交互约定：**左键按在模型身上拖动 = 移动容器；右键拖动 = 旋转角色**（开启 `dragContainer` 时）。
-
 
 ---
 
@@ -2798,7 +2797,6 @@ lil_pass_forward_normal.hlsl:352 / 360 / 411 / 445 / 450 / 457 / 472 / 478：
      ⇒ 用前导里声明过的 `ba3dColor2nd` / `ba3dColor3rd`。
 
 ### 9.5 补齐：层溶解 / Decal 调试 / MatCap / 描边模板
-
 
   #### 主色层 2nd / 3rd 的层溶解（`main2nd.dissolve*` / `main3rd.dissolve*`）
 

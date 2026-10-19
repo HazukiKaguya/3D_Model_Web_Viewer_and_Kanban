@@ -560,10 +560,25 @@ body.light #upload .u-project { border-top-color: rgba(0,0,0,.12); }
 /* ★ 通用着色器参数面板 */
 #shaderPanel { left: 16px; top: 120px; width: 360px; height: min(340px, 46vh); z-index: 11; }
 #shaderPanel .lp-body { padding: 8px 10px; overflow-y: auto; }
+
+/* ===== 语言切换条（跟随日夜模式 ✓ 长标签（韩语）不换行 ✓ 当前语言不可点 ✓）===== */
+.ba3d-lang-switch{position:fixed;left:12px;top:8px;z-index:9998;display:flex;align-items:center;flex-wrap:nowrap;white-space:nowrap;gap:6px;max-width:calc(100vw - 24px);overflow:hidden;font:12px/1.6 system-ui,sans-serif;background:rgba(20,22,28,.78);color:#fff;padding:3px 9px;border-radius:6px}
+.ba3d-lang-switch .bls-label{opacity:.6}
+.ba3d-lang-switch .bls-sep{opacity:.28}
+.ba3d-lang-switch .bls-link{color:#9fd3ff;text-decoration:underline;text-underline-offset:2px}
+.ba3d-lang-switch .bls-link:hover{color:#d3e9ff}
+.ba3d-lang-switch .bls-cur{font-weight:600;color:#fff}
+body.light .ba3d-lang-switch{background:rgba(255,255,255,.88);color:#1f2937;border:1px solid rgba(0,0,0,.10);box-shadow:0 1px 5px rgba(0,10,30,.14)}
+body.light .ba3d-lang-switch .bls-label{color:#5d6b80;opacity:1}
+body.light .ba3d-lang-switch .bls-sep{color:#9aa7bb;opacity:1}
+body.light .ba3d-lang-switch .bls-link{color:#2a5fd0}
+body.light .ba3d-lang-switch .bls-link:hover{color:#1b46a8}
+body.light .ba3d-lang-switch .bls-cur{color:#16202e}
+@media (max-width:560px){.ba3d-lang-switch{font-size:11px;gap:4px;padding:2px 7px;left:8px;top:6px}}
 </style>
 </head>
 <body>
-
+<div id="ba3dLangSwitch" class="ba3d-lang-switch" data-ba3d-noi18n="1" aria-label="Language"></div>
 <!-- ★ 场景浮窗（Unity 风格的独立窗口 · 可拖动 / 可缩放。） -->
 <div id="sceneWin" class="fw">
     <!-- ★ 场景浮窗左上角：显示模式 + 场景按钮（用户指定的位置。） -->
@@ -1142,6 +1157,7 @@ const __noopInput = (def) => ({
 var groundOff = document.getElementById('groundOff') || __noopInput('0');
 var groundOffNum = document.getElementById('groundOffNum') || __noopInput('0');
 /* ⚠️ 用 var 而不是 const —— 旧代码里可能还有别的地方在重新声明它们。 */
+import * as I18N from './i18n/index.js';
 import { createViewer } from './viewer.js';
 
 /* ---------- 模型部件面板：列出网格，逐个显示/隐藏 ---------- */
@@ -1595,6 +1611,8 @@ viewer = createViewer(container, Object.assign({ autoRotate: false, onProgress: 
   // （ES module 里的变量默认不在 window 上、所以必须显式挂）
   window.viewer = viewer;
   window.ba3d = viewer;
+  // ★ 静态文案按语言替换（?lang=en/ja 时生效 ✓ 中文默认不做事 ✓）
+  try { if (I18N.applyPageI18n) I18N.applyPageI18n(); if (I18N.mountLangSwitch) I18N.mountLangSwitch(); if (I18N.startI18nObserver) I18N.startI18nObserver(); } catch (e) { console.warn("[i18n] 静态文案替换失败：", e); }
   window.ba3dExportConfig = () => viewer.exportConfig();
   window.ba3dExportJSON = () => viewer.exportConfigJSON();
   const info = await viewer.load();
@@ -1660,6 +1678,66 @@ fillMenu(shaderMenu, viewer.getShaderModes());
  * 沿用本文件既有的钩子写法（见 __ba3dSyncLightClamp）。
  */
 window.__ba3dSyncShaderUI = function () { try { syncRenderUI(); } catch (e) {} };
+
+/**
+ * ★ 原地切换语言（**不刷新页面** ⇒ 自定义模型 / 已改参数 / 相机位置都保留 ✓）
+ *
+ *   ① I18N.setLang 改模块状态（viewer.js 里的 LABELS 是 live binding ⇒ 之后重建的面板自动是新语言 ✓）
+ *   ② applyPageI18n 把静态文案「当前语言 → 中文原文 → 目标语言」两段映射翻回去 ✓
+ *   ③ 重建动态面板（内容读的是 viewer 的实时配置 ⇒ 参数不会丢 ✓）
+ *   ④ HUD 三个下拉重新填标签 + syncRenderUI 保持选中项 ✓
+ *   ⑤ 切换条自身重画 + URL 改成 ?lang=xx（replaceState，不产生历史记录 ✓）
+ */
+window.ba3dApplyLang = function (code) {
+  try {
+    const applied = I18N.setLang ? I18N.setLang(code) : '';
+    if (!applied) return false;
+
+    if (I18N.applyPageI18n) I18N.applyPageI18n();
+
+    // ① HUD 下拉：打光 / 渲染 / 着色器（标签来自 viewer 的实时 LABELS ✓）
+    try {
+      const keepLight = lightMenu.value;
+      lightMenu.innerHTML = '';
+      viewer.getLightingPresets().forEach((p) => {
+        const opt = document.createElement('option');
+        opt.value = p.key;
+        opt.textContent = p.label;
+        lightMenu.appendChild(opt);
+      });
+      lightMenu.value = keepLight;
+      fillMenu(renderMenu, viewer.getRenderModes());
+      fillMenu(shaderMenu, viewer.getShaderModes());
+      syncRenderUI();
+    } catch (e) { console.warn('[i18n] HUD 下拉重建失败：', e); }
+
+    // ② 动态面板：重建（都是 function 声明 ⇒ 已提升 ✓）
+    const builders = [];
+    try { if (typeof buildShaderPanel === 'function') builders.push(buildShaderPanel); } catch (e) { /* 不在作用域 ⇒ 跳过 ✓ */ }
+    try { if (typeof buildExportPanel === 'function') builders.push(buildExportPanel); } catch (e) { /* 同上 */ }
+    try { if (typeof buildPartsPanel === 'function') builders.push(buildPartsPanel); } catch (e) { /* 同上 */ }
+    try { if (typeof buildScenePanel === 'function') builders.push(buildScenePanel); } catch (e) { /* 同上 */ }
+    try { if (typeof buildLilPanel === 'function') builders.push(buildLilPanel); } catch (e) { /* 同上 */ }
+    for (const fn of builders) {
+      try { fn(); } catch (e) { console.warn('[i18n] 面板重建失败：', e); }
+    }
+    try { if (typeof window.__ba3dBuildExportPanel === 'function') builders.push(window.__ba3dBuildExportPanel); } catch (e) { /* 忽略 */ }
+    try { if (typeof window.__ba3dBuildExportPanel === 'function' && !builders.includes(window.__ba3dBuildExportPanel)) builders.push(window.__ba3dBuildExportPanel); } catch (e) { /* 忽略 */ }
+    try { if (typeof refreshAnimMenu === 'function') refreshAnimMenu(); } catch (e) { /* 动画菜单重建失败不致命 ✓ */ }
+
+    // ③ 切换条自身 + URL
+    if (I18N.mountLangSwitch) I18N.mountLangSwitch();
+    try {
+      const u = new URL(location.href);
+      u.searchParams.set('lang', I18N.langParam ? I18N.langParam() : code);
+      history.replaceState(null, '', u.pathname + u.search + u.hash);
+    } catch (e) { /* file:// 下 replaceState 可能失败 ⇒ 忽略 ✓ */ }
+    return true;
+  } catch (e) {
+    console.warn('[i18n] 切换语言失败：', e);
+    return false;
+  }
+};
 
 /** 把界面同步到当前状态；着色器下拉在非 toon 材质时禁用 */
 function syncRenderUI() {
@@ -4504,6 +4582,8 @@ mkNrmRow('bump', 'tex', '1st 法线贴图', '_BumpMap：切线空间法线、走
   const exportPanel = document.getElementById('exportPanel');
   const btnExport = document.getElementById('btnExport');
   
+  /** ★ 语言切换时也要重建导出面板 ⇒ 挂到 window（本函数在 afterLoad 里 ✓ 模块作用域看不到）*/
+  window.__ba3dBuildExportPanel = buildExportPanel;
   function buildExportPanel() {
     exportPanel.innerHTML = '';
     ensurePanelTitle(exportPanel);   // 清空后把标题栏装回来（同时是拖拽把手）

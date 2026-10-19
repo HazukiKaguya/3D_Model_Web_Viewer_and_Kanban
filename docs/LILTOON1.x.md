@@ -1,6 +1,6 @@
 # lilToon 1.3.7 → Web (three.js) 旧基线对照（已归档）
 
-中文 ｜ [English](LILTOON1.x.en.md) ｜ [日本語](LILTOON1.x.ja.md)
+**简体中文** ｜ [繁體中文](LILTOON1.x.zh-TW.md) ｜ [English](LILTOON1.x.en.md) ｜ [日本語](LILTOON1.x.ja.md) ｜ [한국어](LILTOON1.x.ko.md)
 
 > ⚠️ **本文档已归档** —— 它记录的是**旧基线 lilToon 1.3.7** 的对照与核对。
 > **当前生效的基线是 2.3.4**、见 [`LILTOON2.x.md`](LILTOON2.x.md)。
@@ -134,7 +134,6 @@ Unity 里参考效果：        （截图更好）
 7. **Backlight / 逆光**
 8. **Dissolve**
 
-
 ### 阶段 3 —— 已完成
 
 原计划两条、实际执行时**你要求先跳过法线贴图通路**（成本最高）、改为做「其他的」：
@@ -161,7 +160,6 @@ Unity 里参考效果：        （截图更好）
 `_Shadow2ndNormalStrength` / `_Shadow3rdNormalStrength`
 
 **建议的后续顺序**：① 自发光第二层（低）② 层溶解（低）③ 距离淡出（中）④ Decal（中）⑤ 法线贴图通路（高、一次解锁 9+3 个参数）
-
 
 ### 明确不做
 
@@ -317,7 +315,6 @@ fd.col.a  *= _OutlineColor.a;
 - [ ] 接入预设（预设里 `_OutlineWidth` 等值填入 LIL_PRESETS）
 - [ ] GLB 与 FBX 双验证
 - [ ] 决定是否替换掉现有的 OutlineEffect 路径
-
 
 ---
 
